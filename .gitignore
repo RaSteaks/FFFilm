@@ -1,0 +1,22 @@
+# macOS metadata
+.DS_Store
+
+# Local Codex environment and workspace state
+/.codex/
+
+# Xcode user state and local build products
+xcuserdata/
+*.xcuserstate
+DerivedData/
+build/
+*.xcresult
+*.dSYM
+*.dSYM.zip
+*.ipa
+
+# Swift Package Manager local artifacts
+.build/
+
+# Editor swap files
+*.swp
+*~

@@ -1,0 +1,6484 @@
+{
+  "cameras": [
+    {
+      "id": "apple-prores",
+      "name": "Apple ProRes",
+      "manufacturer": "APPLE",
+      "sourceType": "prores",
+      "sensorLabel": "Encoded frame only · no camera",
+      "sensorWidthMm": 0,
+      "sensorHeightMm": 0,
+      "nativeWidth": 1920,
+      "nativeHeight": 1080,
+      "imageCircleMm": 0,
+      "modes": [
+        {
+          "id": "encoded-frame",
+          "label": "Encoded frame",
+          "note": "Apple target dimensions · no sensor crop",
+          "resolutions": [
+            {
+              "id": "prores-720x486",
+              "label": "SD NTSC · 720 × 486",
+              "width": 720,
+              "height": 486
+            },
+            {
+              "id": "prores-720x576",
+              "label": "SD PAL · 720 × 576",
+              "width": 720,
+              "height": 576
+            },
+            {
+              "id": "prores-960x720",
+              "label": "HD 4:3 · 960 × 720",
+              "width": 960,
+              "height": 720
+            },
+            {
+              "id": "prores-1280x720",
+              "label": "HD · 1280 × 720",
+              "width": 1280,
+              "height": 720
+            },
+            {
+              "id": "prores-1280x1080",
+              "label": "HD anamorphic · 1280 × 1080",
+              "width": 1280,
+              "height": 1080
+            },
+            {
+              "id": "prores-1440x1080",
+              "label": "HD anamorphic · 1440 × 1080",
+              "width": 1440,
+              "height": 1080
+            },
+            {
+              "id": "prores-1920x1080",
+              "label": "Full HD · 1920 × 1080",
+              "width": 1920,
+              "height": 1080
+            },
+            {
+              "id": "prores-2048x1080",
+              "label": "2K DCI · 2048 × 1080",
+              "width": 2048,
+              "height": 1080
+            },
+            {
+              "id": "prores-2048x1556",
+              "label": "2K 4:3 · 2048 × 1556",
+              "width": 2048,
+              "height": 1556
+            },
+            {
+              "id": "prores-3840x2160",
+              "label": "4K UHD · 3840 × 2160",
+              "width": 3840,
+              "height": 2160
+            },
+            {
+              "id": "prores-4096x2160",
+              "label": "4K DCI · 4096 × 2160",
+              "width": 4096,
+              "height": 2160
+            },
+            {
+              "id": "prores-5120x2700",
+              "label": "5K · 5120 × 2700",
+              "width": 5120,
+              "height": 2700
+            },
+            {
+              "id": "prores-6144x3240",
+              "label": "6K · 6144 × 3240",
+              "width": 6144,
+              "height": 3240
+            },
+            {
+              "id": "prores-8192x4320",
+              "label": "8K · 8192 × 4320",
+              "width": 8192,
+              "height": 4320
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "alexa35",
+      "name": "ALEXA 35",
+      "manufacturer": "ARRI",
+      "maxSensorFps": 120,
+      "sensorLabel": "4.6K ALEV 4.0",
+      "sensorWidthMm": 27.99,
+      "sensorHeightMm": 19.22,
+      "nativeWidth": 4608,
+      "nativeHeight": 3164,
+      "imageCircleMm": 33.95,
+      "modes": [
+        {
+          "id": "open-gate",
+          "label": "Open Gate 3:2",
+          "note": "Full sensor height",
+          "resolutions": [
+            {
+              "id": "a35-open",
+              "label": "4.6K Open Gate · 4608 × 3164",
+              "width": 4608,
+              "height": 3164
+            },
+            {
+              "id": "a35-open-3k",
+              "label": "3K Open Gate · 3072 × 2112",
+              "width": 3072,
+              "height": 2112
+            },
+            {
+              "id": "a35-open-1x1",
+              "label": "3K 1:1 · 3072 × 3072",
+              "width": 3072,
+              "height": 3072
+            }
+          ]
+        },
+        {
+          "id": "16x9",
+          "label": "16:9",
+          "note": "Television & streaming",
+          "resolutions": [
+            {
+              "id": "a35-46k-16x9",
+              "label": "4.6K 16:9 · 4608 × 2592",
+              "width": 4608,
+              "height": 2592
+            },
+            {
+              "id": "a35-16x9",
+              "label": "4K 16:9 · 4096 × 2304",
+              "width": 4096,
+              "height": 2304,
+              "activeWidth": 4608,
+              "activeHeight": 2592
+            },
+            {
+              "id": "a35-uhd-16x9",
+              "label": "UHD 16:9 · 3840 × 2160",
+              "width": 3840,
+              "height": 2160,
+              "activeWidth": 4608,
+              "activeHeight": 2592
+            },
+            {
+              "id": "a35-2k-16x9",
+              "label": "2K 16:9 S16 · 2048 × 1152",
+              "width": 2048,
+              "height": 1152,
+              "activeWidth": 4608,
+              "activeHeight": 2592
+            }
+          ]
+        },
+        {
+          "id": "239",
+          "label": "2.39:1",
+          "note": "Scope extraction",
+          "resolutions": [
+            {
+              "id": "a35-239",
+              "label": "4.6K 2.39 · 4608 × 1920",
+              "width": 4608,
+              "height": 1920
+            },
+            {
+              "id": "a35-38k-239",
+              "label": "3.8K Scope · 3840 × 1608",
+              "width": 3840,
+              "height": 1608
+            }
+          ]
+        },
+        {
+          "id": "2x1",
+          "label": "2:1",
+          "note": "Wide spherical capture",
+          "resolutions": [
+            {
+              "id": "a35-2x1",
+              "label": "4K 2:1 · 4096 × 2048",
+              "width": 4096,
+              "height": 2048
+            }
+          ]
+        },
+        {
+          "id": "65",
+          "label": "6:5",
+          "note": "Anamorphic capture",
+          "resolutions": [
+            {
+              "id": "a35-65",
+              "label": "3.3K 6:5 · 3328 × 2790",
+              "width": 3328,
+              "height": 2790
+            }
+          ]
+        },
+        {
+          "id": "89",
+          "label": "8:9",
+          "note": "Vertical / anamorphic crop",
+          "resolutions": [
+            {
+              "id": "a35-89",
+              "label": "2.7K 8:9 · 2743 × 3086",
+              "width": 2743,
+              "height": 3086
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mini-lf",
+      "name": "ALEXA Mini LF",
+      "manufacturer": "ARRI",
+      "sensorLabel": "4.5K LF ALEV 3.1",
+      "sensorWidthMm": 36.7,
+      "sensorHeightMm": 25.54,
+      "nativeWidth": 4448,
+      "nativeHeight": 3096,
+      "imageCircleMm": 44.7,
+      "modes": [
+        {
+          "id": "open-gate",
+          "label": "Open Gate 3:2",
+          "note": "Full sensor height",
+          "resolutions": [
+            {
+              "id": "mlf-open",
+              "label": "4.5K Open Gate · 4448 × 3096",
+              "width": 4448,
+              "height": 3096
+            }
+          ]
+        },
+        {
+          "id": "16x9",
+          "label": "16:9",
+          "note": "Television & streaming",
+          "resolutions": [
+            {
+              "id": "mlf-16x9",
+              "label": "UHD 16:9 · 3840 × 2160",
+              "width": 3840,
+              "height": 2160
+            },
+            {
+              "id": "mlf-2k-16x9",
+              "label": "2K 16:9 · 2048 × 1152",
+              "width": 2048,
+              "height": 1152
+            },
+            {
+              "id": "mlf-hd-16x9",
+              "label": "HD 16:9 · 1920 × 1080",
+              "width": 1920,
+              "height": 1080
+            }
+          ]
+        },
+        {
+          "id": "239",
+          "label": "2.39:1",
+          "note": "Scope extraction",
+          "resolutions": [
+            {
+              "id": "mlf-239",
+              "label": "4.5K Scope · 4448 × 1856",
+              "width": 4448,
+              "height": 1856
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "alexa-lf",
+      "name": "ALEXA LF",
+      "manufacturer": "ARRI",
+      "sensorLabel": "4.5K LF ALEV 3.1",
+      "sensorWidthMm": 36.7,
+      "sensorHeightMm": 25.54,
+      "nativeWidth": 4448,
+      "nativeHeight": 3096,
+      "imageCircleMm": 44.7,
+      "modes": [
+        {
+          "id": "open-gate",
+          "label": "Open Gate 3:2",
+          "note": "Full sensor height",
+          "resolutions": [
+            {
+              "id": "lf-open",
+              "label": "4.5K Open Gate · 4448 × 3096",
+              "width": 4448,
+              "height": 3096
+            }
+          ]
+        },
+        {
+          "id": "16x9",
+          "label": "16:9",
+          "note": "Television & streaming",
+          "resolutions": [
+            {
+              "id": "lf-16x9",
+              "label": "UHD 16:9 · 3840 × 2160",
+              "width": 3840,
+              "height": 2160
+            },
+            {
+              "id": "lf-2k-16x9",
+              "label": "2K 16:9 · 2048 × 1152",
+              "width": 2048,
+              "height": 1152
+            },
+            {
+              "id": "lf-hd-16x9",
+              "label": "HD 16:9 · 1920 × 1080",
+              "width": 1920,
+              "height": 1080
+            }
+          ]
+        },
+        {
+          "id": "239",
+          "label": "2.39:1",
+          "note": "Scope extraction",
+          "resolutions": [
+            {
+              "id": "lf-239",
+              "label": "4.5K Scope · 4448 × 1856",
+              "width": 4448,
+              "height": 1856
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "venice2",
+      "name": "VENICE 2 · 8.6K",
+      "manufacturer": "SONY",
+      "sensorLabel": "8.6K Full Frame",
+      "sensorWidthMm": 35.9,
+      "sensorHeightMm": 24,
+      "nativeWidth": 8640,
+      "nativeHeight": 5760,
+      "imageCircleMm": 43.18,
+      "modes": [
+        {
+          "id": "full-frame",
+          "label": "Full Frame 3:2",
+          "note": "8.6K sensor area",
+          "resolutions": [
+            {
+              "id": "venice2-full",
+              "label": "8.6K Full Frame · 8640 × 5760",
+              "width": 8640,
+              "height": 5760
+            }
+          ]
+        },
+        {
+          "id": "17x9",
+          "label": "Full Frame 17:9",
+          "note": "Wide-screen capture",
+          "resolutions": [
+            {
+              "id": "venice2-17x9",
+              "label": "8.6K 17:9 · 8640 × 4556",
+              "width": 8640,
+              "height": 4556
+            }
+          ]
+        },
+        {
+          "id": "239",
+          "label": "2.39:1",
+          "note": "Scope extraction",
+          "resolutions": [
+            {
+              "id": "venice2-239",
+              "label": "8.2K Scope · 8192 × 3432",
+              "width": 8192,
+              "height": 3432
+            }
+          ]
+        },
+        {
+          "id": "16x9",
+          "label": "16:9",
+          "note": "Television & streaming",
+          "resolutions": [
+            {
+              "id": "venice2-16x9",
+              "label": "8.1K 16:9 · 8100 × 4556",
+              "width": 8100,
+              "height": 4556
+            },
+            {
+              "id": "venice2-76k-16x9",
+              "label": "7.6K 16:9 · 7680 × 4320",
+              "width": 7680,
+              "height": 4320
+            }
+          ]
+        },
+        {
+          "id": "anamorphic",
+          "label": "Anamorphic",
+          "note": "4:3 and 6:5 capture",
+          "resolutions": [
+            {
+              "id": "venice2-58k-43",
+              "label": "5.8K 4:3 · 5792 × 4276",
+              "width": 5792,
+              "height": 4276
+            },
+            {
+              "id": "venice2-58k-65",
+              "label": "5.8K 6:5 · 5792 × 4854",
+              "width": 5792,
+              "height": 4854
+            },
+            {
+              "id": "venice2-58k-179",
+              "label": "5.8K 17:9 · 5792 × 3056",
+              "width": 5792,
+              "height": 3056
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "raptor-xl",
+      "name": "V-RAPTOR XL",
+      "manufacturer": "RED",
+      "sensorLabel": "8K VV",
+      "sensorWidthMm": 40.96,
+      "sensorHeightMm": 21.6,
+      "nativeWidth": 8192,
+      "nativeHeight": 4320,
+      "imageCircleMm": 46.3,
+      "modes": [
+        {
+          "id": "full-frame",
+          "label": "Full Frame 1.90:1",
+          "note": "8K Vista Vision",
+          "resolutions": [
+            {
+              "id": "raptor-full",
+              "label": "8K Full Frame · 8192 × 4320",
+              "width": 8192,
+              "height": 4320
+            }
+          ]
+        },
+        {
+          "id": "16x9",
+          "label": "16:9",
+          "note": "Television & streaming",
+          "resolutions": [
+            {
+              "id": "raptor-16x9",
+              "label": "7.6K 16:9 · 7680 × 4320",
+              "width": 7680,
+              "height": 4320
+            }
+          ]
+        },
+        {
+          "id": "239",
+          "label": "2.39:1",
+          "note": "Scope extraction",
+          "resolutions": [
+            {
+              "id": "raptor-239",
+              "label": "6K 2.39 · 6144 × 2570",
+              "width": 6144,
+              "height": 2570
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "alexa35-xtreme",
+      "name": "ALEXA 35 Xtreme",
+      "manufacturer": "ARRI",
+      "maxSensorFps": 660,
+      "maxSensorFpsWithoutOverdrive": 330,
+      "supportsSensorOverdrive": true,
+      "sensorLabel": "4.6K ALEV 4.0 · 660 fps",
+      "sensorWidthMm": 27.99,
+      "sensorHeightMm": 19.22,
+      "nativeWidth": 4608,
+      "nativeHeight": 3164,
+      "imageCircleMm": 33.96,
+      "modes": [
+        {
+          "id": "open-gate",
+          "label": "Open Gate 3:2",
+          "note": "Full sensor height",
+          "resolutions": [
+            {
+              "id": "a35x-open",
+              "label": "4.6K Open Gate · 4608 × 3164",
+              "width": 4608,
+              "height": 3164
+            }
+          ]
+        },
+        {
+          "id": "16x9",
+          "label": "16:9",
+          "note": "Spherical / 4K delivery",
+          "resolutions": [
+            {
+              "id": "a35x-46k-16x9",
+              "label": "4.6K 16:9 · 4608 × 2592",
+              "width": 4608,
+              "height": 2592
+            },
+            {
+              "id": "a35x-4k-16x9",
+              "label": "4K 16:9 · 4096 × 2304",
+              "width": 4096,
+              "height": 2304,
+              "activeWidth": 4608,
+              "activeHeight": 2592
+            },
+            {
+              "id": "a35x-uhd-16x9",
+              "label": "UHD 16:9 · 3840 × 2160",
+              "width": 3840,
+              "height": 2160,
+              "activeWidth": 4608,
+              "activeHeight": 2592
+            },
+            {
+              "id": "a35x-2k-16x9",
+              "label": "2K 16:9 S16 · 2048 × 1152",
+              "width": 2048,
+              "height": 1152,
+              "activeWidth": 4608,
+              "activeHeight": 2592
+            },
+            {
+              "id": "a35x-hd-16x9",
+              "label": "HD 16:9 S16 · 1920 × 1080",
+              "width": 1920,
+              "height": 1080,
+              "activeWidth": 4608,
+              "activeHeight": 2592
+            }
+          ]
+        },
+        {
+          "id": "239",
+          "label": "2.39:1",
+          "note": "Scope capture",
+          "resolutions": [
+            {
+              "id": "a35x-239",
+              "label": "3.8K Scope · 3840 × 1608",
+              "width": 3840,
+              "height": 1608
+            }
+          ]
+        },
+        {
+          "id": "65",
+          "label": "6:5",
+          "note": "Anamorphic capture",
+          "resolutions": [
+            {
+              "id": "a35x-33k-65",
+              "label": "3.3K 6:5 · 3328 × 2790",
+              "width": 3328,
+              "height": 2790
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "alexa265",
+      "name": "ALEXA 265",
+      "manufacturer": "ARRI",
+      "sensorLabel": "6.5K A3X Rev.B · 65 mm",
+      "sensorWidthMm": 54.12,
+      "sensorHeightMm": 25.58,
+      "nativeWidth": 6560,
+      "nativeHeight": 3100,
+      "imageCircleMm": 59.86,
+      "modes": [
+        {
+          "id": "open-gate",
+          "label": "6.5K Open Gate 2.12:1",
+          "note": "Full 65 mm sensor",
+          "resolutions": [
+            {
+              "id": "a265-open",
+              "label": "6.5K Open Gate · 6560 × 3100",
+              "width": 6560,
+              "height": 3100
+            }
+          ]
+        },
+        {
+          "id": "51k",
+          "label": "5.1K 1.65:1",
+          "note": "Wide 65 mm crop",
+          "resolutions": [
+            {
+              "id": "a265-51k",
+              "label": "5.1K · 5120 × 3100",
+              "width": 5120,
+              "height": 3100
+            }
+          ]
+        },
+        {
+          "id": "lf-open",
+          "label": "LF Open Gate 3:2",
+          "note": "Large-format lens compatibility",
+          "resolutions": [
+            {
+              "id": "a265-lf",
+              "label": "4.5K LF Open Gate · 4448 × 3096",
+              "width": 4448,
+              "height": 3096
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "alexa65",
+      "name": "ALEXA 65",
+      "manufacturer": "ARRI",
+      "sensorLabel": "6.5K ALEV III · 65 mm",
+      "sensorWidthMm": 54.12,
+      "sensorHeightMm": 25.58,
+      "nativeWidth": 6560,
+      "nativeHeight": 3100,
+      "imageCircleMm": 59.86,
+      "modes": [
+        {
+          "id": "open-gate",
+          "label": "Open Gate",
+          "note": "Full 65 mm sensor",
+          "resolutions": [
+            {
+              "id": "a65-open",
+              "label": "6.5K Open Gate · 6560 × 3100",
+              "width": 6560,
+              "height": 3100
+            }
+          ]
+        },
+        {
+          "id": "51k",
+          "label": "5.1K",
+          "note": "Wide 65 mm crop",
+          "resolutions": [
+            {
+              "id": "a65-51k",
+              "label": "5.1K · 5120 × 2880",
+              "width": 5120,
+              "height": 2880
+            }
+          ]
+        },
+        {
+          "id": "lf-open",
+          "label": "LF Open Gate",
+          "note": "Large-format crop",
+          "resolutions": [
+            {
+              "id": "a65-lf",
+              "label": "4.5K LF Open Gate · 4448 × 3096",
+              "width": 4448,
+              "height": 3096
+            }
+          ]
+        },
+        {
+          "id": "43k",
+          "label": "4.3K",
+          "note": "Reduced 65 mm crop",
+          "resolutions": [
+            {
+              "id": "a65-43k",
+              "label": "4.3K · 4320 × 2880",
+              "width": 4320,
+              "height": 2880
+            }
+          ]
+        },
+        {
+          "id": "16x9",
+          "label": "16:9",
+          "note": "UHD delivery",
+          "resolutions": [
+            {
+              "id": "a65-uhd",
+              "label": "4K UHD · 3840 × 2160",
+              "width": 3840,
+              "height": 2160
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "alexa-mini",
+      "name": "ALEXA Mini",
+      "manufacturer": "ARRI",
+      "sensorLabel": "3.4K ALEV III · Super 35",
+      "sensorWidthMm": 28.25,
+      "sensorHeightMm": 18.17,
+      "nativeWidth": 3424,
+      "nativeHeight": 2202,
+      "imageCircleMm": 33.59,
+      "modes": [
+        {
+          "id": "open-gate",
+          "label": "Open Gate 3:2",
+          "note": "Full sensor height",
+          "resolutions": [
+            {
+              "id": "amini-open",
+              "label": "3.4K Open Gate · 3424 × 2202",
+              "width": 3424,
+              "height": 2202
+            }
+          ]
+        },
+        {
+          "id": "16x9",
+          "label": "16:9",
+          "note": "Spherical capture",
+          "resolutions": [
+            {
+              "id": "amini-32k",
+              "label": "3.2K · 3200 × 1800",
+              "width": 3200,
+              "height": 1800
+            },
+            {
+              "id": "amini-uhd",
+              "label": "4K UHD · 3840 × 2160",
+              "width": 3840,
+              "height": 2160,
+              "activeWidth": 3200,
+              "activeHeight": 1800
+            },
+            {
+              "id": "amini-2k",
+              "label": "2K · 2048 × 1152",
+              "width": 2048,
+              "height": 1152,
+              "activeWidth": 2868,
+              "activeHeight": 1612
+            },
+            {
+              "id": "amini-hd",
+              "label": "HD · 1920 × 1080",
+              "width": 1920,
+              "height": 1080,
+              "activeWidth": 2880,
+              "activeHeight": 1620
+            }
+          ]
+        },
+        {
+          "id": "43",
+          "label": "4:3",
+          "note": "Anamorphic capture",
+          "resolutions": [
+            {
+              "id": "amini-43",
+              "label": "2.8K 4:3 · 2880 × 2160",
+              "width": 2880,
+              "height": 2160
+            }
+          ]
+        },
+        {
+          "id": "65",
+          "label": "6:5",
+          "note": "Anamorphic capture",
+          "resolutions": [
+            {
+              "id": "amini-ana",
+              "label": "2K Anamorphic · 2048 × 858",
+              "width": 2048,
+              "height": 858,
+              "activeWidth": 2560,
+              "activeHeight": 2145
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "alexa-sxt",
+      "name": "ALEXA SXT",
+      "manufacturer": "ARRI",
+      "sensorLabel": "3.4K ALEV III · SXT family",
+      "sensorWidthMm": 28.25,
+      "sensorHeightMm": 18.17,
+      "nativeWidth": 3424,
+      "nativeHeight": 2202,
+      "imageCircleMm": 33.59,
+      "modes": [
+        {
+          "id": "16x9",
+          "label": "16:9",
+          "note": "SXT ProRes / ARRIRAW",
+          "resolutions": [
+            {
+              "id": "asxt-32k",
+              "label": "3.2K · 3200 × 1800",
+              "width": 3200,
+              "height": 1800
+            },
+            {
+              "id": "asxt-28k",
+              "label": "2.8K · 2880 × 1620",
+              "width": 2880,
+              "height": 1620
+            },
+            {
+              "id": "asxt-uhd",
+              "label": "4K UHD · 3840 × 2160",
+              "width": 3840,
+              "height": 2160,
+              "activeWidth": 3200,
+              "activeHeight": 1800
+            }
+          ]
+        },
+        {
+          "id": "43",
+          "label": "4:3",
+          "note": "Anamorphic capture",
+          "resolutions": [
+            {
+              "id": "asxt-43",
+              "label": "2.8K 4:3 · 2880 × 2160",
+              "width": 2880,
+              "height": 2160
+            }
+          ]
+        },
+        {
+          "id": "open-gate",
+          "label": "Open Gate 3:2",
+          "note": "Full sensor height",
+          "resolutions": [
+            {
+              "id": "asxt-open",
+              "label": "4K Cine Open Gate · 4096 × 2636",
+              "width": 4096,
+              "height": 2636,
+              "activeWidth": 3414,
+              "activeHeight": 2198
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "alexa-xt",
+      "name": "ALEXA XT / XR",
+      "manufacturer": "ARRI",
+      "sensorLabel": "3.4K ALEV III · XT family",
+      "sensorWidthMm": 28.25,
+      "sensorHeightMm": 18.17,
+      "nativeWidth": 3424,
+      "nativeHeight": 2202,
+      "imageCircleMm": 33.59,
+      "modes": [
+        {
+          "id": "16x9",
+          "label": "16:9",
+          "note": "Spherical capture",
+          "resolutions": [
+            {
+              "id": "axt-28k",
+              "label": "2.8K · 2880 × 1620",
+              "width": 2880,
+              "height": 1620
+            },
+            {
+              "id": "axt-32k",
+              "label": "3.2K · 3200 × 1800",
+              "width": 3200,
+              "height": 1800
+            },
+            {
+              "id": "axt-uhd",
+              "label": "4K UHD · 3840 × 2160",
+              "width": 3840,
+              "height": 2160,
+              "activeWidth": 3200,
+              "activeHeight": 1800
+            }
+          ]
+        },
+        {
+          "id": "43",
+          "label": "4:3",
+          "note": "Anamorphic capture",
+          "resolutions": [
+            {
+              "id": "axt-43",
+              "label": "2.8K 4:3 · 2880 × 2160",
+              "width": 2880,
+              "height": 2160
+            }
+          ]
+        },
+        {
+          "id": "open-gate",
+          "label": "Open Gate 3:2",
+          "note": "ARRIRAW open gate",
+          "resolutions": [
+            {
+              "id": "axt-open",
+              "label": "3.4K Open Gate · 3424 × 2202",
+              "width": 3424,
+              "height": 2202
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "alexa-classic",
+      "name": "ALEXA Classic",
+      "manufacturer": "ARRI",
+      "sensorLabel": "2.8K ALEV III · legacy",
+      "sensorWidthMm": 23.76,
+      "sensorHeightMm": 17.82,
+      "nativeWidth": 2880,
+      "nativeHeight": 2160,
+      "imageCircleMm": 29.7,
+      "modes": [
+        {
+          "id": "16x9",
+          "label": "16:9",
+          "note": "Spherical capture",
+          "resolutions": [
+            {
+              "id": "aclassic-hd",
+              "label": "HD · 1920 × 1080",
+              "width": 1920,
+              "height": 1080,
+              "activeWidth": 2880,
+              "activeHeight": 1620
+            },
+            {
+              "id": "aclassic-2k",
+              "label": "2K · 2048 × 1152",
+              "width": 2048,
+              "height": 1152,
+              "activeWidth": 2880,
+              "activeHeight": 1620
+            },
+            {
+              "id": "aclassic-28k",
+              "label": "2.8K · 2880 × 1620",
+              "width": 2880,
+              "height": 1620
+            }
+          ]
+        },
+        {
+          "id": "43",
+          "label": "4:3",
+          "note": "Anamorphic capture",
+          "resolutions": [
+            {
+              "id": "aclassic-2k-43",
+              "label": "2K 4:3 · 2048 × 1536",
+              "width": 2048,
+              "height": 1536,
+              "activeWidth": 2880,
+              "activeHeight": 2160
+            },
+            {
+              "id": "aclassic-28k-43",
+              "label": "2.8K 4:3 · 2880 × 2160",
+              "width": 2880,
+              "height": 2160
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "amira",
+      "name": "AMIRA",
+      "manufacturer": "ARRI",
+      "sensorLabel": "2.8K ALEV III · documentary",
+      "sensorWidthMm": 23.76,
+      "sensorHeightMm": 13.37,
+      "nativeWidth": 2880,
+      "nativeHeight": 1620,
+      "imageCircleMm": 27.26,
+      "modes": [
+        {
+          "id": "16x9",
+          "label": "16:9",
+          "note": "ProRes / MPEG-2 capture",
+          "resolutions": [
+            {
+              "id": "amira-2k",
+              "label": "2K · 2048 × 1152",
+              "width": 2048,
+              "height": 1152,
+              "activeWidth": 2868,
+              "activeHeight": 1612
+            },
+            {
+              "id": "amira-32k",
+              "label": "3.2K · 3200 × 1800",
+              "width": 3200,
+              "height": 1800
+            },
+            {
+              "id": "amira-uhd",
+              "label": "4K UHD · 3840 × 2160",
+              "width": 3840,
+              "height": 2160,
+              "activeWidth": 3200,
+              "activeHeight": 1800
+            },
+            {
+              "id": "amira-hd",
+              "label": "HD · 1920 × 1080",
+              "width": 1920,
+              "height": 1080,
+              "activeWidth": 2880,
+              "activeHeight": 1620
+            }
+          ]
+        },
+        {
+          "id": "s16",
+          "label": "Super 16",
+          "note": "High-speed crop",
+          "resolutions": [
+            {
+              "id": "amira-s16-hd",
+              "label": "S16 HD · 1920 × 1080",
+              "width": 1920,
+              "height": 1080,
+              "activeWidth": 1600,
+              "activeHeight": 900
+            }
+          ]
+        },
+        {
+          "id": "43",
+          "label": "4:3",
+          "note": "Anamorphic crop",
+          "resolutions": [
+            {
+              "id": "amira-2k-43",
+              "label": "2K 4:3 · 2048 × 1536",
+              "width": 2048,
+              "height": 1536
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "venice",
+      "name": "VENICE · 6K",
+      "manufacturer": "SONY",
+      "sensorLabel": "6K Full Frame · 36 × 24 mm",
+      "sensorWidthMm": 36,
+      "sensorHeightMm": 24,
+      "nativeWidth": 6048,
+      "nativeHeight": 4032,
+      "imageCircleMm": 43.27,
+      "modes": [
+        {
+          "id": "full-frame",
+          "label": "Full Frame 3:2",
+          "note": "6K sensor area",
+          "resolutions": [
+            {
+              "id": "venice-full",
+              "label": "6K Full Frame · 6048 × 4032",
+              "width": 6048,
+              "height": 4032
+            }
+          ]
+        },
+        {
+          "id": "17x9",
+          "label": "Full Frame 17:9",
+          "note": "Wide-screen capture",
+          "resolutions": [
+            {
+              "id": "venice-17x9",
+              "label": "6K 17:9 · 6054 × 3192",
+              "width": 6054,
+              "height": 3192
+            }
+          ]
+        },
+        {
+          "id": "185",
+          "label": "1.85:1",
+          "note": "Full-frame spherical",
+          "resolutions": [
+            {
+              "id": "venice-185",
+              "label": "6K 1.85:1 · 6054 × 3272",
+              "width": 6054,
+              "height": 3272
+            }
+          ]
+        },
+        {
+          "id": "239",
+          "label": "2.39:1",
+          "note": "Scope extraction",
+          "resolutions": [
+            {
+              "id": "venice-239",
+              "label": "6K Scope · 6048 × 2534",
+              "width": 6048,
+              "height": 2534
+            }
+          ]
+        },
+        {
+          "id": "16x9",
+          "label": "16:9",
+          "note": "Spherical / UHD delivery",
+          "resolutions": [
+            {
+              "id": "venice-57k",
+              "label": "5.7K 16:9 · 5674 × 3192",
+              "width": 5674,
+              "height": 3192
+            },
+            {
+              "id": "venice-38k",
+              "label": "3.8K 16:9 · 3840 × 2160",
+              "width": 3840,
+              "height": 2160
+            }
+          ]
+        },
+        {
+          "id": "anamorphic",
+          "label": "Anamorphic",
+          "note": "4:3 and 6:5 capture",
+          "resolutions": [
+            {
+              "id": "venice-4k-65",
+              "label": "4K 6:5 · 4096 × 3432",
+              "width": 4096,
+              "height": 3432
+            },
+            {
+              "id": "venice-4k-43",
+              "label": "4K 4:3 · 4096 × 3024",
+              "width": 4096,
+              "height": 3024
+            },
+            {
+              "id": "venice-4k-179",
+              "label": "4K 17:9 · 4096 × 2160",
+              "width": 4096,
+              "height": 2160
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "venice2-6k",
+      "name": "VENICE 2 · 6K",
+      "manufacturer": "SONY",
+      "sensorLabel": "6K Full Frame · MPC-3626",
+      "sensorWidthMm": 35.9,
+      "sensorHeightMm": 24,
+      "nativeWidth": 6048,
+      "nativeHeight": 4032,
+      "imageCircleMm": 43.18,
+      "modes": [
+        {
+          "id": "full-frame",
+          "label": "Full Frame 3:2",
+          "note": "6K sensor area",
+          "resolutions": [
+            {
+              "id": "venice2-6k-full",
+              "label": "6K Full Frame · 6048 × 4032",
+              "width": 6048,
+              "height": 4032
+            }
+          ]
+        },
+        {
+          "id": "17x9",
+          "label": "Full Frame 17:9",
+          "note": "Wide-screen capture",
+          "resolutions": [
+            {
+              "id": "venice2-6k-17x9",
+              "label": "6K 17:9 · 6054 × 3192",
+              "width": 6054,
+              "height": 3192
+            }
+          ]
+        },
+        {
+          "id": "185",
+          "label": "1.85:1",
+          "note": "Full-frame spherical",
+          "resolutions": [
+            {
+              "id": "venice2-6k-185",
+              "label": "6K 1.85:1 · 6054 × 3272",
+              "width": 6054,
+              "height": 3272
+            }
+          ]
+        },
+        {
+          "id": "239",
+          "label": "2.39:1",
+          "note": "Scope extraction",
+          "resolutions": [
+            {
+              "id": "venice2-6k-239",
+              "label": "6K Scope · 6048 × 2534",
+              "width": 6048,
+              "height": 2534
+            }
+          ]
+        },
+        {
+          "id": "16x9",
+          "label": "16:9",
+          "note": "Spherical / UHD delivery",
+          "resolutions": [
+            {
+              "id": "venice2-6k-57k",
+              "label": "5.7K 16:9 · 5674 × 3192",
+              "width": 5674,
+              "height": 3192
+            },
+            {
+              "id": "venice2-6k-38k",
+              "label": "3.8K 16:9 · 3840 × 2160",
+              "width": 3840,
+              "height": 2160
+            }
+          ]
+        },
+        {
+          "id": "anamorphic",
+          "label": "Anamorphic",
+          "note": "4:3 and 6:5 capture",
+          "resolutions": [
+            {
+              "id": "venice2-6k-4k-65",
+              "label": "4K 6:5 · 4096 × 3432",
+              "width": 4096,
+              "height": 3432
+            },
+            {
+              "id": "venice2-6k-4k-43",
+              "label": "4K 4:3 · 4096 × 3024",
+              "width": 4096,
+              "height": 3024
+            },
+            {
+              "id": "venice2-6k-4k-179",
+              "label": "4K 17:9 · 4096 × 2160",
+              "width": 4096,
+              "height": 2160
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "burano",
+      "name": "BURANO",
+      "manufacturer": "SONY",
+      "maxSensorFps": 120,
+      "sensorLabel": "8.6K Full Frame · X-OCN",
+      "sensorWidthMm": 35.9,
+      "sensorHeightMm": 20.2,
+      "nativeWidth": 8632,
+      "nativeHeight": 4856,
+      "imageCircleMm": 41.19,
+      "modes": [
+        {
+          "id": "full-frame",
+          "label": "Full Frame",
+          "note": "8.6K sensor area",
+          "resolutions": [
+            {
+              "id": "burano-86k-16x9",
+              "label": "8.6K 16:9 · 8632 × 4856",
+              "width": 8632,
+              "height": 4856
+            },
+            {
+              "id": "burano-86k-17x9",
+              "label": "8.6K 17:9 · 8632 × 4552",
+              "width": 8632,
+              "height": 4552
+            }
+          ]
+        },
+        {
+          "id": "full-frame-crop",
+          "label": "Full Frame Crop",
+          "note": "High-speed 6K / 3.8K",
+          "resolutions": [
+            {
+              "id": "burano-6k-16x9",
+              "label": "6K 16:9 · 6052 × 3404",
+              "width": 6052,
+              "height": 3404
+            },
+            {
+              "id": "burano-6k-17x9",
+              "label": "6K 17:9 · 6052 × 3192",
+              "width": 6052,
+              "height": 3192
+            },
+            {
+              "id": "burano-38k",
+              "label": "3.8K 16:9 · 3840 × 2160",
+              "width": 3840,
+              "height": 2160
+            }
+          ]
+        },
+        {
+          "id": "s35",
+          "label": "Super 35",
+          "note": "S35 sensor crop",
+          "resolutions": [
+            {
+              "id": "burano-58k-16x9",
+              "label": "5.8K 16:9 · 5760 × 3240",
+              "width": 5760,
+              "height": 3240
+            },
+            {
+              "id": "burano-58k-17x9",
+              "label": "5.8K 17:9 · 5760 × 3036",
+              "width": 5760,
+              "height": 3036
+            },
+            {
+              "id": "burano-43k-43",
+              "label": "4.3K 4:3 · 4256 × 3192",
+              "width": 4256,
+              "height": 3192
+            },
+            {
+              "id": "burano-4k-17x9",
+              "label": "4K 17:9 S35c · 4096 × 2160",
+              "width": 4096,
+              "height": 2160
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fx9",
+      "name": "FX9",
+      "manufacturer": "SONY",
+      "maxSensorFps": 120,
+      "sensorLabel": "6K Full Frame Exmor R",
+      "sensorWidthMm": 35.7,
+      "sensorHeightMm": 18.8,
+      "nativeWidth": 6048,
+      "nativeHeight": 3192,
+      "imageCircleMm": 40.35,
+      "modes": [
+        {
+          "id": "full-frame",
+          "label": "Full Frame 6K scan",
+          "note": "Oversampled internal 4K",
+          "resolutions": [
+            {
+              "id": "fx9-dci4k",
+              "label": "DCI 4K · 4096 × 2160",
+              "width": 4096,
+              "height": 2160,
+              "activeWidth": 6048,
+              "activeHeight": 3192
+            },
+            {
+              "id": "fx9-qfhd",
+              "label": "QFHD · 3840 × 2160",
+              "width": 3840,
+              "height": 2160,
+              "activeWidth": 6048,
+              "activeHeight": 3192
+            },
+            {
+              "id": "fx9-hd",
+              "label": "Full HD · 1920 × 1080",
+              "width": 1920,
+              "height": 1080,
+              "activeWidth": 6048,
+              "activeHeight": 3192
+            }
+          ]
+        },
+        {
+          "id": "s35",
+          "label": "Super 35 4K scan",
+          "note": "4K crop / oversampling",
+          "resolutions": [
+            {
+              "id": "fx9-s35-dci4k",
+              "label": "DCI 4K · 4096 × 2160",
+              "width": 4096,
+              "height": 2160
+            },
+            {
+              "id": "fx9-s35-qfhd",
+              "label": "QFHD · 3840 × 2160",
+              "width": 3840,
+              "height": 2160
+            },
+            {
+              "id": "fx9-s35-hd",
+              "label": "Full HD · 1920 × 1080",
+              "width": 1920,
+              "height": 1080
+            }
+          ]
+        },
+        {
+          "id": "s16",
+          "label": "Super 16 2K scan",
+          "note": "High-speed crop",
+          "resolutions": [
+            {
+              "id": "fx9-s16-hd",
+              "label": "Full HD · 1920 × 1080",
+              "width": 1920,
+              "height": 1080,
+              "activeWidth": 2048,
+              "activeHeight": 1080
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fx6",
+      "name": "FX6",
+      "manufacturer": "SONY",
+      "maxSensorFps": 120,
+      "sensorLabel": "4K Full Frame Exmor R",
+      "sensorWidthMm": 35.6,
+      "sensorHeightMm": 23.8,
+      "nativeWidth": 4240,
+      "nativeHeight": 2832,
+      "imageCircleMm": 42.82,
+      "modes": [
+        {
+          "id": "full-frame",
+          "label": "Full Frame",
+          "note": "Internal XAVC capture",
+          "resolutions": [
+            {
+              "id": "fx6-dci4k",
+              "label": "DCI 4K · 4096 × 2160",
+              "width": 4096,
+              "height": 2160
+            },
+            {
+              "id": "fx6-qfhd",
+              "label": "QFHD · 3840 × 2160",
+              "width": 3840,
+              "height": 2160
+            },
+            {
+              "id": "fx6-hd",
+              "label": "Full HD · 1920 × 1080",
+              "width": 1920,
+              "height": 1080
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fx5",
+      "name": "FX5",
+      "manufacturer": "SONY",
+      "maxSensorFps": 120,
+      "sensorLabel": "5K Full Frame Exmor RS",
+      "sensorWidthMm": 35.9,
+      "sensorHeightMm": 23.9,
+      "nativeWidth": 4992,
+      "nativeHeight": 3328,
+      "imageCircleMm": 43.13,
+      "modes": [
+        {
+          "id": "full-frame",
+          "label": "Full Frame",
+          "note": "5K X-OCN capture",
+          "resolutions": [
+            {
+              "id": "fx5-5k-32",
+              "label": "5K 3:2 · 4992 × 3328",
+              "width": 4992,
+              "height": 3328
+            },
+            {
+              "id": "fx5-5k-179",
+              "label": "5K 17:9 · 4992 × 2632",
+              "width": 4992,
+              "height": 2632
+            },
+            {
+              "id": "fx5-5k-16x9",
+              "label": "5K 16:9 · 4992 × 2808",
+              "width": 4992,
+              "height": 2808
+            }
+          ]
+        },
+        {
+          "id": "full-frame-crop",
+          "label": "Full Frame Crop",
+          "note": "4.5K / 3.8K capture",
+          "resolutions": [
+            {
+              "id": "fx5-45k-179",
+              "label": "4.5K 17:9 · 4552 × 2400",
+              "width": 4552,
+              "height": 2400
+            },
+            {
+              "id": "fx5-45k-16x9",
+              "label": "4.5K 16:9 · 4552 × 2560",
+              "width": 4552,
+              "height": 2560
+            },
+            {
+              "id": "fx5-38k",
+              "label": "3.8K 16:9 · 3840 × 2160",
+              "width": 3840,
+              "height": 2160
+            }
+          ]
+        },
+        {
+          "id": "s35",
+          "label": "Super 35",
+          "note": "S35 sensor crop",
+          "resolutions": [
+            {
+              "id": "fx5-s35",
+              "label": "3.2K 16:9 · 3264 × 1836",
+              "width": 3264,
+              "height": 1836
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fx3",
+      "name": "FX3",
+      "manufacturer": "SONY",
+      "maxSensorFps": 120,
+      "sensorLabel": "4K Full Frame Exmor R",
+      "sensorWidthMm": 35.6,
+      "sensorHeightMm": 23.8,
+      "nativeWidth": 4240,
+      "nativeHeight": 2385,
+      "imageCircleMm": 42.82,
+      "modes": [
+        {
+          "id": "full-frame",
+          "label": "Full Frame",
+          "note": "Internal XAVC capture",
+          "resolutions": [
+            {
+              "id": "fx3-dci4k",
+              "label": "DCI 4K · 4096 × 2160",
+              "width": 4096,
+              "height": 2160
+            },
+            {
+              "id": "fx3-uhd",
+              "label": "UHD · 3840 × 2160",
+              "width": 3840,
+              "height": 2160
+            },
+            {
+              "id": "fx3-hd",
+              "label": "Full HD · 1920 × 1080",
+              "width": 1920,
+              "height": 1080
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fx30",
+      "name": "FX30",
+      "manufacturer": "SONY",
+      "maxSensorFps": 120,
+      "sensorLabel": "6.2K Super 35 Exmor R",
+      "sensorWidthMm": 23.3,
+      "sensorHeightMm": 15.5,
+      "nativeWidth": 4672,
+      "nativeHeight": 2628,
+      "imageCircleMm": 28,
+      "modes": [
+        {
+          "id": "s35",
+          "label": "Super 35",
+          "note": "6K oversampled 4K",
+          "resolutions": [
+            {
+              "id": "fx30-dci4k",
+              "label": "DCI 4K · 4096 × 2160",
+              "width": 4096,
+              "height": 2160
+            },
+            {
+              "id": "fx30-uhd",
+              "label": "UHD · 3840 × 2160",
+              "width": 3840,
+              "height": 2160
+            },
+            {
+              "id": "fx30-hd",
+              "label": "Full HD · 1920 × 1080",
+              "width": 1920,
+              "height": 1080
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fx2",
+      "name": "FX2",
+      "manufacturer": "SONY",
+      "maxSensorFps": 120,
+      "sensorLabel": "Full Frame Exmor R · 4K",
+      "sensorWidthMm": 35.9,
+      "sensorHeightMm": 23.9,
+      "nativeWidth": 4672,
+      "nativeHeight": 2628,
+      "imageCircleMm": 43.13,
+      "modes": [
+        {
+          "id": "full-frame",
+          "label": "Full Frame",
+          "note": "Internal XAVC capture",
+          "resolutions": [
+            {
+              "id": "fx2-dci4k",
+              "label": "DCI 4K · 4096 × 2160",
+              "width": 4096,
+              "height": 2160
+            },
+            {
+              "id": "fx2-uhd",
+              "label": "UHD · 3840 × 2160",
+              "width": 3840,
+              "height": 2160
+            },
+            {
+              "id": "fx2-hd",
+              "label": "Full HD · 1920 × 1080",
+              "width": 1920,
+              "height": 1080
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fr7",
+      "name": "FR7",
+      "manufacturer": "SONY",
+      "sensorLabel": "4K Full Frame PTZ",
+      "sensorWidthMm": 35.6,
+      "sensorHeightMm": 23.8,
+      "nativeWidth": 4240,
+      "nativeHeight": 2385,
+      "imageCircleMm": 42.82,
+      "modes": [
+        {
+          "id": "full-frame",
+          "label": "Full Frame",
+          "note": "Remote / studio capture",
+          "resolutions": [
+            {
+              "id": "fr7-uhd",
+              "label": "UHD · 3840 × 2160",
+              "width": 3840,
+              "height": 2160
+            },
+            {
+              "id": "fr7-hd",
+              "label": "Full HD · 1920 × 1080",
+              "width": 1920,
+              "height": 1080
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "f55",
+      "name": "PMW-F55",
+      "manufacturer": "SONY",
+      "sensorLabel": "4K Super 35 · CineAlta",
+      "sensorWidthMm": 24.6,
+      "sensorHeightMm": 13.8,
+      "nativeWidth": 4096,
+      "nativeHeight": 2160,
+      "imageCircleMm": 28.2,
+      "modes": [
+        {
+          "id": "s35",
+          "label": "Super 35",
+          "note": "CineAlta 4K capture",
+          "resolutions": [
+            {
+              "id": "f55-4k",
+              "label": "4K · 4096 × 2160",
+              "width": 4096,
+              "height": 2160
+            },
+            {
+              "id": "f55-2k",
+              "label": "2K · 2048 × 1080",
+              "width": 2048,
+              "height": 1080
+            },
+            {
+              "id": "f55-hd",
+              "label": "Full HD · 1920 × 1080",
+              "width": 1920,
+              "height": 1080
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "f5",
+      "name": "PMW-F5",
+      "manufacturer": "SONY",
+      "sensorLabel": "2K Super 35 · CineAlta",
+      "sensorWidthMm": 24.6,
+      "sensorHeightMm": 13.8,
+      "nativeWidth": 2048,
+      "nativeHeight": 1080,
+      "imageCircleMm": 28.2,
+      "modes": [
+        {
+          "id": "s35",
+          "label": "Super 35",
+          "note": "CineAlta 2K capture",
+          "resolutions": [
+            {
+              "id": "f5-2k",
+              "label": "2K · 2048 × 1080",
+              "width": 2048,
+              "height": 1080
+            },
+            {
+              "id": "f5-hd",
+              "label": "Full HD · 1920 × 1080",
+              "width": 1920,
+              "height": 1080
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ronin4d-8k",
+      "name": "RONIN 4D · X9-8K",
+      "manufacturer": "DJI",
+      "maxSensorFps": 120,
+      "sensorLabel": "X9-8K · Full Frame",
+      "sensorWidthMm": 36,
+      "sensorHeightMm": 19,
+      "nativeWidth": 8192,
+      "nativeHeight": 4320,
+      "imageCircleMm": 40.71,
+      "modes": [
+        {
+          "id": "full-frame-17x9",
+          "label": "Full Frame 17:9",
+          "note": "8K / 4K full-frame capture",
+          "resolutions": [
+            {
+              "id": "r4d8k-8k-ff",
+              "label": "8K Full Frame · 8192 × 4320",
+              "width": 8192,
+              "height": 4320,
+              "maxSensorFps": 60
+            },
+            {
+              "id": "r4d8k-4k-ff",
+              "label": "4K Full Frame · 4096 × 2160",
+              "width": 4096,
+              "height": 2160,
+              "activeWidth": 8192,
+              "activeHeight": 4320,
+              "maxSensorFps": 120
+            }
+          ]
+        },
+        {
+          "id": "full-frame-239",
+          "label": "Full Frame 2.39:1",
+          "note": "8K scope capture",
+          "resolutions": [
+            {
+              "id": "r4d8k-8k-scope",
+              "label": "8K Scope · 8192 × 3424",
+              "width": 8192,
+              "height": 3424,
+              "maxSensorFps": 75
+            }
+          ]
+        },
+        {
+          "id": "super35-17x9",
+          "label": "Super 35 17:9",
+          "note": "5.5K / 4K crop capture",
+          "resolutions": [
+            {
+              "id": "r4d8k-55k-s35",
+              "label": "5.5K Super 35 · 5568 × 2952",
+              "width": 5568,
+              "height": 2952,
+              "maxSensorFps": 60
+            },
+            {
+              "id": "r4d8k-4k-s35",
+              "label": "4K Super 35 · 4096 × 2160",
+              "width": 4096,
+              "height": 2160,
+              "activeWidth": 5568,
+              "activeHeight": 2952,
+              "maxSensorFps": 120
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ronin4d-6k",
+      "name": "RONIN 4D · X9-6K",
+      "manufacturer": "DJI",
+      "maxSensorFps": 120,
+      "sensorLabel": "X9-6K · Full Frame",
+      "sensorWidthMm": 35.7,
+      "sensorHeightMm": 18.8,
+      "nativeWidth": 6008,
+      "nativeHeight": 3168,
+      "imageCircleMm": 40.35,
+      "modes": [
+        {
+          "id": "full-frame-17x9",
+          "label": "Full Frame 17:9",
+          "note": "6K / 4K / 2K full-frame capture",
+          "resolutions": [
+            {
+              "id": "r4d6k-6k-ff",
+              "label": "6K Full Frame · 6008 × 3168",
+              "width": 6008,
+              "height": 3168,
+              "maxSensorFps": 60
+            },
+            {
+              "id": "r4d6k-6k-crop",
+              "label": "6K Full Frame Crop · 5952 × 3136",
+              "width": 5952,
+              "height": 3136,
+              "maxSensorFps": 60
+            },
+            {
+              "id": "r4d6k-4k-ff",
+              "label": "4K Full Frame · 4096 × 2160",
+              "width": 4096,
+              "height": 2160,
+              "activeWidth": 6008,
+              "activeHeight": 3168,
+              "maxSensorFps": 120
+            },
+            {
+              "id": "r4d6k-2k-ff",
+              "label": "2K Full Frame · 2048 × 1080",
+              "width": 2048,
+              "height": 1080,
+              "activeWidth": 6008,
+              "activeHeight": 3168,
+              "maxSensorFps": 120
+            }
+          ]
+        },
+        {
+          "id": "full-frame-239",
+          "label": "Full Frame 2.39:1",
+          "note": "6K / 4K scope capture",
+          "resolutions": [
+            {
+              "id": "r4d6k-6k-scope",
+              "label": "6K Scope · 6008 × 2512",
+              "width": 6008,
+              "height": 2512,
+              "maxSensorFps": 60
+            },
+            {
+              "id": "r4d6k-4k-scope",
+              "label": "4K Scope · 4096 × 1712",
+              "width": 4096,
+              "height": 1712,
+              "activeWidth": 6008,
+              "activeHeight": 2512,
+              "maxSensorFps": 120
+            }
+          ]
+        },
+        {
+          "id": "super35-17x9",
+          "label": "Super 35 17:9",
+          "note": "4K / 2K crop capture",
+          "resolutions": [
+            {
+              "id": "r4d6k-4k-s35",
+              "label": "4K Super 35 · 4096 × 2160",
+              "width": 4096,
+              "height": 2160,
+              "maxSensorFps": 120
+            },
+            {
+              "id": "r4d6k-2k-s35",
+              "label": "2K Super 35 · 2048 × 1080",
+              "width": 2048,
+              "height": 1080,
+              "activeWidth": 4096,
+              "activeHeight": 2160,
+              "maxSensorFps": 120
+            }
+          ]
+        },
+        {
+          "id": "super35-239",
+          "label": "Super 35 2.39:1",
+          "note": "4K scope crop capture",
+          "resolutions": [
+            {
+              "id": "r4d6k-4k-scope-s35",
+              "label": "4K Super 35 Scope · 4096 × 1712",
+              "width": 4096,
+              "height": 1712,
+              "activeWidth": 4096,
+              "activeHeight": 1712,
+              "maxSensorFps": 120
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mavo-edge-8k",
+      "name": "MAVO Edge 8K",
+      "manufacturer": "KINEFINITY",
+      "maxSensorFps": 290.0,
+      "sensorLabel": "36 × 24 mm · Kinefinity",
+      "sensorWidthMm": 36,
+      "sensorHeightMm": 24,
+      "nativeWidth": 8192,
+      "nativeHeight": 5288,
+      "imageCircleMm": 43.3,
+      "supportedCodecIds": [
+        "prores-4444-xq",
+        "prores-4444",
+        "prores-422-hq",
+        "prores-422",
+        "prores-422-lt",
+        "kinefinity-dng"
+      ],
+      "modes": [
+        {
+          "id": "full-frame",
+          "label": "Full Frame",
+          "note": "KineLOG3 ProRes · Apple target-rate estimate",
+          "resolutions": [
+            {
+              "id": "mavo-edge-8k-full-frame-1",
+              "label": "FF 8K OG · 8192 × 5288",
+              "width": 8192,
+              "height": 5288,
+              "minSensorFps": 2.0,
+              "maxSensorFps": 45.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 36.0,
+              "activeHeightMm": 23.3
+            },
+            {
+              "id": "mavo-edge-8k-full-frame-2",
+              "label": "FF 8K DCI · 8192 × 4320",
+              "width": 8192,
+              "height": 4320,
+              "minSensorFps": 2.0,
+              "maxSensorFps": 55.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 36.0,
+              "activeHeightMm": 19.0
+            },
+            {
+              "id": "mavo-edge-8k-full-frame-3",
+              "label": "FF 8K 2.4:1 · 8192 × 3384",
+              "width": 8192,
+              "height": 3384,
+              "minSensorFps": 2.0,
+              "maxSensorFps": 70.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 36.0,
+              "activeHeightMm": 14.9
+            },
+            {
+              "id": "mavo-edge-8k-full-frame-4",
+              "label": "FF 8K UHD · 7680 × 4320",
+              "width": 7680,
+              "height": 4320,
+              "minSensorFps": 2.0,
+              "maxSensorFps": 55.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 33.8,
+              "activeHeightMm": 19.0
+            },
+            {
+              "id": "mavo-edge-8k-full-frame-5",
+              "label": "FF 7.6K 2.4:1 · 7680 × 3200",
+              "width": 7680,
+              "height": 3200,
+              "minSensorFps": 2.0,
+              "maxSensorFps": 72.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 33.8,
+              "activeHeightMm": 14.1
+            },
+            {
+              "id": "mavo-edge-8k-full-frame-6",
+              "label": "FF 7.2K 3:2 · 7168 × 4760",
+              "width": 7168,
+              "height": 4760,
+              "minSensorFps": 2.0,
+              "maxSensorFps": 50.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 31.5,
+              "activeHeightMm": 21.0
+            },
+            {
+              "id": "mavo-edge-8k-full-frame-7",
+              "label": "FF 6.4K 4:2 · 6400 × 4760",
+              "width": 6400,
+              "height": 4760,
+              "minSensorFps": 2.0,
+              "maxSensorFps": 50.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 28.1,
+              "activeHeightMm": 21.0
+            },
+            {
+              "id": "mavo-edge-8k-full-frame-8",
+              "label": "FF 5.7K 6:5 · 5760 × 4760",
+              "width": 5760,
+              "height": 4760,
+              "minSensorFps": 2.0,
+              "maxSensorFps": 50.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 25.3,
+              "activeHeightMm": 21.0
+            },
+            {
+              "id": "mavo-edge-8k-full-frame-9",
+              "label": "FF 4.8K 3:2 (OS) · 4864 × 3176",
+              "width": 4864,
+              "height": 3176,
+              "minSensorFps": 2.0,
+              "maxSensorFps": 50.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 31.5,
+              "activeHeightMm": 21.0
+            },
+            {
+              "id": "mavo-edge-8k-full-frame-10",
+              "label": "FF 4.2K 4:3 (OS) · 4224 × 3176",
+              "width": 4224,
+              "height": 3176,
+              "minSensorFps": 2.0,
+              "maxSensorFps": 50.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 28.1,
+              "activeHeightMm": 21.0
+            },
+            {
+              "id": "mavo-edge-8k-full-frame-11",
+              "label": "FF 4K OG (OS) · 4096 × 2644",
+              "width": 4096,
+              "height": 2644,
+              "minSensorFps": 2.0,
+              "maxSensorFps": 45.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 36.0,
+              "activeHeightMm": 23.3
+            },
+            {
+              "id": "mavo-edge-8k-full-frame-12",
+              "label": "FF 4K DCI (OS) · 4096 × 2160",
+              "width": 4096,
+              "height": 2160,
+              "minSensorFps": 2.0,
+              "maxSensorFps": 55.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 36.0,
+              "activeHeightMm": 19.0
+            },
+            {
+              "id": "mavo-edge-8k-full-frame-13",
+              "label": "FF 4K 2.4:1 (OS) · 4096 × 1692",
+              "width": 4096,
+              "height": 1692,
+              "minSensorFps": 2.0,
+              "maxSensorFps": 70.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 36.0,
+              "activeHeightMm": 14.9
+            },
+            {
+              "id": "mavo-edge-8k-full-frame-14",
+              "label": "FF 3.8K 6:5 (OS) · 3840 × 3176",
+              "width": 3840,
+              "height": 3176,
+              "minSensorFps": 2.0,
+              "maxSensorFps": 50.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 25.3,
+              "activeHeightMm": 21.0
+            },
+            {
+              "id": "mavo-edge-8k-full-frame-15",
+              "label": "FF 4K UHD (OS) · 3840 × 2160",
+              "width": 3840,
+              "height": 2160,
+              "minSensorFps": 2.0,
+              "maxSensorFps": 55.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 33.8,
+              "activeHeightMm": 19.0
+            },
+            {
+              "id": "mavo-edge-8k-full-frame-16",
+              "label": "FF 3.8K 2.4:1 (OS) · 3840 × 1600",
+              "width": 3840,
+              "height": 1600,
+              "minSensorFps": 2.0,
+              "maxSensorFps": 70.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 33.8,
+              "activeHeightMm": 14.1
+            }
+          ]
+        },
+        {
+          "id": "super35",
+          "label": "Super 35",
+          "note": "KineLOG3 ProRes · Apple target-rate estimate",
+          "resolutions": [
+            {
+              "id": "mavo-edge-8k-super35-1",
+              "label": "S35 6K 3:2 · 6144 × 3840",
+              "width": 6144,
+              "height": 3840,
+              "minSensorFps": 2.0,
+              "maxSensorFps": 60.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 27.0,
+              "activeHeightMm": 16.8
+            },
+            {
+              "id": "mavo-edge-8k-super35-2",
+              "label": "S35 6K DCI · 6144 × 3240",
+              "width": 6144,
+              "height": 3240,
+              "minSensorFps": 2.0,
+              "maxSensorFps": 72.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 27.0,
+              "activeHeightMm": 14.2
+            },
+            {
+              "id": "mavo-edge-8k-super35-3",
+              "label": "S35 6K 2.4:1 · 6144 × 2560",
+              "width": 6144,
+              "height": 2560,
+              "minSensorFps": 2.0,
+              "maxSensorFps": 92.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 27.0,
+              "activeHeightMm": 11.3
+            },
+            {
+              "id": "mavo-edge-8k-super35-4",
+              "label": "S35 6K UHD · 5760 × 3240",
+              "width": 5760,
+              "height": 3240,
+              "minSensorFps": 2.0,
+              "maxSensorFps": 72.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 25.2,
+              "activeHeightMm": 14.2
+            },
+            {
+              "id": "mavo-edge-8k-super35-5",
+              "label": "S35 5K 4:3 · 5120 × 3840",
+              "width": 5120,
+              "height": 3840,
+              "minSensorFps": 2.0,
+              "maxSensorFps": 60.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 22.5,
+              "activeHeightMm": 16.8
+            },
+            {
+              "id": "mavo-edge-8k-super35-6",
+              "label": "S35 5K DCI · 5120 × 2700",
+              "width": 5120,
+              "height": 2700,
+              "minSensorFps": 2.0,
+              "maxSensorFps": 85.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 22.5,
+              "activeHeightMm": 11.9
+            },
+            {
+              "id": "mavo-edge-8k-super35-7",
+              "label": "S35 5K 2.4:1 · 5120 × 2160",
+              "width": 5120,
+              "height": 2160,
+              "minSensorFps": 2.0,
+              "maxSensorFps": 108.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 22.5,
+              "activeHeightMm": 9.5
+            },
+            {
+              "id": "mavo-edge-8k-super35-8",
+              "label": "S35 4.8K 6:5 · 4864 × 3840",
+              "width": 4864,
+              "height": 3840,
+              "minSensorFps": 2.0,
+              "maxSensorFps": 60.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 21.4,
+              "activeHeightMm": 16.8
+            },
+            {
+              "id": "mavo-edge-8k-super35-9",
+              "label": "S35 4K 3:2 (OS) · 4096 × 2560",
+              "width": 4096,
+              "height": 2560,
+              "minSensorFps": 2.0,
+              "maxSensorFps": 60.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 27.0,
+              "activeHeightMm": 16.8
+            },
+            {
+              "id": "mavo-edge-8k-super35-10",
+              "label": "S35 4K DCI (OS) · 4096 × 2160",
+              "width": 4096,
+              "height": 2160,
+              "minSensorFps": 2.0,
+              "maxSensorFps": 72.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 27.0,
+              "activeHeightMm": 14.2
+            },
+            {
+              "id": "mavo-edge-8k-super35-11",
+              "label": "S35 4K UHD (OS) · 3840 × 2160",
+              "width": 3840,
+              "height": 2160,
+              "minSensorFps": 2.0,
+              "maxSensorFps": 72.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 25.2,
+              "activeHeightMm": 14.2
+            },
+            {
+              "id": "mavo-edge-8k-super35-12",
+              "label": "S35 3.8K 2.4:1 (OS) · 3840 × 1600",
+              "width": 3840,
+              "height": 1600,
+              "minSensorFps": 2.0,
+              "maxSensorFps": 92.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 25.2,
+              "activeHeightMm": 10.5
+            },
+            {
+              "id": "mavo-edge-8k-super35-13",
+              "label": "S35 3.4K 4:3 (OS) · 3456 × 2560",
+              "width": 3456,
+              "height": 2560,
+              "minSensorFps": 2.0,
+              "maxSensorFps": 60.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 22.5,
+              "activeHeightMm": 16.8
+            },
+            {
+              "id": "mavo-edge-8k-super35-14",
+              "label": "S35 3K 6:5 (OS) · 3072 × 2560",
+              "width": 3072,
+              "height": 2560,
+              "minSensorFps": 2.0,
+              "maxSensorFps": 60.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 21.4,
+              "activeHeightMm": 16.8
+            }
+          ]
+        },
+        {
+          "id": "crop",
+          "label": "Other Crop",
+          "note": "KineLOG3 ProRes · Apple target-rate estimate",
+          "resolutions": [
+            {
+              "id": "mavo-edge-8k-crop-1",
+              "label": "4K DCI · 4096 × 2160",
+              "width": 4096,
+              "height": 2160,
+              "minSensorFps": 2.0,
+              "maxSensorFps": 108.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ]
+            },
+            {
+              "id": "mavo-edge-8k-crop-2",
+              "label": "4K 2.4:1 · 4096 × 1692",
+              "width": 4096,
+              "height": 1692,
+              "minSensorFps": 2.0,
+              "maxSensorFps": 130.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ]
+            },
+            {
+              "id": "mavo-edge-8k-crop-3",
+              "label": "4K UHD · 3840 × 2160",
+              "width": 3840,
+              "height": 2160,
+              "minSensorFps": 2.0,
+              "maxSensorFps": 108.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ]
+            },
+            {
+              "id": "mavo-edge-8k-crop-4",
+              "label": "3.8K 2.4:1 · 3840 × 1600",
+              "width": 3840,
+              "height": 1600,
+              "minSensorFps": 2.0,
+              "maxSensorFps": 130.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ]
+            },
+            {
+              "id": "mavo-edge-8k-crop-5",
+              "label": "3K DCI · 3072 × 1620",
+              "width": 3072,
+              "height": 1620,
+              "minSensorFps": 2.0,
+              "maxSensorFps": 144.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ]
+            },
+            {
+              "id": "mavo-edge-8k-crop-6",
+              "label": "3K 2.4:1 · 3072 × 1200",
+              "width": 3072,
+              "height": 1200,
+              "minSensorFps": 2.0,
+              "maxSensorFps": 195.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ]
+            },
+            {
+              "id": "mavo-edge-8k-crop-7",
+              "label": "2K DCI · 2048 × 1080",
+              "width": 2048,
+              "height": 1080,
+              "minSensorFps": 2.0,
+              "maxSensorFps": 200.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ]
+            },
+            {
+              "id": "mavo-edge-8k-crop-8",
+              "label": "2K 2.4:1 · 2048 × 860",
+              "width": 2048,
+              "height": 860,
+              "minSensorFps": 2.0,
+              "maxSensorFps": 270.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ]
+            },
+            {
+              "id": "mavo-edge-8k-crop-9",
+              "label": "2K FHD · 1920 × 1080",
+              "width": 1920,
+              "height": 1080,
+              "minSensorFps": 2.0,
+              "maxSensorFps": 220.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ]
+            },
+            {
+              "id": "mavo-edge-8k-crop-10",
+              "label": "1.9K 2.4:1 · 1920 × 800",
+              "width": 1920,
+              "height": 800,
+              "minSensorFps": 2.0,
+              "maxSensorFps": 290.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "raw-kineos8",
+          "label": "RAW · KineOS 8.0",
+          "note": "KineOS 8.0 required · 12-bit uncompressed DNG · video payload estimate",
+          "resolutions": [
+            {
+              "id": "mavo-edge-8k-raw-1",
+              "label": "FF 4K OG (OS) · 4096 × 2644",
+              "width": 4096,
+              "height": 2644,
+              "activeWidthMm": 36,
+              "activeHeightMm": 23.3,
+              "minSensorFps": 2,
+              "maxSensorFps": 45,
+              "supportedCodecIds": [
+                "kinefinity-dng"
+              ]
+            },
+            {
+              "id": "mavo-edge-8k-raw-2",
+              "label": "FF 4K DCI (OS) · 4096 × 2160",
+              "width": 4096,
+              "height": 2160,
+              "activeWidthMm": 36,
+              "activeHeightMm": 19,
+              "minSensorFps": 2,
+              "maxSensorFps": 55,
+              "supportedCodecIds": [
+                "kinefinity-dng"
+              ]
+            },
+            {
+              "id": "mavo-edge-8k-raw-3",
+              "label": "FF 4K UHD (OS) · 3840 × 2160",
+              "width": 3840,
+              "height": 2160,
+              "activeWidthMm": 33.8,
+              "activeHeightMm": 19,
+              "minSensorFps": 2,
+              "maxSensorFps": 55,
+              "supportedCodecIds": [
+                "kinefinity-dng"
+              ]
+            },
+            {
+              "id": "mavo-edge-8k-raw-4",
+              "label": "S35 4K DCI (OS) · 4096 × 2160",
+              "width": 4096,
+              "height": 2160,
+              "activeWidthMm": 27,
+              "activeHeightMm": 14.2,
+              "minSensorFps": 2,
+              "maxSensorFps": 72,
+              "supportedCodecIds": [
+                "kinefinity-dng"
+              ]
+            },
+            {
+              "id": "mavo-edge-8k-raw-5",
+              "label": "S35 4K UHD (OS) · 3840 × 2160",
+              "width": 3840,
+              "height": 2160,
+              "activeWidthMm": 25.2,
+              "activeHeightMm": 14.2,
+              "minSensorFps": 2,
+              "maxSensorFps": 72,
+              "supportedCodecIds": [
+                "kinefinity-dng"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mavo-edge-6k",
+      "name": "MAVO Edge 6K",
+      "manufacturer": "KINEFINITY",
+      "maxSensorFps": 290.0,
+      "sensorLabel": "36 × 24 mm · Kinefinity",
+      "sensorWidthMm": 36,
+      "sensorHeightMm": 24,
+      "nativeWidth": 6016,
+      "nativeHeight": 3984,
+      "imageCircleMm": 43.3,
+      "supportedCodecIds": [
+        "prores-4444-xq",
+        "prores-4444",
+        "prores-422-hq",
+        "prores-422",
+        "prores-422-lt",
+        "kinefinity-dng"
+      ],
+      "modes": [
+        {
+          "id": "full-frame",
+          "label": "Full Frame",
+          "note": "KineLOG3 ProRes · Apple target-rate estimate",
+          "resolutions": [
+            {
+              "id": "mavo-edge-6k-full-frame-1",
+              "label": "FF 6K OG · 6016 × 3984",
+              "width": 6016,
+              "height": 3984,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 48.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 36.0,
+              "activeHeightMm": 24.0
+            },
+            {
+              "id": "mavo-edge-6k-full-frame-2",
+              "label": "FF 6K 17:9 · 6016 × 3172",
+              "width": 6016,
+              "height": 3172,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 60.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 36.0,
+              "activeHeightMm": 19.1
+            },
+            {
+              "id": "mavo-edge-6k-full-frame-3",
+              "label": "FF 6K 2.4:1 · 6016 × 2520",
+              "width": 6016,
+              "height": 2520,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 75.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 36.0,
+              "activeHeightMm": 15.2
+            },
+            {
+              "id": "mavo-edge-6k-full-frame-4",
+              "label": "FF 5.7K 3:2 · 5760 × 3700",
+              "width": 5760,
+              "height": 3700,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 50.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 34.5,
+              "activeHeightMm": 22.2
+            },
+            {
+              "id": "mavo-edge-6k-full-frame-5",
+              "label": "FF 6K UHD · 5760 × 3240",
+              "width": 5760,
+              "height": 3240,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 58.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 34.5,
+              "activeHeightMm": 19.5
+            },
+            {
+              "id": "mavo-edge-6k-full-frame-6",
+              "label": "FF 5.7K 2.4:1 · 5760 × 2400",
+              "width": 5760,
+              "height": 2400,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 75.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 34.5,
+              "activeHeightMm": 14.4
+            },
+            {
+              "id": "mavo-edge-6k-full-frame-7",
+              "label": "FF 5K 4:3 · 5120 × 3700",
+              "width": 5120,
+              "height": 3700,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 50.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 30.6,
+              "activeHeightMm": 22.3
+            },
+            {
+              "id": "mavo-edge-6k-full-frame-8",
+              "label": "FF 5K DCI · 5120 × 2700",
+              "width": 5120,
+              "height": 2700,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 70.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 30.6,
+              "activeHeightMm": 16.2
+            },
+            {
+              "id": "mavo-edge-6k-full-frame-9",
+              "label": "FF 5K 2.4:1 · 5120 × 2160",
+              "width": 5120,
+              "height": 2160,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 86.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 30.6,
+              "activeHeightMm": 12.9
+            },
+            {
+              "id": "mavo-edge-6k-full-frame-10",
+              "label": "FF 4.6K 6:5 · 4608 × 3700",
+              "width": 4608,
+              "height": 3700,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 50.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 27.6,
+              "activeHeightMm": 22.3
+            },
+            {
+              "id": "mavo-edge-6k-full-frame-11",
+              "label": "FF 3.8K 3:2 (OS) · 3840 × 2460",
+              "width": 3840,
+              "height": 2460,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 50.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 34.5,
+              "activeHeightMm": 22.2
+            },
+            {
+              "id": "mavo-edge-6k-full-frame-12",
+              "label": "FF 4K UHD (OS) · 3840 × 2160",
+              "width": 3840,
+              "height": 2160,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 58.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 34.5,
+              "activeHeightMm": 19.5
+            },
+            {
+              "id": "mavo-edge-6k-full-frame-13",
+              "label": "FF 3.8K 2.4:1 (OS) · 3840 × 1600",
+              "width": 3840,
+              "height": 1600,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 75.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 34.5,
+              "activeHeightMm": 14.4
+            },
+            {
+              "id": "mavo-edge-6k-full-frame-14",
+              "label": "FF 3.4K 4:3 (OS) · 3456 × 2460",
+              "width": 3456,
+              "height": 2460,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 50.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 31.0,
+              "activeHeightMm": 22.1
+            },
+            {
+              "id": "mavo-edge-6k-full-frame-15",
+              "label": "FF 3K 6:5 (OS) · 3072 × 2460",
+              "width": 3072,
+              "height": 2460,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 50.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 27.6,
+              "activeHeightMm": 22.1
+            }
+          ]
+        },
+        {
+          "id": "super35",
+          "label": "Super 35",
+          "note": "KineLOG3 ProRes · Apple target-rate estimate",
+          "resolutions": [
+            {
+              "id": "mavo-edge-6k-super35-1",
+              "label": "S35 4K 3:2 · 4096 × 2700",
+              "width": 4096,
+              "height": 2700,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 70.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 24.5,
+              "activeHeightMm": 16.1
+            },
+            {
+              "id": "mavo-edge-6k-super35-2",
+              "label": "S35 4K DCI · 4096 × 2160",
+              "width": 4096,
+              "height": 2160,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 112.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 24.5,
+              "activeHeightMm": 12.9
+            },
+            {
+              "id": "mavo-edge-6k-super35-3",
+              "label": "S35 4K 2.4:1 · 4096 × 1720",
+              "width": 4096,
+              "height": 1720,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 140.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 24.5,
+              "activeHeightMm": 10.3
+            },
+            {
+              "id": "mavo-edge-6k-super35-4",
+              "label": "S35 4K UHD · 3840 × 2160",
+              "width": 3840,
+              "height": 2160,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 112.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 23.0,
+              "activeHeightMm": 12.9
+            },
+            {
+              "id": "mavo-edge-6k-super35-5",
+              "label": "S35 3.8K 2.4:1 · 3840 × 1600",
+              "width": 3840,
+              "height": 1600,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 150.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 23.0,
+              "activeHeightMm": 9.6
+            },
+            {
+              "id": "mavo-edge-6k-super35-6",
+              "label": "S35 3.6K 4:3 · 3712 × 2700",
+              "width": 3712,
+              "height": 2700,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 70.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 22.2,
+              "activeHeightMm": 16.1
+            },
+            {
+              "id": "mavo-edge-6k-super35-7",
+              "label": "S35 3.2K 6:5 · 3328 × 2700",
+              "width": 3328,
+              "height": 2700,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 70.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 19.9,
+              "activeHeightMm": 16.1
+            },
+            {
+              "id": "mavo-edge-6k-super35-8",
+              "label": "S35 2.7K 1:1 · 2688 × 2688",
+              "width": 2688,
+              "height": 2688,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 70.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 16.1,
+              "activeHeightMm": 16.1
+            },
+            {
+              "id": "mavo-edge-6k-super35-9",
+              "label": "S35 2K DCI (OS) · 2048 × 1080",
+              "width": 2048,
+              "height": 1080,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 112.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 24.5,
+              "activeHeightMm": 12.9
+            },
+            {
+              "id": "mavo-edge-6k-super35-10",
+              "label": "S35 2K 2.4:1 (OS) · 2048 × 860",
+              "width": 2048,
+              "height": 860,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 140.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 24.5,
+              "activeHeightMm": 10.3
+            },
+            {
+              "id": "mavo-edge-6k-super35-11",
+              "label": "S35 2K FHD (OS) · 1920 × 1080",
+              "width": 1920,
+              "height": 1080,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 112.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 23.0,
+              "activeHeightMm": 12.9
+            },
+            {
+              "id": "mavo-edge-6k-super35-12",
+              "label": "S35 1.9K 2.4:1 (OS) · 1920 × 800",
+              "width": 1920,
+              "height": 800,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 140.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 23.0,
+              "activeHeightMm": 9.6
+            }
+          ]
+        },
+        {
+          "id": "crop",
+          "label": "Other Crop",
+          "note": "KineLOG3 ProRes · Apple target-rate estimate",
+          "resolutions": [
+            {
+              "id": "mavo-edge-6k-crop-1",
+              "label": "3K DCI · 3072 × 1620",
+              "width": 3072,
+              "height": 1620,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 144.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ]
+            },
+            {
+              "id": "mavo-edge-6k-crop-2",
+              "label": "3K 2.4:1 · 3072 × 1200",
+              "width": 3072,
+              "height": 1200,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 195.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ]
+            },
+            {
+              "id": "mavo-edge-6k-crop-3",
+              "label": "3K HD · 2944 × 1620",
+              "width": 2944,
+              "height": 1620,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 145.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ]
+            },
+            {
+              "id": "mavo-edge-6k-crop-4",
+              "label": "3K HD 2.4:1 · 2944 × 1200",
+              "width": 2944,
+              "height": 1200,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 195.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ]
+            },
+            {
+              "id": "mavo-edge-6k-crop-5",
+              "label": "2K DCI · 2048 × 1080",
+              "width": 2048,
+              "height": 1080,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 200.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ]
+            },
+            {
+              "id": "mavo-edge-6k-crop-6",
+              "label": "2K 2.4:1 · 2048 × 860",
+              "width": 2048,
+              "height": 860,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 270.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ]
+            },
+            {
+              "id": "mavo-edge-6k-crop-7",
+              "label": "2K FHD · 1920 × 1080",
+              "width": 1920,
+              "height": 1080,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 220.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ]
+            },
+            {
+              "id": "mavo-edge-6k-crop-8",
+              "label": "1.9K 2.4:1 · 1920 × 800",
+              "width": 1920,
+              "height": 800,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 290.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "raw-kineos8",
+          "label": "RAW · KineOS 8.0",
+          "note": "KineOS 8.0 required · 12-bit uncompressed DNG · video payload estimate",
+          "resolutions": [
+            {
+              "id": "mavo-edge-6k-raw-1",
+              "label": "FF 4K UHD (OS) · 3840 × 2160",
+              "width": 3840,
+              "height": 2160,
+              "activeWidthMm": 34.5,
+              "activeHeightMm": 19.4,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 58,
+              "supportedCodecIds": [
+                "kinefinity-dng"
+              ]
+            },
+            {
+              "id": "mavo-edge-6k-raw-2",
+              "label": "S35 4K DCI · 4096 × 2160",
+              "width": 4096,
+              "height": 2160,
+              "activeWidthMm": 24.5,
+              "activeHeightMm": 12.9,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 112,
+              "supportedCodecIds": [
+                "kinefinity-dng"
+              ]
+            },
+            {
+              "id": "mavo-edge-6k-raw-3",
+              "label": "S35 4K UHD · 3840 × 2160",
+              "width": 3840,
+              "height": 2160,
+              "activeWidthMm": 23,
+              "activeHeightMm": 12.9,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 112,
+              "supportedCodecIds": [
+                "kinefinity-dng"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mavo-mark2-s35",
+      "name": "MAVO mark2 S35",
+      "manufacturer": "KINEFINITY",
+      "maxSensorFps": 270.0,
+      "sensorLabel": "24 × 16 mm · Kinefinity",
+      "sensorWidthMm": 24,
+      "sensorHeightMm": 16,
+      "nativeWidth": 6144,
+      "nativeHeight": 4016,
+      "imageCircleMm": 28.8,
+      "supportedCodecIds": [
+        "prores-4444-xq",
+        "prores-4444",
+        "prores-422-hq",
+        "prores-422",
+        "prores-422-lt",
+        "kinefinity-dng"
+      ],
+      "modes": [
+        {
+          "id": "super35",
+          "label": "Super 35",
+          "note": "KineLOG3 ProRes · Apple target-rate estimate",
+          "resolutions": [
+            {
+              "id": "mavo-mark2-s35-super35-1",
+              "label": "S35 6K OG · 6144 × 4016",
+              "width": 6144,
+              "height": 4016,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 60.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 24.0,
+              "activeHeightMm": 16.0
+            },
+            {
+              "id": "mavo-mark2-s35-super35-2",
+              "label": "S35 6K DCI · 6144 × 3240",
+              "width": 6144,
+              "height": 3240,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 75.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 24.0,
+              "activeHeightMm": 12.9
+            },
+            {
+              "id": "mavo-mark2-s35-super35-3",
+              "label": "S35 6K 2.4:1 · 6144 × 2516",
+              "width": 6144,
+              "height": 2516,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 96.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 24.0,
+              "activeHeightMm": 10.0
+            },
+            {
+              "id": "mavo-mark2-s35-super35-4",
+              "label": "S35 6K UHD · 5760 × 3240",
+              "width": 5760,
+              "height": 3240,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 75.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 22.5,
+              "activeHeightMm": 12.9
+            },
+            {
+              "id": "mavo-mark2-s35-super35-5",
+              "label": "S35 5K 17:9 · 5120 × 2700",
+              "width": 5120,
+              "height": 2700,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 90.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 20.0,
+              "activeHeightMm": 10.8
+            },
+            {
+              "id": "mavo-mark2-s35-super35-6",
+              "label": "S35 5.7K 3:2 · 5760 × 3840",
+              "width": 5760,
+              "height": 3840,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 60.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 22.5,
+              "activeHeightMm": 15.3
+            },
+            {
+              "id": "mavo-mark2-s35-super35-7",
+              "label": "S35 5K 4:3 · 5120 × 3840",
+              "width": 5120,
+              "height": 3840,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 60.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 20.0,
+              "activeHeightMm": 15.3
+            },
+            {
+              "id": "mavo-mark2-s35-super35-8",
+              "label": "S35 4.8K 6:5 · 4864 × 3840",
+              "width": 4864,
+              "height": 3840,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 60.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 19.0,
+              "activeHeightMm": 15.3
+            },
+            {
+              "id": "mavo-mark2-s35-super35-9",
+              "label": "S35 4K DCI (OS) · 4096 × 2160",
+              "width": 4096,
+              "height": 2160,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 75.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 24.0,
+              "activeHeightMm": 12.9
+            },
+            {
+              "id": "mavo-mark2-s35-super35-10",
+              "label": "S35 4K 2.4:1 (OS) · 4096 × 1672",
+              "width": 4096,
+              "height": 1672,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 96.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 24.0,
+              "activeHeightMm": 10.0
+            },
+            {
+              "id": "mavo-mark2-s35-super35-11",
+              "label": "S35 3.8K 3:2 (OS) · 3840 × 2460",
+              "width": 3840,
+              "height": 2460,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 60.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 22.5,
+              "activeHeightMm": 15.3
+            },
+            {
+              "id": "mavo-mark2-s35-super35-12",
+              "label": "S35 4K UHD (OS) · 3840 × 2160",
+              "width": 3840,
+              "height": 2160,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 75.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 22.5,
+              "activeHeightMm": 12.9
+            },
+            {
+              "id": "mavo-mark2-s35-super35-13",
+              "label": "S35 3.8K 2.4:1 (OS) · 3840 × 1576",
+              "width": 3840,
+              "height": 1576,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 96.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 24.0,
+              "activeHeightMm": 10.0
+            },
+            {
+              "id": "mavo-mark2-s35-super35-14",
+              "label": "S35 3.4K 4:3 (OS) · 3456 × 2460",
+              "width": 3456,
+              "height": 2460,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 60.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 20.0,
+              "activeHeightMm": 15.3
+            },
+            {
+              "id": "mavo-mark2-s35-super35-15",
+              "label": "S35 3K 6:5 (OS) · 3072 × 2460",
+              "width": 3072,
+              "height": 2460,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 60.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 19.0,
+              "activeHeightMm": 15.3
+            }
+          ]
+        },
+        {
+          "id": "m43",
+          "label": "M43 Crop",
+          "note": "KineLOG3 ProRes · Apple target-rate estimate",
+          "resolutions": [
+            {
+              "id": "mavo-mark2-s35-m43-1",
+              "label": "M43 4K DCI · 4096 × 2160",
+              "width": 4096,
+              "height": 2160,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 110.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 16.0,
+              "activeHeightMm": 8.6
+            },
+            {
+              "id": "mavo-mark2-s35-m43-2",
+              "label": "M43 4K 2.4:1 · 4096 × 1672",
+              "width": 4096,
+              "height": 1672,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 140.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 16.0,
+              "activeHeightMm": 6.8
+            },
+            {
+              "id": "mavo-mark2-s35-m43-3",
+              "label": "M43 4K UHD · 3840 × 2160",
+              "width": 3840,
+              "height": 2160,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 110.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 15.0,
+              "activeHeightMm": 8.6
+            },
+            {
+              "id": "mavo-mark2-s35-m43-4",
+              "label": "M43 3.8K 2.4:1 · 3840 × 1576",
+              "width": 3840,
+              "height": 1576,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 150.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 15.0,
+              "activeHeightMm": 6.4
+            },
+            {
+              "id": "mavo-mark2-s35-m43-5",
+              "label": "M43 4K 4:3 · 4096 × 3072",
+              "width": 4096,
+              "height": 3072,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 75.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 16.0,
+              "activeHeightMm": 12.2
+            },
+            {
+              "id": "mavo-mark2-s35-m43-6",
+              "label": "M43 2K DCI (OS) · 2048 × 1080",
+              "width": 2048,
+              "height": 1080,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 110.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 16.0,
+              "activeHeightMm": 8.6
+            },
+            {
+              "id": "mavo-mark2-s35-m43-7",
+              "label": "M43 2K 2.4:1 (OS) · 2048 × 832",
+              "width": 2048,
+              "height": 832,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 140.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 16.0,
+              "activeHeightMm": 6.8
+            },
+            {
+              "id": "mavo-mark2-s35-m43-8",
+              "label": "M43 2K FHD (OS) · 1920 × 1080",
+              "width": 1920,
+              "height": 1080,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 110.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 15.0,
+              "activeHeightMm": 8.6
+            },
+            {
+              "id": "mavo-mark2-s35-m43-9",
+              "label": "M43 1.9K 2.4:1 (OS) · 1920 × 784",
+              "width": 1920,
+              "height": 784,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 150.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 15.0,
+              "activeHeightMm": 6.4
+            }
+          ]
+        },
+        {
+          "id": "super16",
+          "label": "Super 16 Crop",
+          "note": "KineLOG3 ProRes · Apple target-rate estimate",
+          "resolutions": [
+            {
+              "id": "mavo-mark2-s35-super16-1",
+              "label": "S16 2K DCI · 2048 × 1080",
+              "width": 2048,
+              "height": 1080,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 220.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 8.0,
+              "activeHeightMm": 4.3
+            },
+            {
+              "id": "mavo-mark2-s35-super16-2",
+              "label": "S16 2K 2.4:1 · 2048 × 832",
+              "width": 2048,
+              "height": 832,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 270.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 8.0,
+              "activeHeightMm": 3.4
+            },
+            {
+              "id": "mavo-mark2-s35-super16-3",
+              "label": "S16 2K FHD · 1920 × 1080",
+              "width": 1920,
+              "height": 1080,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 218.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 7.5,
+              "activeHeightMm": 4.3
+            },
+            {
+              "id": "mavo-mark2-s35-super16-4",
+              "label": "S16 1.9K 2.4:1 · 1920 × 784",
+              "width": 1920,
+              "height": 784,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 270.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 7.5,
+              "activeHeightMm": 3.2
+            }
+          ]
+        },
+        {
+          "id": "raw-kineos8",
+          "label": "RAW · KineOS 8.0",
+          "note": "KineOS 8.0 required · 12-bit uncompressed DNG · video payload estimate",
+          "resolutions": [
+            {
+              "id": "mavo-mark2-s35-raw-1",
+              "label": "S35 4K UHD (OS) · 3840 × 2160",
+              "width": 3840,
+              "height": 2160,
+              "activeWidthMm": 22.5,
+              "activeHeightMm": 12.9,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 75,
+              "supportedCodecIds": [
+                "kinefinity-dng"
+              ]
+            },
+            {
+              "id": "mavo-mark2-s35-raw-2",
+              "label": "M43 4K DCI · 4096 × 2160",
+              "width": 4096,
+              "height": 2160,
+              "activeWidthMm": 16,
+              "activeHeightMm": 8.6,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 112,
+              "supportedCodecIds": [
+                "kinefinity-dng"
+              ]
+            },
+            {
+              "id": "mavo-mark2-s35-raw-3",
+              "label": "M43 4K UHD · 3840 × 2160",
+              "width": 3840,
+              "height": 2160,
+              "activeWidthMm": 15,
+              "activeHeightMm": 8.6,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 112,
+              "supportedCodecIds": [
+                "kinefinity-dng"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mavo-mark2-lf",
+      "name": "MAVO mark2 LF",
+      "manufacturer": "KINEFINITY",
+      "maxSensorFps": 290.0,
+      "sensorLabel": "36 × 24 mm · Kinefinity",
+      "sensorWidthMm": 36,
+      "sensorHeightMm": 24,
+      "nativeWidth": 6016,
+      "nativeHeight": 3984,
+      "imageCircleMm": 43.3,
+      "supportedCodecIds": [
+        "prores-4444-xq",
+        "prores-4444",
+        "prores-422-hq",
+        "prores-422",
+        "prores-422-lt",
+        "kinefinity-dng"
+      ],
+      "modes": [
+        {
+          "id": "full-frame",
+          "label": "Full Frame",
+          "note": "KineLOG3 ProRes · Apple target-rate estimate",
+          "resolutions": [
+            {
+              "id": "mavo-mark2-lf-full-frame-1",
+              "label": "FF 6K OG · 6016 × 3984",
+              "width": 6016,
+              "height": 3984,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 48.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 36.0,
+              "activeHeightMm": 24.0
+            },
+            {
+              "id": "mavo-mark2-lf-full-frame-2",
+              "label": "FF 6K 17:9 · 6016 × 3172",
+              "width": 6016,
+              "height": 3172,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 60.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 36.0,
+              "activeHeightMm": 19.1
+            },
+            {
+              "id": "mavo-mark2-lf-full-frame-3",
+              "label": "FF 6K 2.4:1 · 6016 × 2520",
+              "width": 6016,
+              "height": 2520,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 75.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 36.0,
+              "activeHeightMm": 15.2
+            },
+            {
+              "id": "mavo-mark2-lf-full-frame-4",
+              "label": "FF 5.7K 3:2 · 5760 × 3700",
+              "width": 5760,
+              "height": 3700,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 50.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 34.5,
+              "activeHeightMm": 22.2
+            },
+            {
+              "id": "mavo-mark2-lf-full-frame-5",
+              "label": "FF 6K UHD · 5760 × 3240",
+              "width": 5760,
+              "height": 3240,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 58.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 34.5,
+              "activeHeightMm": 19.5
+            },
+            {
+              "id": "mavo-mark2-lf-full-frame-6",
+              "label": "FF 5.7K 2.4:1 · 5760 × 2400",
+              "width": 5760,
+              "height": 2400,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 75.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 34.5,
+              "activeHeightMm": 14.4
+            },
+            {
+              "id": "mavo-mark2-lf-full-frame-7",
+              "label": "FF 5K 4:3 · 5120 × 3700",
+              "width": 5120,
+              "height": 3700,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 50.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 30.6,
+              "activeHeightMm": 22.3
+            },
+            {
+              "id": "mavo-mark2-lf-full-frame-8",
+              "label": "FF 5K DCI · 5120 × 2700",
+              "width": 5120,
+              "height": 2700,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 70.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 30.6,
+              "activeHeightMm": 16.2
+            },
+            {
+              "id": "mavo-mark2-lf-full-frame-9",
+              "label": "FF 5K 2.4:1 · 5120 × 2160",
+              "width": 5120,
+              "height": 2160,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 86.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 30.6,
+              "activeHeightMm": 12.9
+            },
+            {
+              "id": "mavo-mark2-lf-full-frame-10",
+              "label": "FF 4.6K 6:5 · 4608 × 3700",
+              "width": 4608,
+              "height": 3700,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 50.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 27.6,
+              "activeHeightMm": 22.3
+            },
+            {
+              "id": "mavo-mark2-lf-full-frame-11",
+              "label": "FF 3.8K 3:2 (OS) · 3840 × 2460",
+              "width": 3840,
+              "height": 2460,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 50.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 34.5,
+              "activeHeightMm": 22.2
+            },
+            {
+              "id": "mavo-mark2-lf-full-frame-12",
+              "label": "FF 4K UHD (OS) · 3840 × 2160",
+              "width": 3840,
+              "height": 2160,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 58.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 34.5,
+              "activeHeightMm": 19.5
+            },
+            {
+              "id": "mavo-mark2-lf-full-frame-13",
+              "label": "FF 3.8K 2.4:1 (OS) · 3840 × 1600",
+              "width": 3840,
+              "height": 1600,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 75.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 34.5,
+              "activeHeightMm": 14.4
+            },
+            {
+              "id": "mavo-mark2-lf-full-frame-14",
+              "label": "FF 3.4K 4:3 (OS) · 3456 × 2460",
+              "width": 3456,
+              "height": 2460,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 50.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 31.0,
+              "activeHeightMm": 22.1
+            },
+            {
+              "id": "mavo-mark2-lf-full-frame-15",
+              "label": "FF 3K 6:5 (OS) · 3072 × 2460",
+              "width": 3072,
+              "height": 2460,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 50.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 27.6,
+              "activeHeightMm": 22.3
+            }
+          ]
+        },
+        {
+          "id": "super35",
+          "label": "Super 35",
+          "note": "KineLOG3 ProRes · Apple target-rate estimate",
+          "resolutions": [
+            {
+              "id": "mavo-mark2-lf-super35-1",
+              "label": "S35 4K 3:2 · 4096 × 2700",
+              "width": 4096,
+              "height": 2700,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 70.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 24.5,
+              "activeHeightMm": 16.1
+            },
+            {
+              "id": "mavo-mark2-lf-super35-2",
+              "label": "S35 4K DCI · 4096 × 2160",
+              "width": 4096,
+              "height": 2160,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 112.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 24.5,
+              "activeHeightMm": 12.9
+            },
+            {
+              "id": "mavo-mark2-lf-super35-3",
+              "label": "S35 4K 2.4:1 · 4096 × 1720",
+              "width": 4096,
+              "height": 1720,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 140.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 24.5,
+              "activeHeightMm": 10.3
+            },
+            {
+              "id": "mavo-mark2-lf-super35-4",
+              "label": "S35 4K UHD · 3840 × 2160",
+              "width": 3840,
+              "height": 2160,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 112.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 23.0,
+              "activeHeightMm": 12.9
+            },
+            {
+              "id": "mavo-mark2-lf-super35-5",
+              "label": "S35 3.8K 2.4:1 · 3840 × 1600",
+              "width": 3840,
+              "height": 1600,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 150.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 23.0,
+              "activeHeightMm": 9.6
+            },
+            {
+              "id": "mavo-mark2-lf-super35-6",
+              "label": "S35 3.6K 4:3 · 3712 × 2700",
+              "width": 3712,
+              "height": 2700,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 70.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 22.2,
+              "activeHeightMm": 16.1
+            },
+            {
+              "id": "mavo-mark2-lf-super35-7",
+              "label": "S35 3.2K 6:5 · 3328 × 2700",
+              "width": 3328,
+              "height": 2700,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 70.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 19.9,
+              "activeHeightMm": 16.1
+            },
+            {
+              "id": "mavo-mark2-lf-super35-8",
+              "label": "S35 2.7K 1:1 · 2688 × 2688",
+              "width": 2688,
+              "height": 2688,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 70.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 16.1,
+              "activeHeightMm": 16.1
+            },
+            {
+              "id": "mavo-mark2-lf-super35-9",
+              "label": "S35 2K DCI (OS) · 2048 × 1080",
+              "width": 2048,
+              "height": 1080,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 112.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 24.5,
+              "activeHeightMm": 12.9
+            },
+            {
+              "id": "mavo-mark2-lf-super35-10",
+              "label": "S35 2K 2.4:1 (OS) · 2048 × 860",
+              "width": 2048,
+              "height": 860,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 140.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 24.5,
+              "activeHeightMm": 10.3
+            },
+            {
+              "id": "mavo-mark2-lf-super35-11",
+              "label": "S35 2K FHD (OS) · 1920 × 1080",
+              "width": 1920,
+              "height": 1080,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 112.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 23.0,
+              "activeHeightMm": 12.9
+            },
+            {
+              "id": "mavo-mark2-lf-super35-12",
+              "label": "S35 1.9K 2.4:1 (OS) · 1920 × 800",
+              "width": 1920,
+              "height": 800,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 140.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 23.0,
+              "activeHeightMm": 9.6
+            }
+          ]
+        },
+        {
+          "id": "crop",
+          "label": "Other Crop",
+          "note": "KineLOG3 ProRes · Apple target-rate estimate",
+          "resolutions": [
+            {
+              "id": "mavo-mark2-lf-crop-1",
+              "label": "3K DCI · 3072 × 1620",
+              "width": 3072,
+              "height": 1620,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 144.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ]
+            },
+            {
+              "id": "mavo-mark2-lf-crop-2",
+              "label": "3K 2.4:1 · 3072 × 1200",
+              "width": 3072,
+              "height": 1200,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 195.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ]
+            },
+            {
+              "id": "mavo-mark2-lf-crop-3",
+              "label": "3K HD · 2944 × 1620",
+              "width": 2944,
+              "height": 1620,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 145.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ]
+            },
+            {
+              "id": "mavo-mark2-lf-crop-4",
+              "label": "3K HD 2.4:1 · 2944 × 1200",
+              "width": 2944,
+              "height": 1200,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 195.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ]
+            },
+            {
+              "id": "mavo-mark2-lf-crop-5",
+              "label": "2K DCI · 2048 × 1080",
+              "width": 2048,
+              "height": 1080,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 200.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ]
+            },
+            {
+              "id": "mavo-mark2-lf-crop-6",
+              "label": "2K 2.4:1 · 2048 × 860",
+              "width": 2048,
+              "height": 860,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 270.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ]
+            },
+            {
+              "id": "mavo-mark2-lf-crop-7",
+              "label": "2K FHD · 1920 × 1080",
+              "width": 1920,
+              "height": 1080,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 220.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ]
+            },
+            {
+              "id": "mavo-mark2-lf-crop-8",
+              "label": "1.9K 2.4:1 · 1920 × 800",
+              "width": 1920,
+              "height": 800,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 290.0,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "raw-kineos8",
+          "label": "RAW · KineOS 8.0",
+          "note": "KineOS 8.0 required · 12-bit uncompressed DNG · video payload estimate",
+          "resolutions": [
+            {
+              "id": "mavo-mark2-lf-raw-1",
+              "label": "FF 4K UHD (OS) · 3840 × 2160",
+              "width": 3840,
+              "height": 2160,
+              "activeWidthMm": 34.5,
+              "activeHeightMm": 19.4,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 58,
+              "supportedCodecIds": [
+                "kinefinity-dng"
+              ]
+            },
+            {
+              "id": "mavo-mark2-lf-raw-2",
+              "label": "S35 4K DCI · 4096 × 2160",
+              "width": 4096,
+              "height": 2160,
+              "activeWidthMm": 24.5,
+              "activeHeightMm": 12.9,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 112,
+              "supportedCodecIds": [
+                "kinefinity-dng"
+              ]
+            },
+            {
+              "id": "mavo-mark2-lf-raw-3",
+              "label": "S35 4K UHD · 3840 × 2160",
+              "width": 3840,
+              "height": 2160,
+              "activeWidthMm": 23,
+              "activeHeightMm": 12.9,
+              "minSensorFps": 0.2,
+              "maxSensorFps": 112,
+              "supportedCodecIds": [
+                "kinefinity-dng"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "vista",
+      "name": "VISTA",
+      "manufacturer": "KINEFINITY",
+      "maxSensorFps": 200.0,
+      "sensorLabel": "36 × 24 mm · Kinefinity",
+      "sensorWidthMm": 36,
+      "sensorHeightMm": 24,
+      "nativeWidth": 6016,
+      "nativeHeight": 3984,
+      "imageCircleMm": 43.3,
+      "supportedCodecIds": [
+        "prores-422-hq",
+        "prores-422",
+        "prores-422-lt"
+      ],
+      "modes": [
+        {
+          "id": "full-frame",
+          "label": "Full Frame",
+          "note": "KineLOG3 ProRes · Apple target-rate estimate",
+          "resolutions": [
+            {
+              "id": "vista-full-frame-1",
+              "label": "6K OG · 6016 × 3984",
+              "width": 6016,
+              "height": 3984,
+              "minSensorFps": 5.0,
+              "maxSensorFps": 39.0,
+              "supportedCodecIds": [
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 36.0,
+              "activeHeightMm": 24.0
+            },
+            {
+              "id": "vista-full-frame-2",
+              "label": "6K 17:9 · 6016 × 3172",
+              "width": 6016,
+              "height": 3172,
+              "minSensorFps": 5.0,
+              "maxSensorFps": 50.0,
+              "supportedCodecIds": [
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 36.0,
+              "activeHeightMm": 19.1
+            },
+            {
+              "id": "vista-full-frame-3",
+              "label": "6K 2.4:1 · 6016 × 2520",
+              "width": 6016,
+              "height": 2520,
+              "minSensorFps": 5.0,
+              "maxSensorFps": 60.0,
+              "supportedCodecIds": [
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 36.0,
+              "activeHeightMm": 15.2
+            },
+            {
+              "id": "vista-full-frame-4",
+              "label": "4K OG (Oversampling) · 3840 × 2464",
+              "width": 3840,
+              "height": 2464,
+              "minSensorFps": 5.0,
+              "maxSensorFps": 39.0,
+              "supportedCodecIds": [
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 34.5,
+              "activeHeightMm": 22.3
+            },
+            {
+              "id": "vista-full-frame-5",
+              "label": "4K DCI (Oversampling) · 4096 × 2160",
+              "width": 4096,
+              "height": 2160,
+              "minSensorFps": 5.0,
+              "maxSensorFps": 50.0,
+              "supportedCodecIds": [
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 36.0,
+              "activeHeightMm": 19.1
+            },
+            {
+              "id": "vista-full-frame-6",
+              "label": "4K HD (Oversampling) · 3840 × 2160",
+              "width": 3840,
+              "height": 2160,
+              "minSensorFps": 5.0,
+              "maxSensorFps": 50.0,
+              "supportedCodecIds": [
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 34.5,
+              "activeHeightMm": 19.5
+            },
+            {
+              "id": "vista-full-frame-7",
+              "label": "5.7K 3:2 · 5760 × 3700",
+              "width": 5760,
+              "height": 3700,
+              "minSensorFps": 5.0,
+              "maxSensorFps": 42.0,
+              "supportedCodecIds": [
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 34.5,
+              "activeHeightMm": 22.3
+            },
+            {
+              "id": "vista-full-frame-8",
+              "label": "6K UHD · 5760 × 3240",
+              "width": 5760,
+              "height": 3240,
+              "minSensorFps": 5.0,
+              "maxSensorFps": 48.0,
+              "supportedCodecIds": [
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 34.5,
+              "activeHeightMm": 19.5
+            },
+            {
+              "id": "vista-full-frame-9",
+              "label": "5.7K 2.4:1 · 5760 × 2400",
+              "width": 5760,
+              "height": 2400,
+              "minSensorFps": 5.0,
+              "maxSensorFps": 60.0,
+              "supportedCodecIds": [
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 34.5,
+              "activeHeightMm": 14.4
+            },
+            {
+              "id": "vista-full-frame-10",
+              "label": "5K 4:3 · 5120 × 3700",
+              "width": 5120,
+              "height": 3700,
+              "minSensorFps": 5.0,
+              "maxSensorFps": 42.0,
+              "supportedCodecIds": [
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 30.6,
+              "activeHeightMm": 22.3
+            },
+            {
+              "id": "vista-full-frame-11",
+              "label": "5K DCI · 5120 × 2700",
+              "width": 5120,
+              "height": 2700,
+              "minSensorFps": 5.0,
+              "maxSensorFps": 58.0,
+              "supportedCodecIds": [
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 30.6,
+              "activeHeightMm": 16.2
+            },
+            {
+              "id": "vista-full-frame-12",
+              "label": "5K 2.4:1 · 5120 × 2160",
+              "width": 5120,
+              "height": 2160,
+              "minSensorFps": 5.0,
+              "maxSensorFps": 72.0,
+              "supportedCodecIds": [
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 30.6,
+              "activeHeightMm": 12.9
+            },
+            {
+              "id": "vista-full-frame-13",
+              "label": "4.6K 6:5 · 4608 × 3700",
+              "width": 4608,
+              "height": 3700,
+              "minSensorFps": 5.0,
+              "maxSensorFps": 42.0,
+              "supportedCodecIds": [
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 27.6,
+              "activeHeightMm": 22.3
+            }
+          ]
+        },
+        {
+          "id": "super35",
+          "label": "Super 35",
+          "note": "KineLOG3 ProRes · Apple target-rate estimate",
+          "resolutions": [
+            {
+              "id": "vista-super35-1",
+              "label": "4K 6:5 · 4096 × 3432",
+              "width": 4096,
+              "height": 3432,
+              "minSensorFps": 5.0,
+              "maxSensorFps": 58.0,
+              "supportedCodecIds": [
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 24.5,
+              "activeHeightMm": 20.5
+            },
+            {
+              "id": "vista-super35-2",
+              "label": "4K 4:3 · 4096 × 3072",
+              "width": 4096,
+              "height": 3072,
+              "minSensorFps": 5.0,
+              "maxSensorFps": 65.0,
+              "supportedCodecIds": [
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 24.5,
+              "activeHeightMm": 18.4
+            },
+            {
+              "id": "vista-super35-3",
+              "label": "4K 3:2 · 4096 × 2700",
+              "width": 4096,
+              "height": 2700,
+              "minSensorFps": 5.0,
+              "maxSensorFps": 74.0,
+              "supportedCodecIds": [
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 24.5,
+              "activeHeightMm": 16.1
+            },
+            {
+              "id": "vista-super35-4",
+              "label": "4K DCI · 4096 × 2160",
+              "width": 4096,
+              "height": 2160,
+              "minSensorFps": 5.0,
+              "maxSensorFps": 92.0,
+              "supportedCodecIds": [
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 24.5,
+              "activeHeightMm": 12.9
+            },
+            {
+              "id": "vista-super35-5",
+              "label": "4K 2.4:1 · 4096 × 1600",
+              "width": 4096,
+              "height": 1600,
+              "minSensorFps": 5.0,
+              "maxSensorFps": 120.0,
+              "supportedCodecIds": [
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 24.5,
+              "activeHeightMm": 9.6
+            },
+            {
+              "id": "vista-super35-6",
+              "label": "4K UHD · 3840 × 2160",
+              "width": 3840,
+              "height": 2160,
+              "minSensorFps": 5.0,
+              "maxSensorFps": 92.0,
+              "supportedCodecIds": [
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 23.0,
+              "activeHeightMm": 12.9
+            },
+            {
+              "id": "vista-super35-7",
+              "label": "3.8K 2.4:1 · 3840 × 1600",
+              "width": 3840,
+              "height": 1600,
+              "minSensorFps": 5.0,
+              "maxSensorFps": 120.0,
+              "supportedCodecIds": [
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 23.0,
+              "activeHeightMm": 9.6
+            },
+            {
+              "id": "vista-super35-8",
+              "label": "3.7K 4:3 · 3712 × 2700",
+              "width": 3712,
+              "height": 2700,
+              "minSensorFps": 5.0,
+              "maxSensorFps": 74.0,
+              "supportedCodecIds": [
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 22.2,
+              "activeHeightMm": 16.1
+            },
+            {
+              "id": "vista-super35-9",
+              "label": "3.3K 6:5 · 3328 × 2700",
+              "width": 3328,
+              "height": 2700,
+              "minSensorFps": 5.0,
+              "maxSensorFps": 74.0,
+              "supportedCodecIds": [
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 19.9,
+              "activeHeightMm": 16.1
+            }
+          ]
+        },
+        {
+          "id": "m43",
+          "label": "M43 Crop",
+          "note": "KineLOG3 ProRes · Apple target-rate estimate",
+          "resolutions": [
+            {
+              "id": "vista-m43-1",
+              "label": "3K DCI · 3072 × 1620",
+              "width": 3072,
+              "height": 1620,
+              "minSensorFps": 5.0,
+              "maxSensorFps": 120.0,
+              "supportedCodecIds": [
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 18.4,
+              "activeHeightMm": 9.7
+            },
+            {
+              "id": "vista-m43-2",
+              "label": "3K 2.4:1 · 3072 × 1200",
+              "width": 3072,
+              "height": 1200,
+              "minSensorFps": 5.0,
+              "maxSensorFps": 162.0,
+              "supportedCodecIds": [
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 18.4,
+              "activeHeightMm": 7.2
+            },
+            {
+              "id": "vista-m43-3",
+              "label": "3K HD · 2944 × 1620",
+              "width": 2944,
+              "height": 1620,
+              "minSensorFps": 5.0,
+              "maxSensorFps": 120.0,
+              "supportedCodecIds": [
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 17.6,
+              "activeHeightMm": 9.7
+            },
+            {
+              "id": "vista-m43-4",
+              "label": "3K HD 2.4:1 · 2944 × 1200",
+              "width": 2944,
+              "height": 1200,
+              "minSensorFps": 5.0,
+              "maxSensorFps": 162.0,
+              "supportedCodecIds": [
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 17.6,
+              "activeHeightMm": 7.2
+            }
+          ]
+        },
+        {
+          "id": "super16",
+          "label": "Super 16 Crop",
+          "note": "KineLOG3 ProRes · Apple target-rate estimate",
+          "resolutions": [
+            {
+              "id": "vista-super16-1",
+              "label": "2K DCI · 2048 × 1080",
+              "width": 2048,
+              "height": 1080,
+              "minSensorFps": 5.0,
+              "maxSensorFps": 178.0,
+              "supportedCodecIds": [
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 12.3,
+              "activeHeightMm": 6.5
+            },
+            {
+              "id": "vista-super16-2",
+              "label": "2K 2.4:1 · 2048 × 860",
+              "width": 2048,
+              "height": 860,
+              "minSensorFps": 5.0,
+              "maxSensorFps": 200.0,
+              "supportedCodecIds": [
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 12.3,
+              "activeHeightMm": 5.1
+            },
+            {
+              "id": "vista-super16-3",
+              "label": "2K FHD · 1920 × 1080",
+              "width": 1920,
+              "height": 1080,
+              "minSensorFps": 5.0,
+              "maxSensorFps": 178.0,
+              "supportedCodecIds": [
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 11.5,
+              "activeHeightMm": 6.5
+            },
+            {
+              "id": "vista-super16-4",
+              "label": "1.9K 2.4:1 · 1920 × 800",
+              "width": 1920,
+              "height": 800,
+              "minSensorFps": 5.0,
+              "maxSensorFps": 200.0,
+              "supportedCodecIds": [
+                "prores-422-hq",
+                "prores-422",
+                "prores-422-lt"
+              ],
+              "activeWidthMm": 11.5,
+              "activeHeightMm": 4.8
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "codecs": [
+    {
+      "id": "arriraw",
+      "name": "ARRIRAW",
+      "family": "RAW",
+      "rateModel": "estimated-bpp",
+      "effectiveBitsPerPixel": 12,
+      "note": "12-bit sensor data · ARRI camera estimate",
+      "supportedManufacturers": [
+        "ARRI"
+      ]
+    },
+    {
+      "id": "arriraw-hde",
+      "name": "ARRIRAW HDE",
+      "family": "RAW",
+      "rateModel": "estimated-bpp",
+      "effectiveBitsPerPixel": 7.15,
+      "note": "High-density encoding · ARRI camera estimate",
+      "supportedManufacturers": [
+        "ARRI"
+      ]
+    },
+    {
+      "id": "dji-prores-raw",
+      "name": "ProRes RAW / RAW HQ",
+      "family": "RAW",
+      "rateModel": "published-table",
+      "effectiveBitsPerPixel": 3.8,
+      "note": "DJI X9 official sensor-rate table",
+      "supportedManufacturers": [
+        "DJI"
+      ]
+    },
+    {
+      "id": "dji-prores-4444-xq",
+      "name": "ProRes 4444 XQ",
+      "family": "PRORES",
+      "rateModel": "published-table",
+      "effectiveBitsPerPixel": 7.6,
+      "note": "DJI X9-6K official sensor-rate table",
+      "supportedManufacturers": [
+        "DJI"
+      ],
+      "supportedCameraIds": [
+        "ronin4d-6k"
+      ]
+    },
+    {
+      "id": "dji-prores-422-hq",
+      "name": "ProRes 422 HQ",
+      "family": "PRORES",
+      "rateModel": "published-table",
+      "effectiveBitsPerPixel": 2.9,
+      "note": "DJI X9 official sensor-rate table",
+      "supportedManufacturers": [
+        "DJI"
+      ]
+    },
+    {
+      "id": "dji-prores-422-lt",
+      "name": "ProRes 422 LT",
+      "family": "PRORES",
+      "rateModel": "published-table",
+      "effectiveBitsPerPixel": 1.35,
+      "note": "DJI X9-6K official sensor-rate table",
+      "supportedManufacturers": [
+        "DJI"
+      ],
+      "supportedCameraIds": [
+        "ronin4d-6k"
+      ]
+    },
+    {
+      "id": "dji-h264",
+      "name": "H.264 10-bit",
+      "family": "LONG GOP",
+      "rateModel": "published-table",
+      "effectiveBitsPerPixel": 0.68,
+      "note": "DJI X9 official sensor-rate table",
+      "supportedManufacturers": [
+        "DJI"
+      ]
+    },
+    {
+      "id": "prores-4444-xq",
+      "name": "ProRes 4444 XQ",
+      "family": "PRORES",
+      "rateModel": "apple-target",
+      "note": "Apple target · 4:4:4 · no alpha"
+    },
+    {
+      "id": "prores-4444",
+      "name": "ProRes 4444",
+      "family": "PRORES",
+      "rateModel": "apple-target",
+      "note": "Apple target · 4:4:4 · no alpha"
+    },
+    {
+      "id": "prores-422-hq",
+      "name": "ProRes 422 HQ",
+      "family": "PRORES",
+      "rateModel": "apple-target",
+      "note": "Apple target · 4:2:2 · 10-bit"
+    },
+    {
+      "id": "prores-422",
+      "name": "ProRes 422",
+      "family": "PRORES",
+      "rateModel": "apple-target",
+      "note": "Apple target · 4:2:2 · editorial"
+    },
+    {
+      "id": "prores-422-lt",
+      "name": "ProRes 422 LT",
+      "family": "PRORES",
+      "rateModel": "apple-target",
+      "note": "Apple target · 4:2:2 · offline"
+    },
+    {
+      "id": "prores-422-proxy",
+      "name": "ProRes 422 Proxy",
+      "family": "PRORES",
+      "rateModel": "apple-target",
+      "note": "Apple target · 4:2:2 · proxy"
+    },
+    {
+      "id": "hevc-10",
+      "name": "HEVC 10-bit",
+      "family": "LONG GOP",
+      "rateModel": "estimated-bpp",
+      "effectiveBitsPerPixel": 0.68,
+      "note": "Long-GOP · delivery estimate"
+    },
+    {
+      "id": "kinefinity-dng",
+      "name": "Uncompressed RAW (DNG)",
+      "family": "RAW",
+      "rateModel": "estimated-bpp",
+      "effectiveBitsPerPixel": 12,
+      "note": "KineOS 8.0 \u00b7 12-bit DNG payload estimate \u00b7 excludes headers, padding and audio",
+      "supportedManufacturers": [
+        "KINEFINITY"
+      ]
+    }
+  ],
+  "mediaOptions": [
+    {
+      "id": "512gb",
+      "label": "512 GB",
+      "capacityGb": 512
+    },
+    {
+      "id": "1tb",
+      "label": "1 TB",
+      "capacityGb": 1000
+    },
+    {
+      "id": "2tb",
+      "label": "2 TB",
+      "capacityGb": 2000
+    },
+    {
+      "id": "4tb",
+      "label": "4 TB",
+      "capacityGb": 4000
+    }
+  ],
+  "frameRates": [
+    23.976,
+    24,
+    25,
+    29.97,
+    30,
+    48,
+    50,
+    59.94,
+    60,
+    72,
+    75,
+    88,
+    90,
+    90.96,
+    96,
+    100,
+    110,
+    119.88,
+    120,
+    150,
+    180,
+    200,
+    240,
+    330,
+    660
+  ],
+  "projectFrameRates": [
+    23.976,
+    24,
+    25,
+    29.97,
+    30,
+    48,
+    50,
+    59.94,
+    60
+  ],
+  "proResRateTable": {
+    "720x486": {
+      "24": {
+        "prores-422-proxy": 10,
+        "prores-422-lt": 23,
+        "prores-422": 34,
+        "prores-422-hq": 50,
+        "prores-4444": 75,
+        "prores-4444-xq": 113
+      },
+      "30": {
+        "prores-422-proxy": 12,
+        "prores-422-lt": 29,
+        "prores-422": 42,
+        "prores-422-hq": 63,
+        "prores-4444": 94,
+        "prores-4444-xq": 141
+      }
+    },
+    "720x576": {
+      "25": {
+        "prores-422-proxy": 12,
+        "prores-422-lt": 28,
+        "prores-422": 41,
+        "prores-422-hq": 61,
+        "prores-4444": 92,
+        "prores-4444-xq": 138
+      }
+    },
+    "960x720": {
+      "24": {
+        "prores-422-proxy": 15,
+        "prores-422-lt": 35,
+        "prores-422": 50,
+        "prores-422-hq": 75,
+        "prores-4444": 113,
+        "prores-4444-xq": 170
+      },
+      "25": {
+        "prores-422-proxy": 16,
+        "prores-422-lt": 36,
+        "prores-422": 52,
+        "prores-422-hq": 79,
+        "prores-4444": 118,
+        "prores-4444-xq": 177
+      },
+      "30": {
+        "prores-422-proxy": 19,
+        "prores-422-lt": 44,
+        "prores-422": 63,
+        "prores-422-hq": 94,
+        "prores-4444": 141,
+        "prores-4444-xq": 212
+      },
+      "50": {
+        "prores-422-proxy": 32,
+        "prores-422-lt": 73,
+        "prores-422": 105,
+        "prores-422-hq": 157,
+        "prores-4444": 236,
+        "prores-4444-xq": 354
+      },
+      "60": {
+        "prores-422-proxy": 38,
+        "prores-422-lt": 87,
+        "prores-422": 126,
+        "prores-422-hq": 189,
+        "prores-4444": 283,
+        "prores-4444-xq": 424
+      }
+    },
+    "1280x720": {
+      "24": {
+        "prores-422-proxy": 18,
+        "prores-422-lt": 41,
+        "prores-422": 59,
+        "prores-422-hq": 88,
+        "prores-4444": 132,
+        "prores-4444-xq": 198
+      },
+      "25": {
+        "prores-422-proxy": 19,
+        "prores-422-lt": 42,
+        "prores-422": 61,
+        "prores-422-hq": 92,
+        "prores-4444": 138,
+        "prores-4444-xq": 206
+      },
+      "30": {
+        "prores-422-proxy": 23,
+        "prores-422-lt": 51,
+        "prores-422": 73,
+        "prores-422-hq": 110,
+        "prores-4444": 165,
+        "prores-4444-xq": 247
+      },
+      "50": {
+        "prores-422-proxy": 38,
+        "prores-422-lt": 84,
+        "prores-422": 122,
+        "prores-422-hq": 184,
+        "prores-4444": 275,
+        "prores-4444-xq": 413
+      },
+      "60": {
+        "prores-422-proxy": 45,
+        "prores-422-lt": 101,
+        "prores-422": 147,
+        "prores-422-hq": 220,
+        "prores-4444": 330,
+        "prores-4444-xq": 495
+      }
+    },
+    "1280x1080": {
+      "24": {
+        "prores-422-proxy": 31,
+        "prores-422-lt": 70,
+        "prores-422": 101,
+        "prores-422-hq": 151,
+        "prores-4444": 226,
+        "prores-4444-xq": 339
+      },
+      "30": {
+        "prores-422-proxy": 38,
+        "prores-422-lt": 87,
+        "prores-422": 126,
+        "prores-422-hq": 189,
+        "prores-4444": 283,
+        "prores-4444-xq": 424
+      }
+    },
+    "1440x1080": {
+      "24": {
+        "prores-422-proxy": 31,
+        "prores-422-lt": 70,
+        "prores-422": 101,
+        "prores-422-hq": 151,
+        "prores-4444": 226,
+        "prores-4444-xq": 339
+      },
+      "25": {
+        "prores-422-proxy": 32,
+        "prores-422-lt": 73,
+        "prores-422": 105,
+        "prores-422-hq": 157,
+        "prores-4444": 236,
+        "prores-4444-xq": 354
+      },
+      "30": {
+        "prores-422-proxy": 38,
+        "prores-422-lt": 87,
+        "prores-422": 126,
+        "prores-422-hq": 189,
+        "prores-4444": 283,
+        "prores-4444-xq": 424
+      }
+    },
+    "1920x1080": {
+      "24": {
+        "prores-422-proxy": 36,
+        "prores-422-lt": 82,
+        "prores-422": 117,
+        "prores-422-hq": 176,
+        "prores-4444": 264,
+        "prores-4444-xq": 396
+      },
+      "25": {
+        "prores-422-proxy": 38,
+        "prores-422-lt": 85,
+        "prores-422": 122,
+        "prores-422-hq": 184,
+        "prores-4444": 275,
+        "prores-4444-xq": 413
+      },
+      "30": {
+        "prores-422-proxy": 45,
+        "prores-422-lt": 102,
+        "prores-422": 147,
+        "prores-422-hq": 220,
+        "prores-4444": 330,
+        "prores-4444-xq": 495
+      },
+      "50": {
+        "prores-422-proxy": 76,
+        "prores-422-lt": 170,
+        "prores-422": 245,
+        "prores-422-hq": 367,
+        "prores-4444": 551,
+        "prores-4444-xq": 826
+      },
+      "60": {
+        "prores-422-proxy": 91,
+        "prores-422-lt": 204,
+        "prores-422": 293,
+        "prores-422-hq": 440,
+        "prores-4444": 660,
+        "prores-4444-xq": 990
+      }
+    },
+    "2048x1080": {
+      "24": {
+        "prores-422-proxy": 41,
+        "prores-422-lt": 93,
+        "prores-422": 134,
+        "prores-422-hq": 201,
+        "prores-4444": 302,
+        "prores-4444-xq": 453
+      },
+      "25": {
+        "prores-422-proxy": 43,
+        "prores-422-lt": 97,
+        "prores-422": 140,
+        "prores-422-hq": 210,
+        "prores-4444": 315,
+        "prores-4444-xq": 472
+      },
+      "30": {
+        "prores-422-proxy": 52,
+        "prores-422-lt": 116,
+        "prores-422": 168,
+        "prores-422-hq": 251,
+        "prores-4444": 377,
+        "prores-4444-xq": 566
+      },
+      "50": {
+        "prores-422-proxy": 86,
+        "prores-422-lt": 194,
+        "prores-422": 280,
+        "prores-422-hq": 419,
+        "prores-4444": 629,
+        "prores-4444-xq": 944
+      },
+      "60": {
+        "prores-422-proxy": 103,
+        "prores-422-lt": 232,
+        "prores-422": 335,
+        "prores-422-hq": 503,
+        "prores-4444": 754,
+        "prores-4444-xq": 1131
+      }
+    },
+    "2048x1556": {
+      "24": {
+        "prores-422-proxy": 56,
+        "prores-422-lt": 126,
+        "prores-422": 181,
+        "prores-422-hq": 272,
+        "prores-4444": 407,
+        "prores-4444-xq": 611
+      },
+      "25": {
+        "prores-422-proxy": 58,
+        "prores-422-lt": 131,
+        "prores-422": 189,
+        "prores-422-hq": 283,
+        "prores-4444": 425,
+        "prores-4444-xq": 637
+      },
+      "30": {
+        "prores-422-proxy": 70,
+        "prores-422-lt": 157,
+        "prores-422": 226,
+        "prores-422-hq": 340,
+        "prores-4444": 509,
+        "prores-4444-xq": 764
+      },
+      "50": {
+        "prores-422-proxy": 117,
+        "prores-422-lt": 262,
+        "prores-422": 377,
+        "prores-422-hq": 567,
+        "prores-4444": 850,
+        "prores-4444-xq": 1275
+      },
+      "60": {
+        "prores-422-proxy": 140,
+        "prores-422-lt": 314,
+        "prores-422": 452,
+        "prores-422-hq": 679,
+        "prores-4444": 1019,
+        "prores-4444-xq": 1528
+      }
+    },
+    "3840x2160": {
+      "24": {
+        "prores-422-proxy": 145,
+        "prores-422-lt": 328,
+        "prores-422": 471,
+        "prores-422-hq": 707,
+        "prores-4444": 1061,
+        "prores-4444-xq": 1591
+      },
+      "25": {
+        "prores-422-proxy": 151,
+        "prores-422-lt": 342,
+        "prores-422": 492,
+        "prores-422-hq": 737,
+        "prores-4444": 1106,
+        "prores-4444-xq": 1659
+      },
+      "30": {
+        "prores-422-proxy": 182,
+        "prores-422-lt": 410,
+        "prores-422": 589,
+        "prores-422-hq": 884,
+        "prores-4444": 1326,
+        "prores-4444-xq": 1989
+      },
+      "50": {
+        "prores-422-proxy": 303,
+        "prores-422-lt": 684,
+        "prores-422": 983,
+        "prores-422-hq": 1475,
+        "prores-4444": 2212,
+        "prores-4444-xq": 3318
+      },
+      "60": {
+        "prores-422-proxy": 363,
+        "prores-422-lt": 821,
+        "prores-422": 1178,
+        "prores-422-hq": 1768,
+        "prores-4444": 2652,
+        "prores-4444-xq": 3977
+      }
+    },
+    "4096x2160": {
+      "24": {
+        "prores-422-proxy": 155,
+        "prores-422-lt": 350,
+        "prores-422": 503,
+        "prores-422-hq": 754,
+        "prores-4444": 1131,
+        "prores-4444-xq": 1697
+      },
+      "25": {
+        "prores-422-proxy": 162,
+        "prores-422-lt": 365,
+        "prores-422": 524,
+        "prores-422-hq": 786,
+        "prores-4444": 1180,
+        "prores-4444-xq": 1769
+      },
+      "30": {
+        "prores-422-proxy": 194,
+        "prores-422-lt": 437,
+        "prores-422": 629,
+        "prores-422-hq": 943,
+        "prores-4444": 1414,
+        "prores-4444-xq": 2121
+      },
+      "50": {
+        "prores-422-proxy": 323,
+        "prores-422-lt": 730,
+        "prores-422": 1049,
+        "prores-422-hq": 1573,
+        "prores-4444": 2359,
+        "prores-4444-xq": 3539
+      },
+      "60": {
+        "prores-422-proxy": 388,
+        "prores-422-lt": 875,
+        "prores-422": 1257,
+        "prores-422-hq": 1886,
+        "prores-4444": 2828,
+        "prores-4444-xq": 4242
+      }
+    },
+    "5120x2700": {
+      "24": {
+        "prores-422-proxy": 243,
+        "prores-422-lt": 547,
+        "prores-422": 786,
+        "prores-422-hq": 1178,
+        "prores-4444": 1768,
+        "prores-4444-xq": 2652
+      },
+      "25": {
+        "prores-422-proxy": 253,
+        "prores-422-lt": 570,
+        "prores-422": 819,
+        "prores-422-hq": 1229,
+        "prores-4444": 1843,
+        "prores-4444-xq": 2765
+      },
+      "30": {
+        "prores-422-proxy": 304,
+        "prores-422-lt": 684,
+        "prores-422": 982,
+        "prores-422-hq": 1473,
+        "prores-4444": 2210,
+        "prores-4444-xq": 3314
+      },
+      "50": {
+        "prores-422-proxy": 507,
+        "prores-422-lt": 1140,
+        "prores-422": 1638,
+        "prores-422-hq": 2458,
+        "prores-4444": 3686,
+        "prores-4444-xq": 5530
+      },
+      "60": {
+        "prores-422-proxy": 608,
+        "prores-422-lt": 1367,
+        "prores-422": 1964,
+        "prores-422-hq": 2946,
+        "prores-4444": 4419,
+        "prores-4444-xq": 6629
+      }
+    },
+    "6144x3240": {
+      "24": {
+        "prores-422-proxy": 350,
+        "prores-422-lt": 788,
+        "prores-422": 1131,
+        "prores-422-hq": 1697,
+        "prores-4444": 2545,
+        "prores-4444-xq": 3818
+      },
+      "25": {
+        "prores-422-proxy": 365,
+        "prores-422-lt": 821,
+        "prores-422": 1180,
+        "prores-422-hq": 1769,
+        "prores-4444": 2654,
+        "prores-4444-xq": 3981
+      },
+      "30": {
+        "prores-422-proxy": 437,
+        "prores-422-lt": 985,
+        "prores-422": 1414,
+        "prores-422-hq": 2121,
+        "prores-4444": 3182,
+        "prores-4444-xq": 4772
+      },
+      "50": {
+        "prores-422-proxy": 730,
+        "prores-422-lt": 1643,
+        "prores-422": 2359,
+        "prores-422-hq": 3539,
+        "prores-4444": 5308,
+        "prores-4444-xq": 7962
+      },
+      "60": {
+        "prores-422-proxy": 875,
+        "prores-422-lt": 1969,
+        "prores-422": 2828,
+        "prores-422-hq": 4242,
+        "prores-4444": 6364,
+        "prores-4444-xq": 9545
+      }
+    },
+    "8192x4320": {
+      "24": {
+        "prores-422-proxy": 622,
+        "prores-422-lt": 1400,
+        "prores-422": 2011,
+        "prores-422-hq": 3017,
+        "prores-4444": 4525,
+        "prores-4444-xq": 6788
+      },
+      "25": {
+        "prores-422-proxy": 649,
+        "prores-422-lt": 1460,
+        "prores-422": 2097,
+        "prores-422-hq": 3146,
+        "prores-4444": 4719,
+        "prores-4444-xq": 7078
+      },
+      "30": {
+        "prores-422-proxy": 778,
+        "prores-422-lt": 1750,
+        "prores-422": 2514,
+        "prores-422-hq": 3771,
+        "prores-4444": 5657,
+        "prores-4444-xq": 8485
+      },
+      "50": {
+        "prores-422-proxy": 1298,
+        "prores-422-lt": 2920,
+        "prores-422": 4194,
+        "prores-422-hq": 6291,
+        "prores-4444": 9437,
+        "prores-4444-xq": 14156
+      },
+      "60": {
+        "prores-422-proxy": 1556,
+        "prores-422-lt": 3500,
+        "prores-422": 5028,
+        "prores-422-hq": 7542,
+        "prores-4444": 11313,
+        "prores-4444-xq": 16970
+      }
+    }
+  },
+  "rateTable": {
+    "ronin4d-8k|dji-prores-raw|r4d8k-8k-ff": {
+      "24": 405,
+      "25": 422,
+      "30": 506,
+      "48": 810,
+      "50": 844,
+      "60": 1012,
+      "72": 482,
+      "75": 502,
+      "23.976": 405,
+      "29.97": 506,
+      "59.94": 1012
+    },
+    "ronin4d-8k|dji-prores-raw|r4d8k-8k-scope": {
+      "24": 405,
+      "25": 422,
+      "30": 506,
+      "48": 810,
+      "50": 844,
+      "60": 1012,
+      "72": 482,
+      "75": 502,
+      "23.976": 405,
+      "29.97": 506,
+      "59.94": 1012
+    },
+    "ronin4d-8k|dji-prores-raw|r4d8k-4k-ff": {
+      "24": 101,
+      "25": 105,
+      "30": 127,
+      "48": 203,
+      "50": 211,
+      "60": 253,
+      "72": 304,
+      "75": 316,
+      "96": 405,
+      "100": 422,
+      "120": 506,
+      "23.976": 101,
+      "29.97": 126,
+      "59.94": 253
+    },
+    "ronin4d-8k|dji-prores-raw|r4d8k-55k-s35": {
+      "24": 188,
+      "25": 196,
+      "30": 235,
+      "48": 377,
+      "50": 392,
+      "60": 470,
+      "23.976": 188,
+      "29.97": 235,
+      "59.94": 470
+    },
+    "ronin4d-8k|dji-prores-422-hq|r4d8k-8k-ff": {
+      "24": 360,
+      "25": 375,
+      "30": 450,
+      "23.976": 359,
+      "29.97": 449
+    },
+    "ronin4d-8k|dji-prores-422-hq|r4d8k-4k-ff": {
+      "24": 90,
+      "25": 94,
+      "30": 112,
+      "48": 180,
+      "50": 187,
+      "60": 225,
+      "72": 270,
+      "75": 281,
+      "96": 360,
+      "100": 375,
+      "120": 450,
+      "23.976": 90,
+      "29.97": 112,
+      "59.94": 225
+    },
+    "ronin4d-8k|dji-prores-422-hq|r4d8k-4k-s35": {
+      "24": 90,
+      "25": 94,
+      "30": 112,
+      "48": 180,
+      "50": 187,
+      "60": 225,
+      "72": 270,
+      "75": 281,
+      "96": 360,
+      "100": 375,
+      "120": 450,
+      "23.976": 90,
+      "29.97": 112,
+      "59.94": 225
+    },
+    "ronin4d-8k|dji-h264|r4d8k-4k-ff": {
+      "24": 18,
+      "25": 18,
+      "30": 18,
+      "48": 25,
+      "50": 25,
+      "60": 25,
+      "72": 36,
+      "75": 36,
+      "96": 36,
+      "100": 36,
+      "120": 36,
+      "23.976": 18,
+      "29.97": 18,
+      "59.94": 25
+    },
+    "ronin4d-8k|dji-h264|r4d8k-4k-s35": {
+      "24": 18,
+      "25": 18,
+      "30": 18,
+      "48": 25,
+      "50": 25,
+      "60": 25,
+      "72": 36,
+      "75": 36,
+      "96": 36,
+      "100": 36,
+      "120": 36,
+      "23.976": 18,
+      "29.97": 18,
+      "59.94": 25
+    },
+    "ronin4d-6k|dji-prores-raw|r4d6k-6k-ff": {
+      "24": 218,
+      "25": 227,
+      "30": 272,
+      "48": 436,
+      "50": 445,
+      "60": 432,
+      "23.976": 218,
+      "29.97": 272,
+      "59.94": 431
+    },
+    "ronin4d-6k|dji-prores-raw|r4d6k-6k-crop": {
+      "24": 218,
+      "25": 227,
+      "30": 272,
+      "48": 436,
+      "50": 445,
+      "60": 432,
+      "23.976": 218,
+      "29.97": 272,
+      "59.94": 431
+    },
+    "ronin4d-6k|dji-prores-raw|r4d6k-6k-scope": {
+      "24": 218,
+      "25": 227,
+      "30": 272,
+      "48": 436,
+      "50": 445,
+      "60": 432,
+      "23.976": 218,
+      "29.97": 272,
+      "59.94": 431
+    },
+    "ronin4d-6k|dji-prores-raw|r4d6k-4k-s35": {
+      "24": 101,
+      "25": 105,
+      "30": 127,
+      "48": 203,
+      "50": 211,
+      "60": 253,
+      "72": 304,
+      "75": 316,
+      "96": 405,
+      "100": 334,
+      "120": 401,
+      "23.976": 101,
+      "29.97": 126,
+      "59.94": 253
+    },
+    "ronin4d-6k|dji-prores-raw|r4d6k-4k-scope-s35": {
+      "24": 101,
+      "25": 105,
+      "30": 127,
+      "48": 203,
+      "50": 211,
+      "60": 253,
+      "72": 304,
+      "75": 316,
+      "96": 405,
+      "100": 334,
+      "120": 401,
+      "23.976": 101,
+      "29.97": 126,
+      "59.94": 253
+    },
+    "ronin4d-6k|dji-prores-4444-xq|r4d6k-6k-ff": {
+      "24": 435,
+      "25": 453,
+      "30": 544,
+      "48": 870,
+      "50": 890,
+      "60": 864,
+      "23.976": 435,
+      "29.97": 543,
+      "59.94": 863
+    },
+    "ronin4d-6k|dji-prores-4444-xq|r4d6k-6k-crop": {
+      "24": 435,
+      "25": 453,
+      "30": 544,
+      "48": 870,
+      "50": 890,
+      "60": 864,
+      "23.976": 435,
+      "29.97": 543,
+      "59.94": 863
+    },
+    "ronin4d-6k|dji-prores-4444-xq|r4d6k-6k-scope": {
+      "24": 435,
+      "25": 453,
+      "30": 544,
+      "48": 870,
+      "50": 890,
+      "60": 864,
+      "23.976": 435,
+      "29.97": 543,
+      "59.94": 863
+    },
+    "ronin4d-6k|dji-prores-4444-xq|r4d6k-4k-s35": {
+      "24": 202,
+      "25": 211,
+      "30": 253,
+      "48": 405,
+      "50": 421,
+      "60": 506,
+      "72": 607,
+      "75": 632,
+      "96": 809,
+      "100": 668,
+      "120": 802,
+      "23.976": 202,
+      "29.97": 253,
+      "59.94": 505
+    },
+    "ronin4d-6k|dji-prores-4444-xq|r4d6k-4k-scope-s35": {
+      "24": 202,
+      "25": 211,
+      "30": 253,
+      "48": 405,
+      "50": 421,
+      "60": 506,
+      "72": 607,
+      "75": 632,
+      "96": 809,
+      "100": 668,
+      "120": 802,
+      "23.976": 202,
+      "29.97": 253,
+      "59.94": 505
+    },
+    "ronin4d-6k|dji-prores-422-hq|r4d6k-6k-ff": {
+      "24": 193,
+      "25": 202,
+      "30": 242,
+      "48": 387,
+      "50": 395,
+      "60": 384,
+      "23.976": 193,
+      "29.97": 242,
+      "59.94": 383
+    },
+    "ronin4d-6k|dji-prores-422-hq|r4d6k-6k-crop": {
+      "24": 193,
+      "25": 202,
+      "30": 242,
+      "48": 387,
+      "50": 395,
+      "60": 384,
+      "23.976": 193,
+      "29.97": 242,
+      "59.94": 383
+    },
+    "ronin4d-6k|dji-prores-422-hq|r4d6k-6k-scope": {
+      "24": 193,
+      "25": 202,
+      "30": 242,
+      "48": 387,
+      "50": 395,
+      "60": 384,
+      "23.976": 193,
+      "29.97": 242,
+      "59.94": 383
+    },
+    "ronin4d-6k|dji-prores-422-hq|r4d6k-4k-ff": {
+      "24": 90,
+      "25": 94,
+      "30": 112,
+      "48": 180,
+      "50": 188,
+      "60": 178,
+      "23.976": 90,
+      "29.97": 112,
+      "59.94": 178
+    },
+    "ronin4d-6k|dji-prores-422-hq|r4d6k-4k-s35": {
+      "24": 90,
+      "25": 94,
+      "30": 112,
+      "48": 180,
+      "50": 187,
+      "60": 225,
+      "72": 270,
+      "75": 281,
+      "96": 360,
+      "100": 297,
+      "120": 356,
+      "23.976": 90,
+      "29.97": 112,
+      "59.94": 225
+    },
+    "ronin4d-6k|dji-prores-422-hq|r4d6k-4k-scope": {
+      "24": 90,
+      "25": 94,
+      "30": 112,
+      "48": 180,
+      "50": 188,
+      "60": 178,
+      "23.976": 90,
+      "29.97": 112,
+      "59.94": 178
+    },
+    "ronin4d-6k|dji-prores-422-hq|r4d6k-4k-scope-s35": {
+      "24": 90,
+      "25": 94,
+      "30": 112,
+      "48": 180,
+      "50": 187,
+      "60": 225,
+      "72": 270,
+      "75": 281,
+      "96": 360,
+      "100": 297,
+      "120": 356,
+      "23.976": 90,
+      "29.97": 112,
+      "59.94": 225
+    },
+    "ronin4d-6k|dji-prores-422-hq|r4d6k-2k-ff": {
+      "24": 24,
+      "25": 25,
+      "30": 30,
+      "48": 48,
+      "50": 50,
+      "60": 60,
+      "72": 72,
+      "75": 75,
+      "96": 96,
+      "100": 100,
+      "120": 120,
+      "23.976": 24,
+      "29.97": 30,
+      "59.94": 60
+    },
+    "ronin4d-6k|dji-prores-422-hq|r4d6k-2k-s35": {
+      "24": 24,
+      "25": 25,
+      "30": 30,
+      "48": 48,
+      "50": 50,
+      "60": 60,
+      "72": 72,
+      "75": 75,
+      "96": 96,
+      "100": 100,
+      "120": 120,
+      "23.976": 24,
+      "29.97": 30,
+      "59.94": 60
+    },
+    "ronin4d-6k|dji-prores-422-lt|r4d6k-6k-ff": {
+      "24": 90,
+      "25": 94,
+      "30": 112,
+      "48": 180,
+      "50": 183,
+      "60": 186,
+      "23.976": 90,
+      "29.97": 112,
+      "59.94": 186
+    },
+    "ronin4d-6k|dji-prores-422-lt|r4d6k-6k-crop": {
+      "24": 90,
+      "25": 94,
+      "30": 112,
+      "48": 180,
+      "50": 183,
+      "60": 186,
+      "23.976": 90,
+      "29.97": 112,
+      "59.94": 186
+    },
+    "ronin4d-6k|dji-prores-422-lt|r4d6k-6k-scope": {
+      "24": 90,
+      "25": 94,
+      "30": 112,
+      "48": 180,
+      "50": 183,
+      "60": 186,
+      "23.976": 90,
+      "29.97": 112,
+      "59.94": 186
+    },
+    "ronin4d-6k|dji-prores-422-lt|r4d6k-4k-ff": {
+      "24": 42,
+      "25": 43,
+      "30": 52,
+      "48": 83,
+      "50": 87,
+      "60": 83,
+      "23.976": 42,
+      "29.97": 52,
+      "59.94": 83
+    },
+    "ronin4d-6k|dji-prores-422-lt|r4d6k-4k-s35": {
+      "24": 42,
+      "25": 43,
+      "30": 52,
+      "48": 83,
+      "50": 87,
+      "60": 104,
+      "72": 125,
+      "75": 130,
+      "96": 167,
+      "100": 139,
+      "120": 167,
+      "23.976": 42,
+      "29.97": 52,
+      "59.94": 104
+    },
+    "ronin4d-6k|dji-prores-422-lt|r4d6k-4k-scope": {
+      "24": 42,
+      "25": 43,
+      "30": 52,
+      "48": 83,
+      "50": 87,
+      "60": 83,
+      "23.976": 42,
+      "29.97": 52,
+      "59.94": 83
+    },
+    "ronin4d-6k|dji-prores-422-lt|r4d6k-4k-scope-s35": {
+      "24": 42,
+      "25": 43,
+      "30": 52,
+      "48": 83,
+      "50": 87,
+      "60": 104,
+      "72": 125,
+      "75": 130,
+      "96": 167,
+      "100": 139,
+      "120": 167,
+      "23.976": 42,
+      "29.97": 52,
+      "59.94": 104
+    },
+    "ronin4d-6k|dji-prores-422-lt|r4d6k-2k-ff": {
+      "24": 11,
+      "25": 12,
+      "30": 14,
+      "48": 22,
+      "50": 23,
+      "60": 28,
+      "72": 33,
+      "75": 35,
+      "96": 44,
+      "100": 46,
+      "120": 55,
+      "23.976": 11,
+      "29.97": 14,
+      "59.94": 28
+    },
+    "ronin4d-6k|dji-prores-422-lt|r4d6k-2k-s35": {
+      "24": 11,
+      "25": 12,
+      "30": 14,
+      "48": 22,
+      "50": 23,
+      "60": 28,
+      "72": 33,
+      "75": 35,
+      "96": 44,
+      "100": 46,
+      "120": 55,
+      "23.976": 11,
+      "29.97": 14,
+      "59.94": 28
+    },
+    "ronin4d-6k|dji-h264|r4d6k-4k-ff": {
+      "24": 18,
+      "25": 18,
+      "30": 18,
+      "48": 25,
+      "50": 25,
+      "60": 25,
+      "23.976": 18,
+      "29.97": 18,
+      "59.94": 25
+    },
+    "ronin4d-6k|dji-h264|r4d6k-4k-s35": {
+      "24": 18,
+      "25": 18,
+      "30": 18,
+      "48": 25,
+      "50": 25,
+      "60": 25,
+      "72": 36,
+      "75": 36,
+      "96": 36,
+      "100": 36,
+      "120": 36,
+      "23.976": 18,
+      "29.97": 18,
+      "59.94": 25
+    },
+    "ronin4d-6k|dji-h264|r4d6k-4k-scope": {
+      "24": 18,
+      "25": 18,
+      "30": 18,
+      "48": 25,
+      "50": 25,
+      "60": 25,
+      "23.976": 18,
+      "29.97": 18,
+      "59.94": 25
+    },
+    "ronin4d-6k|dji-h264|r4d6k-4k-scope-s35": {
+      "24": 18,
+      "25": 18,
+      "30": 18,
+      "48": 25,
+      "50": 25,
+      "60": 25,
+      "72": 36,
+      "75": 36,
+      "96": 36,
+      "100": 36,
+      "120": 36,
+      "23.976": 18,
+      "29.97": 18,
+      "59.94": 25
+    },
+    "ronin4d-6k|dji-h264|r4d6k-2k-ff": {
+      "24": 7,
+      "25": 7,
+      "30": 7,
+      "48": 11,
+      "50": 11,
+      "60": 11,
+      "72": 18,
+      "75": 18,
+      "96": 18,
+      "100": 18,
+      "120": 18,
+      "23.976": 7,
+      "29.97": 7,
+      "59.94": 11
+    },
+    "ronin4d-6k|dji-h264|r4d6k-2k-s35": {
+      "24": 7,
+      "25": 7,
+      "30": 7,
+      "48": 11,
+      "50": 11,
+      "60": 11,
+      "72": 18,
+      "75": 18,
+      "96": 18,
+      "100": 18,
+      "120": 18,
+      "23.976": 7,
+      "29.97": 7,
+      "59.94": 11
+    }
+  }
+}

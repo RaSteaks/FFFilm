@@ -1,0 +1,236 @@
+import SwiftUI
+
+// Shared primitives keep desktop density separate from touch-oriented presentation.
+struct FieldCard<Content: View>: View {
+    let title: String
+    let content: Content
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    private var usesCompactLayout: Bool {
+        #if os(iOS)
+        horizontalSizeClass == .compact
+        #else
+        false
+        #endif
+    }
+
+    private var usesAccessibilityLayout: Bool {
+        usesCompactLayout && dynamicTypeSize.isAccessibilitySize
+    }
+
+    init(_ title: String, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.content = content()
+    }
+
+    var body: some View {
+        Group {
+            #if os(macOS)
+            VStack(alignment: .leading, spacing: 6) {
+                fieldLabel
+                content
+                    .font(.system(size: 13))
+                    .controlSize(.regular)
+                    .frame(maxWidth: .infinity, minHeight: 28, alignment: .leading)
+            }
+            #else
+            if usesAccessibilityLayout {
+                // Accessibility sizes need vertical growth; a compact HStack would overlap menu labels.
+                VStack(alignment: .leading, spacing: 4) {
+                    fieldLabel
+                    content
+                        .font(.system(.body, design: .monospaced))
+                        .dynamicTypeSize(...DynamicTypeSize.accessibility1)
+                        .frame(maxWidth: .infinity, minHeight: 52, alignment: .leading)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+            } else if usesCompactLayout {
+                // Compact rows preserve a 44-point control region without the tall desktop card stack.
+                HStack(spacing: 10) {
+                    fieldLabel.frame(width: 76, alignment: .leading)
+                    content
+                        .font(.system(.body, design: .monospaced))
+                        .dynamicTypeSize(...DynamicTypeSize.accessibility1)
+                        .frame(maxWidth: .infinity, minHeight: 44, alignment: .trailing)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 4)
+            } else {
+                VStack(alignment: .leading, spacing: 6) {
+                    fieldLabel
+                    content
+                        .font(.system(size: 12, design: .monospaced))
+                        .frame(maxWidth: .infinity, minHeight: 28, alignment: .leading)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
+            }
+            #endif
+        }
+        #if !os(macOS)
+        .background(Palette.surface)
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .overlay { RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Palette.line) }
+        #endif
+    }
+
+    private var fieldLabel: some View {
+        Text(title)
+            .font(.system(size: 9, weight: .semibold, design: .monospaced))
+            .tracking(1.0)
+            .foregroundStyle(Palette.muted)
+            .lineLimit(1)
+    }
+}
+
+struct Detail: View {
+    let text: String
+
+    init(_ text: String) { self.text = text }
+
+    var body: some View {
+        Text(text)
+            .font(.system(size: 10, design: .monospaced))
+            .foregroundStyle(Palette.muted)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+struct WorkbenchPressStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .contentShape(.rect)
+            .opacity(isEnabled ? (configuration.isPressed ? 0.68 : 1) : 0.38)
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.97 : 1)
+            .animation(reduceMotion ? nil : .snappy(duration: 0.12), value: configuration.isPressed)
+    }
+}
+
+struct PresetButtonStyle: ButtonStyle {
+    let selected: Bool
+    @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    // Desktop presets use compact pointer targets; touch platforms keep their 44pt controls.
+    private var presetHeight: CGFloat {
+        #if os(macOS)
+        28
+        #else
+        44
+        #endif
+    }
+    private var presetRadius: CGFloat {
+        #if os(macOS)
+        7
+        #else
+        22
+        #endif
+    }
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 10, weight: .semibold, design: .monospaced))
+            .lineLimit(1)
+            .foregroundStyle(selected ? Palette.background : Palette.text)
+            .padding(.horizontal, 13)
+            .frame(minHeight: presetHeight)
+            .background(selected ? Palette.text : Palette.controlSurface, in: RoundedRectangle(cornerRadius: presetRadius))
+            .overlay { RoundedRectangle(cornerRadius: presetRadius).stroke(selected ? Color.clear : Palette.line) }
+            .contentShape(.rect(cornerRadius: presetRadius))
+            .opacity(isEnabled ? (configuration.isPressed ? 0.7 : 1) : 0.38)
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.97 : 1)
+            .animation(reduceMotion ? nil : .snappy(duration: 0.12), value: configuration.isPressed)
+    }
+}
+
+enum Layout {
+    #if os(macOS)
+    static let shutterResultMinimumHeight: CGFloat = 100
+    static let controlHeight: CGFloat = 28
+    static let maximumContentWidth: CGFloat = 1120
+    static let pageGutter: CGFloat = 24
+    static let sectionSpacing: CGFloat = 18
+    #else
+    static let shutterResultMinimumHeight: CGFloat = 150
+    static let controlHeight: CGFloat = 44
+    static let maximumContentWidth: CGFloat = 920
+    static let pageGutter: CGFloat = 12
+    static let sectionSpacing: CGFloat = 12
+    #endif
+}
+
+enum Palette {
+    static let background = Color(red: 17 / 255, green: 17 / 255, blue: 17 / 255)
+    static let surface = Color(red: 25 / 255, green: 25 / 255, blue: 25 / 255)
+    static let controlSurface = Color(red: 34 / 255, green: 34 / 255, blue: 34 / 255)
+    static let text = Color(red: 242 / 255, green: 242 / 255, blue: 242 / 255)
+    static let muted = Color(red: 166 / 255, green: 166 / 255, blue: 166 / 255)
+    static let mutedDeep = Color(red: 118 / 255, green: 118 / 255, blue: 118 / 255)
+    static let line = Color.white.opacity(0.14)
+}
+
+extension View {
+    func fieldPicker(compact: Bool) -> some View {
+        pickerStyle(.menu)
+            .labelsHidden()
+            .lineLimit(1)
+            .frame(maxWidth: .infinity, minHeight: compact ? 44 : 28, alignment: compact ? .trailing : .leading)
+    }
+
+    @ViewBuilder
+    func workbenchSurface(cornerRadius: CGFloat) -> some View {
+        #if os(macOS)
+        // Desktop content stays opaque and quiet; native window chrome owns toolbar materials.
+        background(Palette.surface, in: RoundedRectangle(cornerRadius: min(cornerRadius, 12)))
+            .overlay {
+                RoundedRectangle(cornerRadius: min(cornerRadius, 12)).stroke(Palette.line.opacity(0.6))
+            }
+        #else
+        // iOS uses Liquid Glass when available and keeps material surfaces on earlier releases.
+        if #available(iOS 26.0, macOS 26.0, *) {
+            glassEffect(.regular, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+        } else {
+            background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+                .overlay { RoundedRectangle(cornerRadius: cornerRadius, style: .continuous).stroke(Palette.line) }
+        }
+        #endif
+    }
+
+    @ViewBuilder
+    func workbenchNumberStyle() -> some View {
+        #if os(macOS)
+        textFieldStyle(.roundedBorder)
+        #else
+        textFieldStyle(.plain)
+        #endif
+    }
+
+    @ViewBuilder
+    func numericKeyboard() -> some View {
+        #if os(iOS)
+        keyboardType(.decimalPad)
+        #else
+        self
+        #endif
+    }
+
+    @ViewBuilder
+    func shutterInputToolbar(focusedInput: FocusState<ShutterInputField?>.Binding) -> some View {
+        #if os(iOS)
+        toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("DONE") { focusedInput.wrappedValue = nil }
+                    .font(.system(size: 12, weight: .semibold, design: .monospaced))
+            }
+        }
+        #else
+        self
+        #endif
+    }
+}

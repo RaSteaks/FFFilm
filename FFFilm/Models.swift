@@ -1,0 +1,334 @@
+import Foundation
+
+// MARK: - Catalog
+
+enum CameraManufacturer: String, Codable, CaseIterable, Hashable {
+    case arri = "ARRI"
+    case sony = "SONY"
+    case canon = "CANON"
+    case red = "RED"
+    case dji = "DJI"
+    case kinefinity = "KINEFINITY"
+    case apple = "APPLE"
+}
+
+enum CaptureSourceType: String, Codable, Hashable {
+    case camera
+    case proRes = "prores"
+}
+
+enum RateModel: String, Codable, Hashable {
+    case appleTarget = "apple-target"
+    case estimatedBitsPerPixel = "estimated-bpp"
+    // Manufacturer-published sensor-rate rows; the table is shared across brands.
+    case publishedTable = "published-table"
+}
+
+struct Resolution: Codable, Identifiable, Hashable {
+    let id: String
+    let label: String
+    let width: Int
+    let height: Int
+    let activeWidth: Int?
+    let activeHeight: Int?
+    let maxSensorFps: Double?
+    // Published optical dimensions preserve the field of view of oversampled modes.
+    let activeWidthMm: Double?
+    let activeHeightMm: Double?
+    let minSensorFps: Double?
+    let supportedCodecIds: [String]?
+}
+
+struct SensorMode: Codable, Identifiable, Hashable {
+    let id: String
+    let label: String
+    let note: String
+    let resolutions: [Resolution]
+}
+
+struct CameraProfile: Codable, Identifiable, Hashable {
+    let id: String
+    let name: String
+    let manufacturer: CameraManufacturer
+    let sourceType: CaptureSourceType?
+    let maxSensorFps: Double?
+    let maxSensorFpsWithoutOverdrive: Double?
+    let supportsSensorOverdrive: Bool?
+    let sensorLabel: String
+    let sensorWidthMm: Double
+    let sensorHeightMm: Double
+    let nativeWidth: Int
+    let nativeHeight: Int
+    let imageCircleMm: Double
+    let modes: [SensorMode]
+    // An explicit allowlist prevents generic codecs leaking into camera-specific formats.
+    let supportedCodecIds: [String]?
+
+    var isStandaloneProRes: Bool { sourceType == .proRes }
+}
+
+struct CodecProfile: Codable, Identifiable, Hashable {
+    let id: String
+    let name: String
+    let family: String
+    let rateModel: RateModel
+    let effectiveBitsPerPixel: Double?
+    let note: String
+    let supportedManufacturers: [CameraManufacturer]?
+    let supportedCameraIds: [String]?
+}
+
+struct MediaProfile: Codable, Identifiable, Hashable {
+    let id: String
+    let label: String
+    let capacityGb: Double
+}
+
+struct CatalogData: Codable, Hashable {
+    let cameras: [CameraProfile]
+    let codecs: [CodecProfile]
+    let mediaOptions: [MediaProfile]
+    let frameRates: [Double]
+    let projectFrameRates: [Double]
+    let proResRateTable: [String: [String: [String: Double]]]
+    // Published per-camera rows keyed "camera|codec|resolution" → frame rate → MB/s payload.
+    let rateTable: [String: [String: Double]]
+
+    static let bundled: CatalogData = {
+        do {
+            return try load()
+        } catch {
+            fatalError("Catalog.json could not be loaded: \(error)")
+        }
+    }()
+
+    static func load(bundle: Bundle? = nil) throws -> CatalogData {
+        let resourceBundle = bundle ?? Bundle(for: CatalogBundleToken.self)
+        guard let url = resourceBundle.url(forResource: "Catalog", withExtension: "json") else {
+            throw CatalogError.missingResource
+        }
+        return try JSONDecoder().decode(CatalogData.self, from: Data(contentsOf: url))
+    }
+}
+
+private final class CatalogBundleToken {}
+
+private enum CatalogError: LocalizedError {
+    case missingResource
+
+    var errorDescription: String? {
+        "Catalog.json is missing from the application bundle."
+    }
+}
+
+// MARK: - Calculator state
+
+struct CaptureSettings: Codable, Equatable, Hashable {
+    var cameraId: String
+    var modeId: String
+    var resolutionId: String
+    var codecId: String
+    var projectFps: Double
+    var sensorFps: Double
+    var sensorOverdrive: Bool
+    var mediaId: String
+    var shootHours: Double
+
+    static let `default` = CaptureSettings(
+        cameraId: "alexa35",
+        modeId: "open-gate",
+        resolutionId: "a35-open",
+        codecId: "arriraw-hde",
+        projectFps: 24,
+        sensorFps: 24,
+        sensorOverdrive: false,
+        mediaId: "2tb",
+        shootHours: 8
+    )
+}
+
+struct Calculation: Hashable {
+    let camera: CameraProfile
+    let mode: SensorMode
+    let resolution: Resolution
+    let codec: CodecProfile
+    let media: MediaProfile
+    let projectMbps: Double
+    let sensorMbps: Double
+    let projectGbPerHour: Double
+    let sensorGbPerHour: Double
+    let projectRuntimeHours: Double
+    let captureRuntimeHours: Double
+    let dayTotalGb: Double
+    let dayUsagePercent: Double
+    let clipWidthMm: Double
+    let clipHeightMm: Double
+    let imageCircleMm: Double
+    let formatFactor: Double
+}
+
+struct PinnedSetup: Identifiable, Hashable {
+    let id: UUID
+    let settings: CaptureSettings
+    let calculation: Calculation
+}
+
+enum CalculatorView: String, CaseIterable, Identifiable, Hashable {
+    case rate = "RATE"
+    case shutter = "SHUTTER"
+
+    var id: Self { self }
+}
+
+// MARK: - Shutter workbench
+
+enum ShutterMode: String, CaseIterable, Identifiable, Hashable {
+    case conversion, flicker, matching
+    var id: Self { self }
+    // MODE 使用中文说明；保留原始值以维持模式标识和计算逻辑。
+    var label: String {
+        switch self {
+        case .conversion: "快门换算"
+        case .flicker: "频闪参考快门"
+        case .matching: "升格 / 降格"
+        }
+    }
+}
+
+enum ShutterDirection: String, CaseIterable, Identifiable {
+    case angleToTime, timeToAngle
+    var id: Self { self }
+    var label: String { self == .angleToTime ? "Angle → time" : "Time → angle" }
+}
+
+enum ShutterMatch: String, CaseIterable, Identifiable {
+    case exposure, angle
+    var id: Self { self }
+    var label: String { self == .exposure ? "Keep exposure time" : "Keep angle" }
+}
+
+enum ShutterLight: String, CaseIterable, Identifiable {
+    case mains50, mains60, custom
+    var id: Self { self }
+    var label: String {
+        switch self {
+        case .mains50: "50 Hz mains · 100 Hz light"
+        case .mains60: "60 Hz mains · 120 Hz light"
+        case .custom: "Custom light pulse rate"
+        }
+    }
+}
+
+/// Presets opt into exact fractional cadence; typed decimals are never reinterpreted.
+enum ShutterFramePreset: String, CaseIterable, Identifiable {
+    case fractional24, fractional30, fractional60, fps24, fps25, fps30, fps48, fps50, fps60, fps120
+    var id: Self { self }
+    var fps: Double {
+        switch self {
+        case .fractional24: 24_000 / 1_001
+        case .fractional30: 30_000 / 1_001
+        case .fractional60: 60_000 / 1_001
+        case .fps24: 24
+        case .fps25: 25
+        case .fps30: 30
+        case .fps48: 48
+        case .fps50: 50
+        case .fps60: 60
+        case .fps120: 120
+        }
+    }
+    var label: String {
+        switch self {
+        case .fractional24: "23.976 (24000/1001)"
+        case .fractional30: "29.97 (30000/1001)"
+        case .fractional60: "59.94 (60000/1001)"
+        default: "\(Int(fps)) fps"
+        }
+    }
+}
+
+struct ShutterSettings: Equatable, Hashable {
+    var mode: ShutterMode = .conversion
+    var direction: ShutterDirection = .angleToTime
+    var match: ShutterMatch = .exposure
+    var sensorFps: Double = 24
+    var projectFps: Double = 24
+    var angle: Double = 180
+    var shutterDenominator: Double = 48
+    var targetAngle: Double = 180
+    var preferredAngle: Double = 180
+    var maxAngle: Double = 360
+    var light: ShutterLight = .mains50
+    var customLightHz: Double = 100
+    var checksFlicker = false
+
+    var lightHz: Double {
+        switch light {
+        case .mains50: 100
+        case .mains60: 120
+        case .custom: customLightHz
+        }
+    }
+    var needsLight: Bool { mode == .flicker || (mode == .matching && checksFlicker) }
+    static let `default` = ShutterSettings()
+}
+
+/// Both the engine and editable fields use these same domain limits.
+enum ShutterInputField: String, Hashable {
+    case sensorFps, projectFps, angle, shutterDenominator, targetAngle, preferredAngle, maxAngle, customLightHz
+
+    var keyPath: WritableKeyPath<ShutterSettings, Double> {
+        switch self {
+        case .sensorFps: \.sensorFps
+        case .projectFps: \.projectFps
+        case .angle: \.angle
+        case .shutterDenominator: \.shutterDenominator
+        case .targetAngle: \.targetAngle
+        case .preferredAngle: \.preferredAngle
+        case .maxAngle: \.maxAngle
+        case .customLightHz: \.customLightHz
+        }
+    }
+
+    func error(for value: Double) -> String? {
+        guard value.isFinite, value > 0 else { return "Enter a finite number greater than zero." }
+        switch self {
+        case .sensorFps, .projectFps:
+            return (0.001 ... 10_000).contains(value) ? nil : "Enter 0.001–10000 fps."
+        case .maxAngle:
+            return value <= 360 ? nil : "Maximum angle must be at most 360°."
+        default:
+            return nil
+        }
+    }
+}
+
+struct ShutterExposure: Equatable, Hashable {
+    let exposureSeconds: Double
+    let angle: Double
+    let framePeriodMs: Double
+    var exposureMs: Double { exposureSeconds * 1_000 }
+    var shutterDenominator: Double { 1 / exposureSeconds }
+}
+
+struct ShutterCandidate: Equatable, Hashable, Identifiable {
+    // Cycle count is stable across result sorting and avoids index-based row identity.
+    let cycles: Double
+    let exposure: ShutterExposure
+    var id: Double { cycles }
+}
+
+enum ShutterStatus: Equatable, Hashable {
+    case valid, exceedsMaximum, noCandidates
+    case invalidInput(ShutterInputField)
+    case numericalLimit
+}
+
+struct ShutterCalculation: Equatable, Hashable {
+    let status: ShutterStatus
+    var exposure: ShutterExposure? = nil
+    var playbackSpeed: Double? = nil
+    var durationMultiplier: Double? = nil
+    var matchesLightCycles: Bool? = nil
+    var candidates: [ShutterCandidate] = []
+}

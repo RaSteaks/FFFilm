@@ -1,0 +1,40 @@
+{
+  "configurations" : [
+    {
+      "id" : "1F58E642-CD40-4BEC-AC8F-332F183E9CFE",
+      "name" : "Test Scheme Action",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "language" : "zh-Hans",
+    "performanceAntipatternCheckerEnabled" : true,
+    "region" : "CN",
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:FFFilm.xcodeproj",
+      "identifier" : "82F7A4B5306107AC000ADBD9",
+      "name" : "FFFilm"
+    }
+  },
+  "testTargets" : [
+    {
+      "parallelizable" : true,
+      "target" : {
+        "containerPath" : "container:FFFilm.xcodeproj",
+        "identifier" : "82F7A4C2306107AD000ADBD9",
+        "name" : "FFFilmTests"
+      }
+    },
+    {
+      "parallelizable" : true,
+      "target" : {
+        "containerPath" : "container:FFFilm.xcodeproj",
+        "identifier" : "82F7A4CC306107AD000ADBD9",
+        "name" : "FFFilmUITests"
+      }
+    }
+  ],
+  "version" : 1
+}

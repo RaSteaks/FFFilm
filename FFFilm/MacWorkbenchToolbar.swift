@@ -7,6 +7,7 @@ extension FocusedValues {
 
 /// Native titlebar controls avoid nesting AppKit button bezels around custom capsule backgrounds.
 struct MacWorkbenchToolbar: ToolbarContent {
+    @Environment(\.openWindow) private var openWindow
     @Bindable var store: CalculatorStore
     @AppStorage(StorageUnit.preferenceKey) private var unit: StorageUnit = .decimal
     @State private var copied = false
@@ -26,6 +27,10 @@ struct MacWorkbenchToolbar: ToolbarContent {
             .accessibilityIdentifier("calculator-view-picker")
         }
         ToolbarItemGroup(placement: .primaryAction) {
+            // Keep the film editor separate from calculator settings and snapshots.
+            Button { openWindow(id: "film-workbench") } label: {
+                Label(filmText("胶片", "Film"), systemImage: "film")
+            }.help(filmText("胶片工作台 ⌘3", "Film workbench ⌘3"))
             SettingsButton()
             if store.activeView == .rate {
                 Button {

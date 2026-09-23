@@ -29,6 +29,18 @@ Preset frame rates carry their exact rational values; typed decimals stay litera
 
 **Settings** — decimal GB/TB or binary GiB/TiB, applied to rates and totals without changing bitrate or runtime. Simplified Chinese and English follow the system language, falling back to English; camera models, codec names and FPS stay in their source form.
 
+## Film slicing (macOS only)
+
+Open **Film** in the Mac toolbar, or press **⌘3**. Import a TIFF or experimental Flextight FFF strip, detect frame gaps or draw frames manually, then crop, rotate, reorder and export. Automatic boundaries are candidates and should be checked. Save `.fffilm` projects to resume slicing without modifying the scan.
+
+Export current, checked or all frames as 16-bit Adobe RGB TIFF or 8-bit sRGB JPEG. Whole-strip output places rotated crops in their original slots, clipping to the slot boundaries; individual exports retain full rotated bounds. Zoom, undo/redo and batch selection remain available.
+
+The workbench contains no film-base correction, tone, curve, histogram or preset tools. Old projects load their geometry and ignore removed grading fields; resaving omits those fields. Existing user-preset files remain untouched.
+
+**Color management** remains for accurate input/output interpretation: embedded input profiles take precedence; untagged scans require explicit assignment or a matching RGB ICC. Floating-point previews preserve extended RGB and exports embed their output profiles. No automatic negative conversion is applied. See [color-management notes](docs/film-color-management.md).
+
+**FFF compatibility is experimental:** ImageIO full-resolution 16-bit RGB decoding works for the tested sample, but this does not establish every proprietary variant or calibrated scanner color. Camera RAW FFF and FlexColor processing history are not supported.
+
 ## Build, run and test
 
 Requires Xcode 26.3 or later, and iOS/iPadOS 18.6+ or macOS 15.6+. Open `FFFilm.xcodeproj`, or use:

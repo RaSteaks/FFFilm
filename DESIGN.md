@@ -178,3 +178,19 @@ The result action stores independent comparison snapshots, deduplicates identica
 ### Multiple display shutter input
 
 The existing LIGHT SOURCE picker owns 多显示设备. A shared FieldCard and native text field accept a comma-separated Hz list with explicit decimal-point instructions. Reuse light-field keyboard focus, scroll centering and result-height retention. Preserve raw list edits across modes/import; reset restores 60, 120. Invalid lists clear the result. When no exact common exposure fits, show a compromise angle/time with an always-visible qualification. DETAILS reports worst and per-device cycle deviation, the optimization rule and an approximation note when the bounded search applies. Matching mode preserves its primary target and puts the compromise in DETAILS only. Clipboard output carries the same qualification and reference angle. Keep fixed-refresh/PWM/VRR limitations; no measured flicker percentages or guarantees. No new visual tokens.
+
+## macOS film slicing
+
+The Film toolbar action and ⌘3 open a separate macOS slicing window, preserving RATE/SHUTTER as the calculator's only segmented modes. Keep the existing monochrome Palette and native controls, central preview, 300–380pt scrolling inspector and bottom frame strip.
+
+The inspector exposes only source dimensions/profile, frame splitting/cropping/rotation/reordering and export. Show crop controls directly. Retain TIFF/FFF import, automatic gap candidates, manual frame drawing, numeric crop fields, aspect ratios, rotation, batch selection, zoom, undo/redo and project save/open. Remove film classification, original/processed comparison, tone, mask correction, curves, histograms, presets, editing-space selection and adjustment synchronization.
+
+Show the active scan's filename and Home-relative path above the preview. Keep long paths selectable and accessible at the minimum window width; source identity follows the successfully loaded scan, including restored projects.
+
+In the strip preview's Select tool, dragging a frame's edge adjusts that side while the opposite edge stays fixed; dragging its interior moves the frame. Selected edges show inset grips so full-image crops remain operable at the canvas boundary; hover and active edges use a yellow line and directional resize cursor. Hide these grips in Draw frame mode. The four numeric crop fields remain the precise keyboard-accessible alternative. A drag remains one undoable edit.
+
+Rendering changes geometry only. Existing projects may contain removed grading keys; ignore these during decoding and omit them when resaving. Do not read or delete the old user-preset library. Source ICC interpretation, floating-point preview and output profile conversion remain necessary for faithful file handling, not image grading. Untagged inputs require explicit profile assignment.
+
+Export current/checked/all frames or the whole strip as 16-bit Adobe RGB TIFF or 8-bit sRGB JPEG. Individual frame output includes the full rotated bounds; whole-strip rotation is clipped to each original slot. Preserve asynchronous progress, cancellation, collision avoidance, error reporting, and unsaved-project protection. No source scans are rewritten.
+
+Frame-strip thumbnails show the saved rotation and keep their 96 × 60 slot while loading. JPEG exports flatten transparent rotated corners onto white before encoding; TIFF retains transparency. Treat a newly imported scan as an unsaved project so close/quit can offer to save its source link and default frame. Only one file panel or unsaved-work sheet may be active per film window; confirmed discards close without a second prompt.

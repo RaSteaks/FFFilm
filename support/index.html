@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#0d0f0f">
+    <meta name="theme-color" content="#f3efe4">
     <meta name="description" content="FFFilm 隐私政策与技术支持。">
     <title>FFFilm / 支持</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
@@ -11,68 +11,75 @@
   </head>
   <body>
     <a class="skip-link" href="#main">跳到主要内容</a>
-    <div class="site-frame">
+    <!-- Signature element: the sprocket rail frames every page of the sheet. -->
+    <aside class="rail" aria-hidden="true">
+      <span class="rail-code">FFFILM ▸ SAFETY FILM ▸ SUPPORT DESK ▸ 5069</span>
+    </aside>
+
+    <div class="page">
       <header class="site-header">
-        <!-- Keep the compact mark and navigation identical across all support pages. -->
-        <a class="brand" href="index.html" aria-label="FFFilm 支持首页">
-          <span class="brand-mark" aria-hidden="true">F</span>
-          <span>FFFilm / support</span>
-        </a>
-        <nav class="site-nav" aria-label="主要导航">
-          <a href="support.html">技术支持</a>
-          <a href="privacy.html">隐私政策</a>
-        </nav>
+        <div class="wrap">
+          <a class="brand" href="index.html" aria-label="FFFilm 支持首页">
+            <span class="brand-chip" aria-hidden="true">F</span>
+            <span class="brand-name">FFFilm <em>/ support</em></span>
+          </a>
+          <nav class="site-nav" aria-label="主要导航">
+            <a href="support.html">技术支持</a>
+            <a href="privacy.html">隐私政策</a>
+          </nav>
+        </div>
       </header>
 
       <main id="main">
-        <section class="hero" aria-labelledby="page-title">
-          <div class="hero-copy">
-            <p class="eyebrow"><span class="eyebrow-dot" aria-hidden="true"></span> FFFILM / SUPPORT DESK</p>
-            <h1 id="page-title">支持资料<span class="title-mark">。</span></h1>
-            <p class="lede">关于 FFFilm 的隐私、数据处理方式和使用问题，都可以从这里找到答案。</p>
-          </div>
-          <aside class="hero-panel" aria-label="站点信息">
-            <p class="panel-label">DOCUMENT STATUS</p>
-            <p class="panel-value"><span class="status-dot" aria-hidden="true"></span> PUBLIC / READY</p>
-            <dl class="panel-meta">
-              <dt>Updated</dt>
-              <dd>2026.09.24</dd>
-              <dt>Runtime</dt>
-              <dd>LOCAL</dd>
-            </dl>
-          </aside>
-        </section>
+        <div class="wrap">
+          <section class="title-block" aria-labelledby="page-title">
+            <div class="title-copy">
+              <p class="eyebrow">FFFILM · TECHNICAL DATA SHEET</p>
+              <h1 id="page-title">支持资料<span class="title-mark">。</span></h1>
+              <p class="lede">关于 FFFilm 的功能、隐私、数据处理方式和使用问题，都可以从这里找到答案。</p>
+            </div>
+            <aside class="meta-block" aria-label="站点信息">
+              <p class="meta-head">DOCUMENT</p>
+              <dl>
+                <div><dt>SHEET</dt><dd>SUPPORT DESK</dd></div>
+                <div><dt>REV / DATE</dt><dd>2026.09.24</dd></div>
+                <div><dt>RUNTIME</dt><dd>LOCAL</dd></div>
+                <div><dt>STATUS</dt><dd><span class="status-dot" aria-hidden="true"></span>PUBLIC / READY</dd></div>
+              </dl>
+            </aside>
+          </section>
 
-        <div class="content-layout">
-          <aside class="section-index" aria-label="页面导航">
-            <p class="section-label">INDEX</p>
-            <ol>
-              <li><a href="support.html">技术支持</a></li>
-              <li><a href="privacy.html">隐私政策</a></li>
-            </ol>
-          </aside>
-
-          <section class="content" aria-labelledby="choose-title">
-            <p class="section-label">START HERE</p>
-            <h2 id="choose-title">选择你要查找的资料</h2>
-            <p>FFFilm 是一个用于影视拍摄规划的本地计算工具，提供数据率、存储与快门计算；Mac 版还包含胶片切片工作台。所有功能都在设备本地完成，不需要登录或上传项目数据。</p>
-            <div class="home-links">
-              <a class="home-link" href="support.html">
-                <small>01 / Help</small>
-                <span>技术支持</span>
+          <!-- Two destinations, two frames on one strip. -->
+          <section class="strip" aria-label="资料入口">
+            <div class="strip-inner">
+              <a class="frame-card" href="support.html">
+                <p class="frame-tag">FRAME 01 · HELP DESK</p>
+                <span class="frame-title">技术支持</span>
+                <span class="frame-desc">数据率、存储、快门与胶片切片的用法和常见问题。</span>
+                <span class="frame-arrow" aria-hidden="true">↗</span>
               </a>
-              <a class="home-link" href="privacy.html">
-                <small>02 / Policy</small>
-                <span>隐私政策</span>
+              <a class="frame-card" href="privacy.html">
+                <p class="frame-tag">FRAME 02 · POLICY</p>
+                <span class="frame-title">隐私政策</span>
+                <span class="frame-desc">应用处理哪些数据、什么留在本地、什么不会上传。</span>
+                <span class="frame-arrow" aria-hidden="true">↗</span>
               </a>
             </div>
+          </section>
+
+          <section class="content-section home-note" aria-labelledby="local-title">
+            <p class="section-label">HOW IT RUNS</p>
+            <h2 id="local-title">一台设备，一张资料单</h2>
+            <p>FFFilm 是一个用于影视拍摄规划的本地计算工具，提供数据率、存储与快门计算；Mac 版还包含胶片切片工作台。所有功能都在设备本地完成，不需要登录或上传项目数据。</p>
           </section>
         </div>
       </main>
 
-      <footer class="footer">
-        <p><span class="footer-label">FFFilm</span> 数据率 · 容量 · 快门换算 · 胶片切片</p>
-        <p>© 2026 FFFilm</p>
+      <footer class="site-footer">
+        <div class="wrap">
+          <p class="edge-code">▸ FFFILM ▸ SAFETY FILM ▸ 5069 ▸ 2026</p>
+          <p>© 2026 FFFilm · 数据率 · 容量 · 快门换算 · 胶片切片</p>
+        </div>
       </footer>
     </div>
   </body>

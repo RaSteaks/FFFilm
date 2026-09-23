@@ -23,20 +23,20 @@ struct QuickStartView: View {
                 .contentMargins(.horizontal, 2, for: .scrollContent)
 
                 // Catalog access stays visible even when many favorites extend beyond the screen.
-                Button("CAMERAS", systemImage: "camera") { showsCameras = true }
+                Button("nav.cameras", systemImage: "camera") { showsCameras = true }
                     .buttonStyle(PresetButtonStyle(selected: false))
                     .fixedSize()
-                    .accessibilityLabel("Browse cameras and manage favorites")
+                    .accessibilityLabel(Text("camera.browseHint"))
                     .accessibilityIdentifier("camera-library")
             }
             if store.quickStartCameras.isEmpty {
-                Text("Add favorites in CAMERAS to show them here.")
+                Text("camera.emptyFavorites")
                     .font(.caption)
                     .foregroundStyle(Palette.muted)
             }
         }
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("Favorite cameras")
+        .accessibilityLabel(Text("nav.favorites"))
         .accessibilityIdentifier("quick-start")
         .sheet(isPresented: $showsCameras) { CameraLibraryView(store: store) }
     }

@@ -9,8 +9,9 @@ final class FFFilmUITests: XCTestCase {
     func testCalculatorLaunchesWithCoreControls() throws {
         let app = XCUIApplication()
         app.launch()
-        XCTAssertTrue(app.staticTexts["FORMAT & DATA"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["reset-action"].firstMatch.exists)
+        // Identifiers only: the simulator language may differ from English.
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "app-title").firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["more-action"].firstMatch.exists)
         XCTAssertTrue(app.buttons["pin-action"].firstMatch.exists)
         let result = app.descendants(matching: .any).matching(identifier: "rate-results").firstMatch
         let controls = app.descendants(matching: .any).matching(identifier: "capture-controls").firstMatch
@@ -33,16 +34,132 @@ final class FFFilmUITests: XCTestCase {
 
         let copyButton = app.buttons["copy-action"].firstMatch
         XCTAssertTrue(copyButton.waitForExistence(timeout: 5))
+        // The label changes to the localized "copied" state; the exact wording
+        // depends on the simulator language, so compare against the rest state.
+        let restLabel = copyButton.label
         copyButton.tap()
-        #if os(macOS)
-        XCTAssertEqual(copyButton.label, "Copied")
-        #else
-        XCTAssertEqual(copyButton.label, "COPIED")
-        #endif
+        XCTAssertNotEqual(copyButton.label, restLabel)
 
         app.buttons["pin-action"].firstMatch.tap()
         let pinnedSetup = app.descendants(matching: .any).matching(identifier: "pinned-setups").firstMatch
         XCTAssertTrue(pinnedSetup.waitForExistence(timeout: 2))
+    }
+
+    @MainActor
+    func testDurationDirectInputCommitsOnlyOnSubmit() throws {
+        let app = XCUIApplication()
+        // Number formatting is locale-dependent; pin the language for value checks.
+        app.launchArguments += ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        let field = app.textFields["capture-duration"].firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        XCTAssertEqual(field.value as? String ?? "", "8.00")
+
+        // Decimal typing must survive intermediate states ("2" alone is valid).
+        enterText("2.5", into: field, in: app)
+        finishDurationEditing(app)
+        XCTAssertEqual(field.value as? String ?? "", "2.50")
+
+        // Out-of-range input keeps the last valid plan and surfaces an inline error.
+        enterText("30", into: field, in: app)
+        finishDurationEditing(app)
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "duration-error").firstMatch.waitForExistence(timeout: 2))
+        XCTAssertEqual(field.value as? String ?? "", "30")
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "rate-results").firstMatch.exists)
+
+        // Quick presets share the store path and clear the error.
+        let quick = app.buttons["duration-quick-4"].firstMatch
+        reveal(quick, in: app)
+        quick.tap()
+        XCTAssertEqual(field.value as? String ?? "", "4.00")
+        XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "duration-error").firstMatch.exists)
+    }
+
+    #if os(iOS)
+    /// XCTest sheet hit-testing is unreliable on the available macOS host, so
+    /// the comparison sheet flow runs on iOS only (AGENT.md, camera catalog).
+    @MainActor
+    func testComparisonSheetAddsViewsAndRemovesSnapshots() throws {
+        let app = XCUIApplication()
+        app.launch()
+        let view = app.buttons["comparison-view"].firstMatch
+        XCTAssertTrue(view.waitForExistence(timeout: 5))
+        XCTAssertFalse(view.isEnabled)
+
+        let add = app.buttons["comparison-add"].firstMatch
+        reveal(add, in: app)
+        add.tap()
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "feedback-banner").firstMatch.waitForExistence(timeout: 2))
+        XCTAssertTrue(view.isEnabled)
+
+        view.tap()
+        let snapshot = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier BEGINSWITH 'comparison-snapshot-'")).firstMatch
+        XCTAssertTrue(snapshot.waitForExistence(timeout: 3))
+        let remove = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier BEGINSWITH 'comparison-remove-'")).firstMatch
+        XCTAssertTrue(remove.exists)
+        remove.tap()
+
+        let done = app.buttons["comparison-done"].firstMatch
+        XCTAssertTrue(done.waitForExistence(timeout: 2))
+        done.tap()
+        let disabled = NSPredicate(format: "isEnabled == false")
+        let expectation = XCTNSPredicateExpectation(predicate: disabled, object: view)
+        XCTWaiter().wait(for: [expectation], timeout: 4)
+        XCTAssertFalse(view.isEnabled)
+    }
+
+    @MainActor
+    func testStandaloneProResComparisonNamesProjectFPS() throws {
+        let app = XCUIApplication()
+        app.launchArguments += ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        // The ProRes quick-start bypasses the camera picker's virtualized list.
+        let proRes = app.buttons["PRORES"].firstMatch
+        XCTAssertTrue(proRes.waitForExistence(timeout: 3))
+        proRes.tap()
+        let add = app.buttons["comparison-add"].firstMatch
+        reveal(add, in: app)
+        add.tap()
+        app.buttons["comparison-view"].firstMatch.tap()
+        let snapshot = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier BEGINSWITH 'comparison-snapshot-'")).firstMatch
+        XCTAssertTrue(snapshot.waitForExistence(timeout: 3))
+        // The stored cadence is project FPS for standalone ProRes, including in comparisons.
+        XCTAssertTrue(snapshot.staticTexts["project FPS"].exists)
+        XCTAssertFalse(snapshot.staticTexts["sensor FPS"].exists)
+    }
+    #endif
+
+    @MainActor
+    func testRateResetFromMoreMenuOfferedOneStepUndo() throws {
+        let app = XCUIApplication()
+        app.launchArguments += ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        let field = app.textFields["capture-duration"].firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        let quick12 = app.buttons["duration-quick-12"].firstMatch
+        reveal(quick12, in: app)
+        quick12.tap()
+        XCTAssertEqual(field.value as? String ?? "", "12.00")
+
+        #if os(macOS)
+        app.typeKey("r", modifierFlags: [.command, .shift])
+        #else
+        openMore(in: app)
+        let reset = app.buttons["reset-action"].firstMatch
+        XCTAssertTrue(reset.waitForExistence(timeout: 3))
+        reset.tap()
+        #endif
+
+        let undo = app.buttons["reset-undo"].firstMatch
+        XCTAssertTrue(undo.waitForExistence(timeout: 3))
+        // Reset restored the default plan; undo brings the edited plan back.
+        XCTAssertEqual(field.value as? String ?? "", "8.00")
+        undo.tap()
+        XCTAssertEqual(field.value as? String ?? "", "12.00")
+        XCTAssertFalse(app.buttons["reset-undo"].firstMatch.exists)
     }
 
     @MainActor
@@ -54,7 +171,8 @@ final class FFFilmUITests: XCTestCase {
         #if os(macOS)
         app.typeKey("2", modifierFlags: .command)
         #else
-        app.segmentedControls.buttons["SHUTTER"].tap()
+        // Segment titles are localized; index follows CalculatorView.allCases order.
+        app.segmentedControls["calculator-view-picker"].buttons.element(boundBy: 1).tap()
         #endif
         if !app.textFields["shutter-sensorFps"].waitForExistence(timeout: 3) {
             XCTFail("Missing camera FPS field: \(app.debugDescription)")
@@ -64,20 +182,31 @@ final class FFFilmUITests: XCTestCase {
 
     @MainActor
     private func reveal(_ element: XCUIElement, in app: XCUIApplication) {
-        for _ in 0 ..< 8 {
+        let window = app.windows.firstMatch.frame
+        for _ in 0 ..< 10 {
             if element.isHittable { break }
-            if element.exists, element.frame.midY < app.windows.firstMatch.frame.midY {
-                app.swipeDown()
+            guard element.exists else { break }
+            // Short center drags avoid the momentum oscillation full swipes
+            // cause around partially clipped fields.
+            let upper = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.52))
+            let lower = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.72))
+            if element.frame.midY < window.midY {
+                upper.press(forDuration: 0.05, thenDragTo: lower)
             } else {
-                app.swipeUp()
+                lower.press(forDuration: 0.05, thenDragTo: upper)
             }
         }
-        XCTAssertTrue(element.isHittable)
+        XCTAssertTrue(element.isHittable, "never became hittable: \(element)")
     }
 
     @MainActor
     private func enter(_ text: String, field name: String, in app: XCUIApplication) {
-        let field = app.textFields["shutter-\(name)"]
+        enterText(text, into: app.textFields["shutter-\(name)"], in: app)
+    }
+
+    @MainActor
+    private func enterText(_ text: String, into field: XCUIElement, in app: XCUIApplication) {
+        dismissKeyboardFocus(in: app)
         reveal(field, in: app)
         field.tap()
         // Keyboard insets and the app's focus-centering task must settle before selecting text.
@@ -86,18 +215,7 @@ final class FFFilmUITests: XCTestCase {
         field.typeKey("a", modifierFlags: .command)
         field.typeText(text)
         #else
-        // Select the complete value using the editing menu; a tap does not guarantee an end caret.
-        let old = field.value as? String ?? ""
-        if !old.isEmpty, old != field.placeholderValue {
-            field.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).press(forDuration: 1.2)
-            let selectAll = app.descendants(matching: .any)
-                .matching(NSPredicate(format: "label == 'Select All' OR label == '全选'"))
-                .firstMatch
-            XCTAssertTrue(selectAll.waitForExistence(timeout: 2), app.debugDescription)
-            selectAll.tap()
-            field.typeText(XCUIKeyboardKey.delete.rawValue)
-        }
-        if !text.isEmpty { field.typeText(text) }
+        replaceFieldText(text, field: field, app: app)
         if text.isEmpty {
             let value = field.value as? String ?? ""
             XCTAssertTrue(value.isEmpty || value == field.placeholderValue)
@@ -107,13 +225,104 @@ final class FFFilmUITests: XCTestCase {
         #endif
     }
 
+    /// A focused field keeps its keyboard toolbar over the lower form; dismiss
+    /// it so the next reveal works on a calm layout.
+    @MainActor
+    private func dismissKeyboardFocus(in app: XCUIApplication) {
+        #if os(iOS)
+        for identifier in ["shutter-done", "duration-done", "DONE"] where app.buttons[identifier].exists {
+            app.buttons[identifier].tap()
+            Thread.sleep(forTimeInterval: 0.3)
+            return
+        }
+        #endif
+    }
+
+    /// Replaces the whole field content on iOS. The automation host keeps a
+    /// hardware keyboard attached, so the software keyboard never shows, the
+    /// long-press edit menu never appears, and delete-key events are dropped
+    /// for some fields (verified against screen recordings). A two-finger tap
+    /// selects the whole single-paragraph content; typing then replaces the
+    /// selection outright. Verified per-key deletes and the edit menu remain
+    /// as fallbacks.
+    @MainActor
+    private func replaceFieldText(_ text: String, field: XCUIElement, app: XCUIApplication) {
+        func settled() -> Bool {
+            let value = field.value as? String ?? ""
+            return text.isEmpty ? (value.isEmpty || value == field.placeholderValue) : value == text
+        }
+        for _ in 0 ..< 2 {
+            if settled() { return }
+            #if os(iOS)
+            field.twoFingerTap()
+            Thread.sleep(forTimeInterval: 0.3)
+            #endif
+            field.typeText(text.isEmpty ? XCUIKeyboardKey.delete.rawValue : text)
+            Thread.sleep(forTimeInterval: 0.3)
+            if settled() { return }
+            deleteBackward(field)
+            clearThroughMenu(field, app: app)
+            if !text.isEmpty { field.typeText(text) }
+            Thread.sleep(forTimeInterval: 0.3)
+        }
+    }
+
+    @MainActor
+    private func clearThroughMenu(_ field: XCUIElement, app: XCUIApplication) {
+        let value = field.value as? String ?? ""
+        guard !value.isEmpty, value != field.placeholderValue else { return }
+        field.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).press(forDuration: 1.2)
+        let selectAll = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label == 'Select All' OR label == '全选'"))
+            .firstMatch
+        if selectAll.waitForExistence(timeout: 2) {
+            selectAll.tap()
+            Thread.sleep(forTimeInterval: 0.2)
+            field.typeText(XCUIKeyboardKey.delete.rawValue)
+            Thread.sleep(forTimeInterval: 0.2)
+        }
+    }
+
+    @MainActor
+    private func deleteBackward(_ field: XCUIElement) {
+        for _ in 0 ..< 24 {
+            let value = field.value as? String ?? ""
+            if value.isEmpty || value == field.placeholderValue { return }
+            field.typeText(XCUIKeyboardKey.delete.rawValue)
+            Thread.sleep(forTimeInterval: 0.1)
+            if (field.value as? String ?? "") == value {
+                // The key did not land; reposition the cursor and keep going.
+                field.coordinate(withNormalizedOffset: CGVector(dx: 0.6, dy: 0.5)).tap()
+                Thread.sleep(forTimeInterval: 0.35)
+            }
+        }
+    }
+
     @MainActor
     private func finishEditing(_ app: XCUIApplication) {
         #if os(iOS)
-        if app.buttons["DONE"].exists { app.buttons["DONE"].tap() }
+        dismissKeyboardFocus(in: app)
         #else
         app.typeKey(.tab, modifierFlags: [])
         #endif
+    }
+
+    @MainActor
+    private func finishDurationEditing(_ app: XCUIApplication) {
+        // The duration draft commits through the keyboard toolbar on iOS.
+        #if os(iOS)
+        let done = app.buttons["duration-done"].firstMatch
+        XCTAssertTrue(done.waitForExistence(timeout: 2), app.debugDescription)
+        done.tap()
+        #else
+        app.typeKey(.tab, modifierFlags: [])
+        #endif
+    }
+
+    @MainActor
+    private func openMore(in app: XCUIApplication) {
+        let more = app.buttons["more-action"].firstMatch
+        if more.exists { reveal(more, in: app); more.tap() }
     }
 
     @MainActor
@@ -123,7 +332,14 @@ final class FFFilmUITests: XCTestCase {
         reveal(control, in: app)
         control.tap()
         #if os(macOS)
-        app.menuItems[label].firstMatch.tap()
+        // macOS exposes SwiftUI menu actions with a shared identifier; the visible
+        // localized title is the stable selector for the menu item itself.
+        let byIdentifier = app.menuItems[label].firstMatch
+        let item = byIdentifier.exists
+            ? byIdentifier
+            : app.menuItems.matching(NSPredicate(format: "title == %@ OR label == %@", label, label)).firstMatch
+        XCTAssertTrue(item.waitForExistence(timeout: 2), app.debugDescription)
+        item.tap()
         #else
         app.buttons[label].firstMatch.tap()
         #endif
@@ -135,7 +351,8 @@ final class FFFilmUITests: XCTestCase {
         enter("23.976", field: "sensorFps", in: app)
         enter("172.8", field: "angle", in: app)
         finishEditing(app)
-        XCTAssertTrue(app.staticTexts["shutter-time-output"].label.contains("1/49.95 s"))
+        // Conversion angle→time shows the time as the primary readout.
+        XCTAssertTrue(app.staticTexts["shutter-time-primary"].label.contains("1/49.95 s"))
         let result = app.descendants(matching: .any).matching(identifier: "shutter-results").firstMatch
         let controls = app.descendants(matching: .any).matching(identifier: "shutter-controls").firstMatch
         #if os(iOS)
@@ -157,24 +374,24 @@ final class FFFilmUITests: XCTestCase {
         XCTAssertFalse(app.staticTexts["shutter-angle-output"].exists)
         enter("60", field: "sensorFps", in: app)
         finishEditing(app)
-        XCTAssertTrue(app.staticTexts["shutter-time-output"].label.contains("1/120 s"))
+        XCTAssertTrue(app.staticTexts["shutter-time-primary"].label.contains("1/120 s"))
+        openMore(in: app)
         let reset = app.buttons["reset-action"].firstMatch
         reveal(reset, in: app)
         reset.tap()
         XCTAssertEqual(app.textFields["shutter-sensorFps"].value as? String, "24")
-        XCTAssertTrue(app.staticTexts["shutter-time-output"].label.contains("1/48 s"))
+        XCTAssertTrue(app.staticTexts["shutter-time-primary"].label.contains("1/48 s"))
     }
 
     @MainActor
     func testShutterFlickerEmptyAndMatchingModes() throws {
         let app = shutterApp()
-        // 使用 MODE 当前的中文描述选择模式。
-        choose("频闪参考快门", picker: "shutter-mode", in: app)
+        choose("Flicker reference", picker: "shutter-mode", in: app)
         XCTAssertEqual(app.staticTexts["shutter-angle-output"].label, "172.8°")
         enter("120", field: "sensorFps", in: app)
         finishEditing(app)
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "shutter-no-candidates").firstMatch.exists)
-        choose("升格 / 降格", picker: "shutter-mode", in: app)
+        choose("Over / undercrank", picker: "shutter-mode", in: app)
         enter("60", field: "sensorFps", in: app)
         finishEditing(app)
         XCTAssertEqual(app.staticTexts["shutter-angle-output"].label, "450°")
@@ -183,7 +400,7 @@ final class FFFilmUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["shutter-time-output"].label.contains("1/120 s"))
         // Supporting readouts are hidden until the single details disclosure is expanded.
         XCTAssertFalse(app.staticTexts["shutter-playback-output"].exists)
-        let details = app.staticTexts["DETAILS"].firstMatch
+        let details = app.staticTexts["Technical details"].firstMatch
         reveal(details, in: app)
         details.tap()
         XCTAssertTrue(app.staticTexts["shutter-playback-output"].label.contains("0.4×"))
@@ -196,6 +413,59 @@ final class FFFilmUITests: XCTestCase {
         attachment.name = "Shutter matching with light check"
         attachment.lifetime = .keepAlways
         add(attachment)
+    }
+
+    @MainActor
+    func testMultipleDisplayShutterInputAndRecovery() throws {
+        let app = shutterApp()
+        // macOS selectable Text combines descendants; read both accessibility labels and values.
+        func resultText() -> String {
+            let result = app.descendants(matching: .any).matching(identifier: "shutter-results").firstMatch
+            return result.descendants(matching: .staticText).allElementsBoundByIndex.map {
+                $0.label + " " + ($0.value as? String ?? "")
+            }.joined(separator: " ")
+        }
+        choose("Flicker reference", picker: "shutter-mode", in: app)
+        choose("Multiple displays", picker: "shutter-light-source", in: app)
+        XCTAssertTrue(resultText().contains("144°"), resultText())
+        // Exercise real text edits: no-common-period and invalid input must not retain a stale angle.
+        enter("50, 60", field: "display-rates", in: app)
+        finishEditing(app)
+        XCTAssertFalse(resultText().contains("144°"))
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "shutter-no-candidates").firstMatch.exists)
+        enter("60,", field: "display-rates", in: app)
+        finishEditing(app)
+        XCTAssertFalse(resultText().contains("144°"))
+        enter("60, 120", field: "display-rates", in: app)
+        finishEditing(app)
+        XCTAssertTrue(resultText().contains("144°"), resultText())
+        #if os(macOS)
+        let details = app.disclosureTriangles.matching(NSPredicate(format: "label == %@", "Technical details")).firstMatch
+        #else
+        let details = app.staticTexts["Technical details"].firstMatch
+        #endif
+        reveal(details, in: app)
+        #if os(macOS)
+        // Use the native desktop mouse action for the disclosure control.
+        details.click()
+        #else
+        details.tap()
+        #endif
+        let expanded = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            resultText().contains("60 Hz × 1 cycles · 120 Hz × 2 cycles")
+        }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [expanded], timeout: 3), .completed, resultText())
+        // Let the native disclosure animation finish before recording visual evidence.
+        Thread.sleep(forTimeInterval: 0.5)
+        let attachment = XCTAttachment(screenshot: app.screenshot())
+        attachment.name = "Multiple display shutter candidates"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+        openMore(in: app)
+        let reset = app.buttons["reset-action"].firstMatch
+        reveal(reset, in: app)
+        reset.tap()
+        XCTAssertTrue(resultText().contains("180°"), resultText())
     }
 
     @MainActor
@@ -212,13 +482,14 @@ final class FFFilmUITests: XCTestCase {
         #if os(macOS)
         app.typeKey("1", modifierFlags: .command)
         #else
-        reveal(app.segmentedControls.buttons["RATE"], in: app)
-        app.segmentedControls.buttons["RATE"].tap()
+        let segments = app.segmentedControls["calculator-view-picker"].buttons
+        reveal(segments.element(boundBy: 0), in: app)
+        segments.element(boundBy: 0).tap()
         #endif
         #if os(macOS)
         app.typeKey("2", modifierFlags: .command)
         #else
-        app.segmentedControls.buttons["SHUTTER"].tap()
+        app.segmentedControls["calculator-view-picker"].buttons.element(boundBy: 1).tap()
         #endif
         XCTAssertEqual(app.textFields["shutter-sensorFps"].value as? String, "48")
         reveal(importButton, in: app)
@@ -255,6 +526,8 @@ final class FFFilmUITests: XCTestCase {
         XCTAssertTrue(camera.waitForExistence(timeout: 3))
         let cameraID = camera.identifier.replacingOccurrences(of: "catalog-camera-", with: "")
         let favorite = app.buttons["favorite-toggle-\(cameraID)"]
+        // Each standalone favorite button must name its camera for VoiceOver.
+        XCTAssertTrue(favorite.label.contains("MAVO Edge 6K"))
         let wasFavorite = favorite.value as? String == "Favorite"
         if !wasFavorite { activateCameraControl(favorite) }
         XCTAssertEqual(favorite.value as? String, "Favorite")
@@ -282,7 +555,7 @@ final class FFFilmUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments += ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()
-        XCTAssertTrue(app.buttons["reset-action"].firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["more-action"].firstMatch.waitForExistence(timeout: 5))
         XCTAssertTrue(app.toolbars.buttons["copy-action"].exists)
         XCTAssertTrue(app.staticTexts["Recording calculator"].exists)
         let rateScreenshot = XCTAttachment(screenshot: app.screenshot())

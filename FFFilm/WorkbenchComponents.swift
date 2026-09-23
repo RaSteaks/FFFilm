@@ -2,7 +2,7 @@ import SwiftUI
 
 // Shared primitives keep desktop density separate from touch-oriented presentation.
 struct FieldCard<Content: View>: View {
-    let title: String
+    let title: LocalizedStringKey
     let content: Content
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -19,7 +19,7 @@ struct FieldCard<Content: View>: View {
         usesCompactLayout && dynamicTypeSize.isAccessibilitySize
     }
 
-    init(_ title: String, @ViewBuilder content: () -> Content) {
+    init(_ title: LocalizedStringKey, @ViewBuilder content: () -> Content) {
         self.title = title
         self.content = content()
     }
@@ -72,26 +72,53 @@ struct FieldCard<Content: View>: View {
         #if !os(macOS)
         .background(Palette.surface)
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-        .overlay { RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Palette.line) }
         #endif
     }
 
     private var fieldLabel: some View {
         Text(title)
-            .font(.system(size: 9, weight: .semibold, design: .monospaced))
-            .tracking(1.0)
+            // Labels use the system face; only measurements and control values
+            // use monospaced figures so translated labels can wrap naturally.
+            .font(.system(.caption2, weight: .semibold))
             .foregroundStyle(Palette.muted)
-            .lineLimit(1)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+/// A quiet section surface replaces a border around every individual field.
+/// It stays a static container so the same grouping works in the phone stack,
+/// iPad split layout and compact macOS workbench.
+struct ParameterGroup<Content: View>: View {
+    let title: LocalizedStringKey
+    let content: Content
+
+    init(title: LocalizedStringKey, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.system(.subheadline, weight: .semibold))
+                .frame(maxWidth: .infinity, alignment: .leading)
+            content
+        }
+        .padding(12)
+        .background(Palette.surface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay { RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Palette.line.opacity(0.8)) }
     }
 }
 
 struct Detail: View {
-    let text: String
+    private let localizedText: LocalizedStringKey
 
-    init(_ text: String) { self.text = text }
+    init(_ text: LocalizedStringKey) {
+        localizedText = text
+    }
 
     var body: some View {
-        Text(text)
+        Text(localizedText)
             .font(.system(size: 10, design: .monospaced))
             .foregroundStyle(Palette.muted)
             .fixedSize(horizontal: false, vertical: true)
@@ -225,8 +252,32 @@ extension View {
         toolbar {
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
-                Button("DONE") { focusedInput.wrappedValue = nil }
+                Button("shutter.done") { focusedInput.wrappedValue = nil }
                     .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                    .accessibilityIdentifier("shutter-done")
+            }
+        }
+        #else
+        self
+        #endif
+    }
+
+    /// The recording-duration draft commits through DONE; decimalPad on iOS
+    /// has no return key, so this toolbar is the explicit submit affordance.
+    @ViewBuilder
+    func durationInputToolbar(commit: @escaping () -> Void, focus: FocusState<Bool>.Binding) -> some View {
+        #if os(iOS)
+        toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button {
+                    commit()
+                    focus.wrappedValue = false
+                } label: {
+                    Text("duration.done")
+                }
+                .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                .accessibilityIdentifier("duration-done")
             }
         }
         #else

@@ -1,10 +1,19 @@
 import Foundation
 import Observation
 
+private struct ResetUndoSnapshot {
+    let settings: CaptureSettings
+    let shutterSettings: ShutterSettings
+    let cameraMemories: [String: CameraSettingsMemory]
+    let view: CalculatorView
+}
+
 @Observable
 final class CalculatorStore {
     @ObservationIgnored private let engine: CalculatorEngine
     @ObservationIgnored private let defaults: UserDefaults
+    @ObservationIgnored private var cameraMemories: [String: CameraSettingsMemory]
+    @ObservationIgnored private var resetUndoSnapshot: ResetUndoSnapshot?
 
     let catalog: CatalogData
     var settings: CaptureSettings
@@ -14,13 +23,21 @@ final class CalculatorStore {
     var pinnedSetups: [PinnedSetup] = []
     var quickStartCameraIds: [String]
 
+    /// The banner is deliberately modelled as state instead of a transient
+    /// toast so VoiceOver and keyboard users can discover important changes.
+    var feedbackMessage: String?
+    var resetUndoAvailable = false
+
     private static let quickStartKey = "fffilm.quick-start-camera-ids"
+    private static let cameraMemoryKey = "fffilm.camera-settings-memory"
     private static let defaultQuickStarts = ["alexa35", "alexa265", "venice2", "burano"]
 
-    init(catalog: CatalogData = .bundled, defaults: UserDefaults = .standard) {
+    init(catalog suppliedCatalog: CatalogData? = nil, defaults: UserDefaults = .standard) {
+        let catalog = suppliedCatalog ?? CatalogData.bundled
         self.catalog = catalog
         self.engine = CalculatorEngine(catalog: catalog)
         self.defaults = defaults
+        self.cameraMemories = Self.loadCameraMemories(defaults: defaults, catalog: catalog)
         self.settings = .default
         self.shutterSettings = .default
 
@@ -30,7 +47,13 @@ final class CalculatorStore {
         }
         // Preserve existing shortcuts as favorites, including an intentionally empty saved list.
         self.quickStartCameraIds = validIDs.uniqued()
-        self.settings = engine.normalized(settings)
+
+        let defaultSettings = engine.normalized(.default)
+        if let memory = cameraMemories[defaultSettings.cameraId] {
+            self.settings = engine.normalized(memory.applying(to: defaultSettings))
+        } else {
+            self.settings = defaultSettings
+        }
     }
 
     var calculation: Calculation { engine.calculate(settings: settings) }
@@ -61,6 +84,8 @@ final class CalculatorStore {
         !quickStartCandidates.isEmpty
     }
 
+    /// The legacy configuration-link format is intentionally kept separate
+    /// from the human-readable clipboard summary for compatibility.
     var configurationText: String {
         var components = URLComponents()
         components.scheme = "fffilm"
@@ -79,73 +104,153 @@ final class CalculatorStore {
         return components.string ?? ""
     }
 
+    func readableRecordingSummary(storageUnit: StorageUnit) -> String {
+        AppText.recordingSummary(settings: settings, calculation: calculation, unit: storageUnit)
+    }
+
+    func readableShutterSummary() -> String {
+        AppText.shutterSummary(settings: shutterSettings, calculation: shutterCalculation)
+    }
+
+    func setActiveView(_ view: CalculatorView) {
+        guard activeView != view else { return }
+        activeView = view
+        clearTransientState()
+    }
+
     func selectCamera(_ id: String) {
         let selectedCamera = engine.camera(id: id)
+        // A different window may have edited this camera since this store opened.
+        // Every format edit is already persisted, so switching need not save the outgoing state.
+        cameraMemories = Self.loadCameraMemories(defaults: defaults, catalog: catalog)
+
         var next = settings
         next.cameraId = selectedCamera.id
-        next.modeId = selectedCamera.modes[0].id
-        next.resolutionId = engine.preferredResolution(camera: selectedCamera, mode: selectedCamera.modes[0]).id
-        settings = engine.normalized(next)
+        if let memory = cameraMemories[selectedCamera.id] {
+            next = memory.applying(to: next)
+        } else {
+            next.modeId = selectedCamera.modes[0].id
+            next.resolutionId = engine.preferredResolution(camera: selectedCamera, mode: selectedCamera.modes[0]).id
+        }
+        commitFormatSettings(next)
     }
 
     func selectMode(_ id: String) {
         var next = settings
         next.modeId = id
         let selectedMode = engine.mode(for: next)
-        next.resolutionId = selectedMode.resolutions[0].id
-        settings = engine.normalized(next)
+        next.resolutionId = engine.preferredResolution(camera: engine.camera(id: next.cameraId), mode: selectedMode).id
+        commitFormatSettings(next)
     }
 
     func selectResolution(_ id: String) {
-        updateSettings { $0.resolutionId = id }
+        updateFormatSettings { $0.resolutionId = id }
     }
 
     func selectCodec(_ id: String) {
-        updateSettings { $0.codecId = id }
+        updateFormatSettings { $0.codecId = id }
     }
 
     func selectProjectFps(_ fps: Double) {
-        updateSettings { $0.projectFps = fps }
+        updateFormatSettings { $0.projectFps = fps }
     }
 
     func selectSensorFps(_ fps: Double) {
-        updateSettings { $0.sensorFps = fps }
+        updateFormatSettings { $0.sensorFps = fps }
     }
 
     func selectMedia(_ id: String) {
-        updateSettings { $0.mediaId = id }
+        guard catalog.mediaOptions.contains(where: { $0.id == id }) else { return }
+        clearTransientState()
+        settings.mediaId = id
     }
 
     func setShootHours(_ hours: Double) {
-        updateSettings { $0.shootHours = hours }
+        guard hours.isFinite, (0.25 ... 24).contains(hours) else { return }
+        clearTransientState()
+        settings.shootHours = hours
     }
 
     func setSensorOverdrive(_ enabled: Bool) {
-        updateSettings { $0.sensorOverdrive = enabled }
+        updateFormatSettings { $0.sensorOverdrive = enabled }
+    }
+
+    /// Shutter controls edit through the store so a new input invalidates the
+    /// one-step reset undo before it could overwrite that input.
+    func updateShutterSettings<Value>(_ value: Value, at keyPath: WritableKeyPath<ShutterSettings, Value>) {
+        clearTransientState()
+        shutterSettings[keyPath: keyPath] = value
     }
 
     func resetActiveView() {
+        cameraMemories = Self.loadCameraMemories(defaults: defaults, catalog: catalog)
+        resetUndoSnapshot = ResetUndoSnapshot(
+            settings: settings,
+            shutterSettings: shutterSettings,
+            cameraMemories: cameraMemories,
+            view: activeView
+        )
+        resetUndoAvailable = true
+        feedbackMessage = AppText.reset
+
         if activeView == .rate {
             settings = engine.normalized(.default)
+            rememberCurrentCamera()
         } else {
             shutterSettings = .default
             shutterInputRevision += 1
         }
     }
 
-    /// One-shot import deliberately leaves RATE, angles and lighting unchanged.
-    func importShutterFrameRates() {
-        shutterSettings.sensorFps = settings.sensorFps
-        shutterSettings.projectFps = settings.projectFps
+    func undoReset() {
+        guard let snapshot = resetUndoSnapshot else { return }
+        settings = snapshot.settings
+        shutterSettings = snapshot.shutterSettings
+        if snapshot.view == .rate {
+            // Undo only the default camera record reset changed; keep other
+            // windows' later edits to unrelated cameras.
+            cameraMemories = Self.loadCameraMemories(defaults: defaults, catalog: catalog)
+            let defaultCameraID = engine.normalized(.default).cameraId
+            cameraMemories[defaultCameraID] = snapshot.cameraMemories[defaultCameraID]
+            persistCameraMemories()
+        }
+        resetUndoSnapshot = nil
+        resetUndoAvailable = false
+        feedbackMessage = AppText.resetUndone
     }
 
-    func pinCurrentSetup() {
-        guard pinnedSetups.count < 4 else { return }
+    /// One-shot import deliberately leaves RATE, angles and lighting unchanged.
+    @discardableResult
+    func importShutterFrameRates() -> (sensor: Double, project: Double) {
+        clearTransientState()
+        shutterSettings.sensorFps = settings.sensorFps
+        shutterSettings.projectFps = settings.projectFps
+        return (settings.sensorFps, settings.projectFps)
+    }
+
+    @discardableResult
+    func pinCurrentSetup() -> ComparisonAddResult {
+        if pinnedSetups.contains(where: { $0.settings == settings }) {
+            feedbackMessage = AppText.comparisonDuplicate
+            return .duplicate
+        }
+        guard pinnedSetups.count < 4 else {
+            feedbackMessage = AppText.comparisonFull
+            return .full
+        }
         pinnedSetups.append(PinnedSetup(id: UUID(), settings: settings, calculation: calculation))
+        feedbackMessage = AppText.comparisonAdded
+        return .added
     }
 
     func removePinnedSetup(id: UUID) {
         pinnedSetups.removeAll { $0.id == id }
+    }
+
+    func clearTransientState() {
+        feedbackMessage = nil
+        resetUndoSnapshot = nil
+        resetUndoAvailable = false
     }
 
     func addQuickStart(cameraID: String) {
@@ -187,7 +292,7 @@ final class CalculatorStore {
     /// Native List destinations refer to the original array, before the moved rows are removed.
     func moveQuickStarts(fromOffsets offsets: IndexSet, toOffset destination: Int) {
         guard !offsets.isEmpty, offsets.allSatisfy(quickStartCameraIds.indices.contains),
-              (0...quickStartCameraIds.count).contains(destination) else { return }
+              (0 ... quickStartCameraIds.count).contains(destination) else { return }
         let moving = offsets.map { quickStartCameraIds[$0] }
         var remaining = quickStartCameraIds.enumerated().filter { !offsets.contains($0.offset) }.map(\.element)
         let insertion = destination - offsets.filter { $0 < destination }.count
@@ -197,14 +302,62 @@ final class CalculatorStore {
         persistQuickStarts()
     }
 
-    private func updateSettings(_ mutation: (inout CaptureSettings) -> Void) {
+    private func updateFormatSettings(_ mutation: (inout CaptureSettings) -> Void) {
         var next = settings
         mutation(&next)
-        settings = engine.normalized(next)
+        commitFormatSettings(next)
+    }
+
+    private func commitFormatSettings(_ proposed: CaptureSettings) {
+        clearTransientState()
+        let normalized = engine.normalized(proposed)
+        let adjusted = adjustedParameters(from: proposed, to: normalized)
+        settings = normalized
+        rememberCurrentCamera()
+        if !adjusted.isEmpty {
+            feedbackMessage = AppText.adjusted(parameters: adjusted)
+        }
+    }
+
+    private func adjustedParameters(from proposed: CaptureSettings, to normalized: CaptureSettings) -> [CaptureParameter] {
+        var fields: [CaptureParameter] = []
+        if proposed.modeId != normalized.modeId { fields.append(.mode) }
+        if proposed.resolutionId != normalized.resolutionId { fields.append(.resolution) }
+        if proposed.codecId != normalized.codecId { fields.append(.codec) }
+        if proposed.projectFps != normalized.projectFps { fields.append(.projectFps) }
+        if proposed.sensorFps != normalized.sensorFps { fields.append(.sensorFps) }
+        if proposed.sensorOverdrive != normalized.sensorOverdrive { fields.append(.sensorOverdrive) }
+        return fields
+    }
+
+    private func rememberCurrentCamera() {
+        guard catalog.cameras.contains(where: { $0.id == settings.cameraId }) else { return }
+        // Merge by camera ID against the latest persisted payload rather than
+        // writing this window's stale copy over another window's edits.
+        cameraMemories = Self.loadCameraMemories(defaults: defaults, catalog: catalog)
+        cameraMemories[settings.cameraId] = CameraSettingsMemory(settings: settings)
+        persistCameraMemories()
     }
 
     private func persistQuickStarts() {
         defaults.set(quickStartCameraIds, forKey: Self.quickStartKey)
+    }
+
+    private func persistCameraMemories() {
+        let payload = CameraSettingsMemoryPayload(version: CameraSettingsMemoryPayload.currentVersion,
+                                                  memories: cameraMemories)
+        guard let data = try? JSONEncoder().encode(payload) else { return }
+        defaults.set(data, forKey: Self.cameraMemoryKey)
+    }
+
+    private static func loadCameraMemories(defaults: UserDefaults, catalog: CatalogData) -> [String: CameraSettingsMemory] {
+        guard let data = defaults.data(forKey: cameraMemoryKey),
+              let payload = try? JSONDecoder().decode(CameraSettingsMemoryPayload.self, from: data),
+              payload.version == CameraSettingsMemoryPayload.currentVersion else {
+            return [:]
+        }
+        let validIDs = Set(catalog.cameras.map(\.id))
+        return payload.memories.filter { validIDs.contains($0.key) }
     }
 }
 

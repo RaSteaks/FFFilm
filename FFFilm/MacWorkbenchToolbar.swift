@@ -8,14 +8,16 @@ extension FocusedValues {
 /// Native titlebar controls avoid nesting AppKit button bezels around custom capsule backgrounds.
 struct MacWorkbenchToolbar: ToolbarContent {
     @Bindable var store: CalculatorStore
+    @AppStorage(StorageUnit.preferenceKey) private var unit: StorageUnit = .decimal
     @State private var copied = false
     @State private var copyResetTask: Task<Void, Never>?
 
     var body: some ToolbarContent {
         ToolbarItem(placement: .principal) {
-            Picker("Calculator", selection: $store.activeView) {
-                Text("Rate").tag(CalculatorView.rate)
-                Text("Shutter").tag(CalculatorView.shutter)
+            Picker("nav.workbench", selection: $store.activeView) {
+                ForEach(CalculatorView.allCases) { view in
+                    Text(view.label).tag(view)
+                }
             }
             .pickerStyle(.segmented)
             .labelsHidden()
@@ -29,7 +31,12 @@ struct MacWorkbenchToolbar: ToolbarContent {
                 Button {
                     store.pinCurrentSetup()
                 } label: {
-                    Label("Pin", systemImage: "pin")
+                    Label {
+                        Text("nav.addComparison")
+                        Text("\(store.pinnedSetups.count)/4").monospacedDigit().foregroundStyle(.secondary)
+                    } icon: {
+                        Image(systemName: "pin")
+                    }
                 }
                 .disabled(store.pinnedSetups.count >= 4)
                 .help("Pin setup for comparison (⇧⌘P)")
@@ -37,7 +44,7 @@ struct MacWorkbenchToolbar: ToolbarContent {
                 .accessibilityIdentifier("pin-action")
 
                 Button {
-                    PlatformClipboard.copy(store.configurationText)
+                    PlatformClipboard.copy(store.readableRecordingSummary(storageUnit: unit))
                     copied = true
                     copyResetTask?.cancel()
                     copyResetTask = Task { @MainActor in
@@ -46,21 +53,29 @@ struct MacWorkbenchToolbar: ToolbarContent {
                         copied = false
                     }
                 } label: {
-                    Label(copied ? "Copied" : "Copy", systemImage: copied ? "checkmark" : "doc.on.doc")
+                    Label(copied ? "nav.copied" : "nav.copy", systemImage: copied ? "checkmark" : "doc.on.doc")
                 }
                 .help("Copy configuration (⇧⌘C)")
                 .keyboardShortcut("c", modifiers: [.command, .shift])
                 .accessibilityIdentifier("copy-action")
                 .onDisappear { copyResetTask?.cancel(); copied = false }
             }
-            Button {
-                store.resetActiveView()
+            Menu {
+                if store.activeView == .rate {
+                    Button("nav.copyLink", systemImage: "link") {
+                        PlatformClipboard.copy(store.configurationText)
+                    }
+                }
+                Button("nav.reset", systemImage: "arrow.counterclockwise") {
+                    store.resetActiveView()
+                }
+                .help(Text("nav.reset"))
+                .keyboardShortcut("r", modifiers: [.command, .shift])
+                .accessibilityIdentifier("reset-action")
             } label: {
-                Label("Reset", systemImage: "arrow.counterclockwise")
+                Label("nav.more", systemImage: "ellipsis.circle")
             }
-            .help("Reset current calculator (⇧⌘R)")
-            .keyboardShortcut("r", modifiers: [.command, .shift])
-            .accessibilityIdentifier("reset-action")
+            .accessibilityIdentifier("more-action")
         }
     }
 }
@@ -71,10 +86,10 @@ struct MacWorkbenchCommands: Commands {
 
     var body: some Commands {
         CommandMenu("Calculator") {
-            Button("Recording Rate") { store?.activeView = .rate }
+            Button("nav.recording") { store?.setActiveView(.rate) }
                 .keyboardShortcut("1")
                 .disabled(store == nil)
-            Button("Shutter") { store?.activeView = .shutter }
+            Button("nav.shutter") { store?.setActiveView(.shutter) }
                 .keyboardShortcut("2")
                 .disabled(store == nil)
         }

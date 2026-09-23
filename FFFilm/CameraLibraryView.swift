@@ -22,7 +22,7 @@ struct CameraLibraryView: View {
                         CameraFavoritesView(store: store)
                     } label: {
                         HStack {
-                            Label("Favorites", systemImage: "star.fill")
+                            Label("nav.favorites", systemImage: "star.fill")
                             Spacer()
                             Text(store.quickStartCameraIds.count.formatted())
                                 .foregroundStyle(.secondary)
@@ -31,7 +31,7 @@ struct CameraLibraryView: View {
                     }
                     .accessibilityIdentifier("camera-favorites")
                 } footer: {
-                    Text("Favorites appear on RATE. Open Favorites to reorder or remove them.")
+                    Text("camera.favoriteHint")
                 }
 
                 if matchingCameras.isEmpty {
@@ -54,14 +54,14 @@ struct CameraLibraryView: View {
                     }
                 }
             }
-            .navigationTitle("Cameras")
-            .searchable(text: $query, prompt: "Camera or manufacturer")
+            .navigationTitle("nav.cameras")
+            .searchable(text: $query, prompt: Text("camera.search"))
             .navigationDestination(for: CameraProfile.self) { camera in
                 CameraDetailView(store: store, camera: camera)
             }
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    Button("nav.done") { dismiss() }
                         .accessibilityIdentifier("camera-library-done")
                 }
             }
@@ -82,21 +82,21 @@ private struct CameraFavoritesView: View {
     var body: some View {
         List {
             if store.quickStartCameras.isEmpty {
-                ContentUnavailableView("No favorite cameras", systemImage: "star",
-                    description: Text("Go back to Cameras and tap a star to add a favorite."))
+                ContentUnavailableView("camera.noFavorites", systemImage: "star",
+                    description: Text("camera.noFavoritesHint"))
             } else {
                 Section {
                     ForEach(store.quickStartCameras) { camera in
                         NavigationLink(value: camera) { CameraSummary(camera: camera) }
                             .accessibilityIdentifier("favorite-camera-\(camera.id)")
                             .contextMenu { CameraOrderingActions(store: store, camera: camera) }
-                            .accessibilityAction(named: "Move earlier") {
+                            .accessibilityAction(named: Text("camera.moveEarlier")) {
                                 store.shiftQuickStart(cameraID: camera.id, forward: false)
                             }
-                            .accessibilityAction(named: "Move later") {
+                            .accessibilityAction(named: Text("camera.moveLater")) {
                                 store.shiftQuickStart(cameraID: camera.id, forward: true)
                             }
-                            .accessibilityAction(named: "Remove favorite") {
+                            .accessibilityAction(named: Text("camera.removeFavorite")) {
                                 store.removeQuickStart(cameraID: camera.id)
                             }
                     }
@@ -107,11 +107,11 @@ private struct CameraFavoritesView: View {
                         for id in ids { store.removeQuickStart(cameraID: id) }
                     }
                 } footer: {
-                    Text("Order is shared with RATE. Open a camera for details and move controls. Removing a favorite keeps the camera in the catalog.")
+                    Text("camera.favoriteFooter")
                 }
             }
         }
-        .navigationTitle("Favorites")
+        .navigationTitle("nav.favorites")
         #if os(iOS)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
@@ -134,15 +134,20 @@ private struct CameraDetailView: View {
                 CameraFavoriteButton(store: store, camera: camera)
             }
             if let position = store.quickStartCameraIds.firstIndex(of: camera.id) {
-                Section("Favorite order · \(position + 1) of \(store.quickStartCameraIds.count)") {
+                Section {
                     // Visible native buttons also support users who cannot perform a drag gesture.
                     CameraOrderingActions(store: store, camera: camera, includesRemoval: false)
+                } header: {
+                    HStack(spacing: 4) {
+                        Text("camera.favoriteOrder")
+                        Text("\(position + 1)/\(store.quickStartCameraIds.count)").monospacedDigit()
+                    }
                 }
             }
-            Section("Sensor") {
-                LabeledContent("Format", value: camera.sensorLabel)
-                LabeledContent("Dimensions", value: "\(DisplayFormat.number(camera.sensorWidthMm, decimals: 2)) × \(DisplayFormat.number(camera.sensorHeightMm, decimals: 2)) mm")
-                LabeledContent("Native resolution", value: "\(camera.nativeWidth) × \(camera.nativeHeight)")
+            Section("camera.sensor") {
+                LabeledContent("camera.format", value: camera.sensorLabel)
+                LabeledContent("camera.dimensions", value: "\(DisplayFormat.number(camera.sensorWidthMm, decimals: 2)) × \(DisplayFormat.number(camera.sensorHeightMm, decimals: 2)) mm")
+                LabeledContent("camera.nativeResolution", value: "\(camera.nativeWidth) × \(camera.nativeHeight)")
             }
             Section {
                 ForEach(camera.modes) { mode in
@@ -156,8 +161,11 @@ private struct CameraDetailView: View {
                                 Text("\(resolution.width) × \(resolution.height)")
                                     .font(.caption.monospaced()).foregroundStyle(.secondary)
                                 if let maximum = resolution.maxSensorFps {
-                                    Text("Up to \(DisplayFormat.number(maximum, decimals: 2)) fps")
-                                        .font(.caption).foregroundStyle(.secondary)
+                                    HStack(spacing: 4) {
+                                        Text("camera.upToFPS")
+                                        Text("\(DisplayFormat.number(maximum, decimals: 2)) fps").monospacedDigit()
+                                    }
+                                    .font(.caption).foregroundStyle(.secondary)
                                 }
                             }
                             .padding(.vertical, 4)
@@ -167,9 +175,9 @@ private struct CameraDetailView: View {
                     }
                 }
             } header: {
-                Text("Supported recording modes")
+                Text("camera.supportedModes")
             } footer: {
-                Text("Catalog reference. Available frame rates and codecs depend on the recording mode. Verify against camera firmware.")
+                Text("camera.catalogFooter")
             }
         }
         .navigationTitle(camera.name)
@@ -207,16 +215,18 @@ private struct CameraFavoriteButton: View {
             if isFavorite { store.removeQuickStart(cameraID: camera.id) }
             else { store.addQuickStart(cameraID: camera.id) }
         } label: {
-            Label(isFavorite ? "Remove favorite" : "Add favorite", systemImage: isFavorite ? "star.fill" : "star")
+            Label(isFavorite ? "camera.removeFavorite" : "camera.addFavorite", systemImage: isFavorite ? "star.fill" : "star")
                 .labelStyle(FavoriteLabelStyle(compact: compact))
                 .frame(minWidth: Layout.controlHeight, minHeight: Layout.controlHeight)
                 .contentShape(.rect)
         }
         .buttonStyle(.borderless)
-        .accessibilityLabel("\(isFavorite ? "Remove" : "Add") \(camera.name) \(isFavorite ? "from" : "to") favorites")
-        .accessibilityValue(isFavorite ? "Favorite" : "Not favorite")
+        // Include the row's camera name because VoiceOver focuses this button separately.
+        .accessibilityLabel(Text(isFavorite ? "camera.removeFavorite" : "camera.addFavorite")
+                            + Text(verbatim: " · \(camera.name)"))
+        .accessibilityValue(Text(isFavorite ? "camera.favorite" : "camera.notFavorite"))
         .accessibilityIdentifier("favorite-toggle-\(camera.id)")
-        .help(isFavorite ? "Remove favorite" : "Add favorite")
+        .help(Text(isFavorite ? "camera.removeFavorite" : "camera.addFavorite"))
     }
 }
 
@@ -234,18 +244,18 @@ private struct CameraOrderingActions: View {
     var includesRemoval = true
 
     var body: some View {
-        Button("Move earlier", systemImage: "arrow.up") {
+        Button("camera.moveEarlier", systemImage: "arrow.up") {
             store.shiftQuickStart(cameraID: camera.id, forward: false)
         }
         .disabled(store.quickStartCameraIds.first == camera.id)
         .accessibilityIdentifier("favorite-move-earlier")
-        Button("Move later", systemImage: "arrow.down") {
+        Button("camera.moveLater", systemImage: "arrow.down") {
             store.shiftQuickStart(cameraID: camera.id, forward: true)
         }
         .disabled(store.quickStartCameraIds.last == camera.id)
         .accessibilityIdentifier("favorite-move-later")
         if includesRemoval {
-            Button("Remove favorite", systemImage: "star.slash") {
+            Button("camera.removeFavorite", systemImage: "star.slash") {
                 store.removeQuickStart(cameraID: camera.id)
             }
         }

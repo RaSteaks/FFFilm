@@ -147,6 +147,66 @@ struct CaptureSettings: Codable, Equatable, Hashable {
     )
 }
 
+/// The camera-scoped part of a capture setup. Media and planned duration stay
+/// window-local, so switching cameras never unexpectedly changes the budget.
+struct CameraSettingsMemory: Codable, Equatable, Hashable {
+    let modeId: String
+    let resolutionId: String
+    let codecId: String
+    let projectFps: Double
+    let sensorFps: Double
+    let sensorOverdrive: Bool
+
+    init(settings: CaptureSettings) {
+        modeId = settings.modeId
+        resolutionId = settings.resolutionId
+        codecId = settings.codecId
+        projectFps = settings.projectFps
+        sensorFps = settings.sensorFps
+        sensorOverdrive = settings.sensorOverdrive
+    }
+
+    func applying(to settings: CaptureSettings) -> CaptureSettings {
+        var restored = settings
+        restored.modeId = modeId
+        restored.resolutionId = resolutionId
+        restored.codecId = codecId
+        restored.projectFps = projectFps
+        restored.sensorFps = sensorFps
+        restored.sensorOverdrive = sensorOverdrive
+        return restored
+    }
+}
+
+/// UserDefaults payloads are versioned so a future catalog change can ignore
+/// stale data safely instead of feeding unknown selections into the engine.
+struct CameraSettingsMemoryPayload: Codable, Equatable {
+    static let currentVersion = 1
+    let version: Int
+    let memories: [String: CameraSettingsMemory]
+}
+
+enum CaptureParameter: String, CaseIterable, Hashable {
+    case mode, resolution, codec, projectFps, sensorFps, sensorOverdrive
+
+    var label: LocalizedStringResource {
+        switch self {
+        case .mode: "field.mode"
+        case .resolution: "field.resolution"
+        case .codec: "field.codec"
+        case .projectFps: "field.projectFps"
+        case .sensorFps: "field.sensorFps"
+        case .sensorOverdrive: "field.overdrive"
+        }
+    }
+}
+
+enum ComparisonAddResult: Equatable {
+    case added
+    case duplicate
+    case full
+}
+
 struct Calculation: Hashable {
     let camera: CameraProfile
     let mode: SensorMode
@@ -178,6 +238,13 @@ enum CalculatorView: String, CaseIterable, Identifiable, Hashable {
     case shutter = "SHUTTER"
 
     var id: Self { self }
+
+    var label: LocalizedStringResource {
+        switch self {
+        case .rate: "nav.recording"
+        case .shutter: "nav.shutter"
+        }
+    }
 }
 
 // MARK: - Shutter workbench
@@ -185,12 +252,11 @@ enum CalculatorView: String, CaseIterable, Identifiable, Hashable {
 enum ShutterMode: String, CaseIterable, Identifiable, Hashable {
     case conversion, flicker, matching
     var id: Self { self }
-    // MODE 使用中文说明；保留原始值以维持模式标识和计算逻辑。
-    var label: String {
+    var label: LocalizedStringResource {
         switch self {
-        case .conversion: "快门换算"
-        case .flicker: "频闪参考快门"
-        case .matching: "升格 / 降格"
+        case .conversion: "shutter.mode.conversion"
+        case .flicker: "shutter.mode.flicker"
+        case .matching: "shutter.mode.matching"
         }
     }
 }
@@ -198,23 +264,28 @@ enum ShutterMode: String, CaseIterable, Identifiable, Hashable {
 enum ShutterDirection: String, CaseIterable, Identifiable {
     case angleToTime, timeToAngle
     var id: Self { self }
-    var label: String { self == .angleToTime ? "Angle → time" : "Time → angle" }
+    var label: LocalizedStringResource {
+        self == .angleToTime ? "shutter.direction.angleToTime" : "shutter.direction.timeToAngle"
+    }
 }
 
 enum ShutterMatch: String, CaseIterable, Identifiable {
     case exposure, angle
     var id: Self { self }
-    var label: String { self == .exposure ? "Keep exposure time" : "Keep angle" }
+    var label: LocalizedStringResource {
+        self == .exposure ? "shutter.match.exposure" : "shutter.match.angle"
+    }
 }
 
 enum ShutterLight: String, CaseIterable, Identifiable {
-    case mains50, mains60, custom
+    case mains50, mains60, custom, displays
     var id: Self { self }
-    var label: String {
+    var label: LocalizedStringResource {
         switch self {
-        case .mains50: "50 Hz mains · 100 Hz light"
-        case .mains60: "60 Hz mains · 120 Hz light"
-        case .custom: "Custom light pulse rate"
+        case .mains50: "shutter.light.mains50"
+        case .mains60: "shutter.light.mains60"
+        case .custom: "shutter.light.custom"
+        case .displays: "shutter.light.displays"
         }
     }
 }
@@ -261,14 +332,45 @@ struct ShutterSettings: Equatable, Hashable {
     var light: ShutterLight = .mains50
     var customLightHz: Double = 100
     var checksFlicker = false
+    // Preserve the editable list, including unfinished input, across mode changes and RATE imports.
+    var displayRefreshRates = "60, 120"
 
     var lightHz: Double {
         switch light {
         case .mains50: 100
         case .mains60: 120
         case .custom: customLightHz
+        case .displays: .nan // The engine derives the common period from validated refresh rates.
         }
     }
+    static var displayRefreshError: String {
+        String(localized: "shutter.displayRefreshError",
+               defaultValue: "Enter 2–16 refresh rates (0.001–1000000 Hz, up to three decimals), separated by commas. Use . for decimals.",
+               comment: "Inline validation for the multiple-display refresh-rate list.")
+    }
+
+    /// Parse decimal Hz as exact milli-Hz; never round distinct refresh rates into a common rate.
+    var displayRefreshMilliHz: [Int64]? {
+        let entries = displayRefreshRates.replacingOccurrences(of: "，", with: ",")
+            .components(separatedBy: ",")
+        guard (2...16).contains(entries.count) else { return nil }
+        var rates: [Int64] = []
+        for entry in entries {
+            let text = entry.trimmingCharacters(in: .whitespacesAndNewlines)
+            let parts = text.split(separator: ".", omittingEmptySubsequences: false)
+            guard (1...2).contains(parts.count),
+                  parts.allSatisfy({ !$0.isEmpty && $0.allSatisfy({ "0123456789".contains($0) }) }),
+                  let whole = Int64(parts[0]), whole <= 1_000_000 else { return nil }
+            let fraction = parts.count == 2 ? String(parts[1]) : ""
+            guard fraction.count <= 3,
+                  let milli = Int64(fraction + String(repeating: "0", count: 3 - fraction.count)) else { return nil }
+            let rate = whole * 1_000 + milli
+            guard (1...1_000_000_000).contains(rate) else { return nil }
+            rates.append(rate)
+        }
+        return rates
+    }
+
     var needsLight: Bool { mode == .flicker || (mode == .matching && checksFlicker) }
     static let `default` = ShutterSettings()
 }
@@ -291,12 +393,20 @@ enum ShutterInputField: String, Hashable {
     }
 
     func error(for value: Double) -> String? {
-        guard value.isFinite, value > 0 else { return "Enter a finite number greater than zero." }
+        guard value.isFinite, value > 0 else {
+            return String(localized: "field.validationFinite",
+                          defaultValue: "Enter a finite number greater than zero.",
+                          comment: "Validation for a positive numeric shutter input.")
+        }
         switch self {
         case .sensorFps, .projectFps:
-            return (0.001 ... 10_000).contains(value) ? nil : "Enter 0.001–10000 fps."
+            return (0.001 ... 10_000).contains(value) ? nil : String(localized: "field.validationFPS",
+                                                                        defaultValue: "Enter 0.001–10000 fps.",
+                                                                        comment: "FPS validation range.")
         case .maxAngle:
-            return value <= 360 ? nil : "Maximum angle must be at most 360°."
+            return value <= 360 ? nil : String(localized: "field.validationAngle",
+                                                defaultValue: "Maximum angle must be at most 360°.",
+                                                comment: "Maximum shutter angle validation.")
         default:
             return nil
         }
@@ -322,6 +432,7 @@ enum ShutterStatus: Equatable, Hashable {
     case valid, exceedsMaximum, noCandidates
     case invalidInput(ShutterInputField)
     case numericalLimit
+    case invalidDisplays
 }
 
 struct ShutterCalculation: Equatable, Hashable {

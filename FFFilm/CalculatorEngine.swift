@@ -103,6 +103,10 @@ struct CalculatorEngine {
         output.projectFps = normalizedRate(output.projectFps, available: catalog.projectFrameRates)
         output.sensorFps = normalizedRate(output.sensorFps, available: availableSensorFrameRates(for: output))
         output.shootHours = min(max(output.shootHours, 0.25), 24)
+        if selectedCamera.supportsSensorOverdrive != true {
+            // Overdrive is camera-scoped; never carry a hidden toggle into a profile that cannot use it.
+            output.sensorOverdrive = false
+        }
         if selectedCamera.isStandaloneProRes {
             output.sensorFps = output.projectFps
         }
@@ -185,6 +189,20 @@ struct CalculatorEngine {
             return ShutterCalculation(status: .invalidInput(field))
         }
 
+        var lightHz = settings.lightHz
+        if settings.needsLight, settings.light == .displays {
+            guard let rates = settings.displayRefreshMilliHz else {
+                return ShutterCalculation(status: .invalidDisplays)
+            }
+            // t * Hz must be integral for every display. The shortest common exposure is
+            // 1000 / gcd(milliHz), avoiding floating-point GCD and unbounded cycle searches.
+            let common = rates.reduce(Int64(0)) { divisor, rate in
+                var a = divisor, b = rate
+                while b != 0 { (a, b) = (b, a % b) }
+                return a
+            }
+            lightHz = Double(common) / 1_000
+        }
         let fps = settings.sensorFps
         let seconds: Double
         switch settings.mode {
@@ -196,7 +214,7 @@ struct CalculatorEngine {
             let baselineFps = settings.match == .exposure ? settings.projectFps : fps
             seconds = settings.targetAngle / (360 * baselineFps)
         case .flicker:
-            guard let candidates = shutterCandidates(fps: fps, lightHz: settings.lightHz,
+            guard let candidates = shutterCandidates(fps: fps, lightHz: lightHz,
                                                       target: settings.preferredAngle, maximum: settings.maxAngle) else {
                 return ShutterCalculation(status: .numericalLimit)
             }
@@ -213,9 +231,9 @@ struct CalculatorEngine {
             result.playbackSpeed = settings.projectFps / fps
             result.durationMultiplier = fps / settings.projectFps
             if settings.checksFlicker {
-                let cycles = seconds * settings.lightHz
+                let cycles = seconds * lightHz
                 guard cycles.isFinite, cycles < 4_503_599_627_370_496,
-                      let candidates = shutterCandidates(fps: fps, lightHz: settings.lightHz,
+                      let candidates = shutterCandidates(fps: fps, lightHz: lightHz,
                                                          target: exposure.angle, maximum: settings.maxAngle) else {
                     return ShutterCalculation(status: .numericalLimit)
                 }

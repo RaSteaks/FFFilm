@@ -221,6 +221,91 @@ struct ShutterTests {
     }
 
     @MainActor
+    @Test("Multiple displays share complete refresh cycles and retain nearest-angle ranking")
+    func displayCandidates() throws {
+        var settings = ShutterSettings.default
+        settings.mode = .flicker
+        settings.light = .displays
+        #expect(engine.calculateShutter(settings: settings).candidates.map(\.exposure.angle) == [144, 288])
+        settings.displayRefreshRates = "60, 120, 144"
+        #expect(engine.calculateShutter(settings: settings).status == .noCandidates)
+        settings.sensorFps = 12
+        #expect(try #require(engine.calculateShutter(settings: settings).exposure).angle == 360)
+        settings.displayRefreshRates = "50, 60"
+        settings.sensorFps = 24
+        #expect(engine.calculateShutter(settings: settings).status == .noCandidates)
+        settings.sensorFps = 10
+        #expect(try #require(engine.calculateShutter(settings: settings).exposure).angle == 360)
+        settings.maxAngle = 359.999
+        #expect(engine.calculateShutter(settings: settings).status == .noCandidates)
+    }
+
+    @MainActor
+    @Test("Decimal display rates are exact, order-independent and never merged by rounding")
+    func decimalDisplays() throws {
+        var settings = ShutterSettings.default
+        settings.mode = .flicker
+        settings.light = .displays
+        settings.displayRefreshRates = "59.94，119.88"
+        let result = engine.calculateShutter(settings: settings)
+        #expect(abs(try #require(result.exposure).shutterDenominator - 59.94) < 1e-10)
+        settings.displayRefreshRates = "119.880, 59.940, 59.94"
+        #expect(engine.calculateShutter(settings: settings) == result)
+        settings.displayRefreshRates = "59.94, 60"
+        #expect(engine.calculateShutter(settings: settings).status == .noCandidates)
+        settings.displayRefreshRates = "1000000, 1000000"
+        #expect(engine.calculateShutter(settings: settings).candidates.count == 3)
+    }
+
+    @MainActor
+    @Test("Malformed refresh lists invalidate active results and are ignored when inactive")
+    func invalidDisplays() {
+        for text in ["", "60", "60,", "60,,120", "0,60", "-60,120", "nan,120", "inf,60",
+                     "60.0001,120", "1000000.001,60", "60.,120", "1e2,60",
+                     "9999999999999999999999,60", Array(repeating: "60", count: 17).joined(separator: ",")] {
+            var settings = ShutterSettings.default
+            settings.light = .displays
+            settings.displayRefreshRates = text
+            #expect(engine.calculateShutter(settings: settings).status == .valid)
+            settings.mode = .flicker
+            let result = engine.calculateShutter(settings: settings)
+            #expect(result.status == .invalidDisplays)
+            #expect(result.exposure == nil)
+        }
+    }
+
+    @MainActor
+    @Test("Display matching checks every device without changing target exposure")
+    func displayMatching() {
+        var settings = ShutterSettings.default
+        settings.mode = .matching
+        settings.light = .displays
+        settings.checksFlicker = true
+        settings.targetAngle = 144
+        #expect(engine.calculateShutter(settings: settings).matchesLightCycles == true)
+        settings.targetAngle = 180
+        let result = engine.calculateShutter(settings: settings)
+        #expect(result.matchesLightCycles == false)
+        #expect(result.exposure?.angle == 180)
+        // Compare bounded GCD candidates to exhaustive enumeration of the first display's periods.
+        for rates in [[60, 120], [50, 60], [120, 144], [48, 72, 120]] {
+            settings.mode = .flicker
+            settings.sensorFps = 1
+            settings.displayRefreshRates = rates.map(String.init).joined(separator: ",")
+            let base = rates[0]
+            let cycles = (1...base).filter { n in rates.allSatisfy { (n * $0) % base == 0 } }
+            let angles: [Double] = cycles.map { Double($0) / Double(base) * 360.0 }
+            let expected = angles.sorted { left, right in
+                let lhs = abs(left - 180), rhs = abs(right - 180)
+                return abs(lhs - rhs) < 1e-9 ? left < right : lhs < rhs
+            }
+            let actual = engine.calculateShutter(settings: settings).candidates.map(\.exposure.angle)
+            #expect(actual.count == min(3, expected.count))
+            for (a, b) in zip(actual, expected.prefix(3)) { #expect(abs(a - b) < 1e-9) }
+        }
+    }
+
+    @MainActor
     @Test("RATE import is one-shot and reset restores all shutter defaults")
     func importAndReset() {
         let store = CalculatorStore()
@@ -230,11 +315,13 @@ struct ShutterTests {
         store.shutterSettings.mode = .matching
         store.shutterSettings.targetAngle = 172.8
         store.shutterSettings.light = .mains60
+        store.shutterSettings.displayRefreshRates = "50, 100, 150"
         store.importShutterFrameRates()
         #expect(store.shutterSettings.sensorFps == 47.952)
         #expect(store.shutterSettings.projectFps == 23.976)
         #expect(store.shutterSettings.targetAngle == 172.8)
         #expect(store.shutterSettings.light == .mains60)
+        #expect(store.shutterSettings.displayRefreshRates == "50, 100, 150")
         store.shutterSettings.sensorFps = 120
         #expect(store.settings == rateBefore)
         store.activeView = .shutter

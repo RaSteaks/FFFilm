@@ -408,6 +408,8 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				"INFOPLIST_FILE[sdk=macosx*]" = Configuration/FFFilm.macOS.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = FFFilm;
+				/* Xcode writes this attribution into each platform's built Info.plist. */
+				INFOPLIST_KEY_NSHumanReadableCopyright = "© 2026 朱煜天";
 				/* Declare exempt/no encryption in the generated iOS Info.plist. */
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.video";
@@ -460,6 +462,8 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				"INFOPLIST_FILE[sdk=macosx*]" = Configuration/FFFilm.macOS.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = FFFilm;
+				/* Xcode writes this attribution into each platform's built Info.plist. */
+				INFOPLIST_KEY_NSHumanReadableCopyright = "© 2026 朱煜天";
 				/* Declare exempt/no encryption in the generated iOS Info.plist. */
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.video";

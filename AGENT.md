@@ -10,6 +10,8 @@
 
 ## Project plan
 
+- Support-site copyright attribution names 朱煜天 as the rights holder; FFFilm remains the product name in all three page footers.
+- App Info.plists use `NSHumanReadableCopyright = © 2026 朱煜天`: the macOS source plist declares it, and both Xcode build configurations inject the field into built apps on each platform.
 - Publish the static `support/` directory as the GitHub Pages artifact through `.github/workflows/pages.yml`; its `index.html`, `support.html`, and `privacy.html` become the site root and the two App Store Connect URLs. Trigger deployment on support-site or workflow changes, with a manual dispatch option.
 - Export compliance: declare `ITSAppUsesNonExemptEncryption = NO` for the iOS generated Info.plist and macOS source plist while the app and linked dependencies use no non-exempt encryption. Reassess if encryption-related capabilities or dependencies are added.
 - Repository hygiene: exclude local `.codex/` configuration, macOS metadata, Xcode user state and build products through `.gitignore`. Keep shared Xcode schemes, tests, project documentation and icon design sources/explorations versionable.

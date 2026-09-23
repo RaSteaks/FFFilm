@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
+    <!-- Finder's app information displays the owner's copyright attribution. -->
+    <key>NSHumanReadableCopyright</key><string>© 2026 朱煜天</string>
     <!-- Export compliance: this app does not use non-exempt encryption. -->
     <key>ITSAppUsesNonExemptEncryption</key><false/>
     <key>UTExportedTypeDeclarations</key><array><dict>

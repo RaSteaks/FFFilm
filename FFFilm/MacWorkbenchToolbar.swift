@@ -42,9 +42,14 @@ struct MacWorkbenchToolbar: ToolbarContent {
                 .help("Pin setup for comparison (⇧⌘P)")
                 .keyboardShortcut("p", modifiers: [.command, .shift])
                 .accessibilityIdentifier("pin-action")
-
+            }
+            // Both calculator tabs expose Copy after the in-content header is removed.
+            if store.activeView != .film {
                 Button {
-                    PlatformClipboard.copy(store.readableRecordingSummary(storageUnit: unit))
+                    let summary = store.activeView == .rate
+                        ? store.readableRecordingSummary(storageUnit: unit)
+                        : store.readableShutterSummary()
+                    PlatformClipboard.copy(summary)
                     copied = true
                     copyResetTask?.cancel()
                     copyResetTask = Task { @MainActor in
@@ -55,8 +60,9 @@ struct MacWorkbenchToolbar: ToolbarContent {
                 } label: {
                     Label(copied ? "nav.copied" : "nav.copy", systemImage: copied ? "checkmark" : "doc.on.doc")
                 }
-                .help("Copy configuration (⇧⌘C)")
+                .help(store.activeView == .rate ? "Copy configuration (⇧⌘C)" : "Copy shutter summary (⇧⌘C)")
                 .keyboardShortcut("c", modifiers: [.command, .shift])
+                .disabled(store.activeView == .shutter && store.shutterCalculation.exposure == nil)
                 .accessibilityIdentifier("copy-action")
                 .onDisappear { copyResetTask?.cancel(); copied = false }
             }

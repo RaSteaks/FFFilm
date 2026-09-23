@@ -6,8 +6,6 @@
 
 为你在片场实际使用的相机做数据率、存储时长与快门规划。原生 SwiftUI，支持 iPhone、iPad 与 Mac，无任何第三方依赖。
 
-数据率来自本仓库内置的厂商官方录制参数表，而非通用码率公式。
-
 ## 功能
 
 **录制** —— 输入相机、格式与帧率，得出码率与存储需求。
@@ -37,7 +35,6 @@
 
 可将当前、已勾选或全部片框导出为 16 位 Adobe RGB TIFF 或 8 位 sRGB JPEG。整条导出时，旋转后的裁剪结果放回原始槽位并裁切至槽位边界；单帧导出保留完整的旋转边界。缩放、撤销/重做与批量选择均可使用。
 
-工作台不提供片基校正、色调、曲线、直方图或预设工具。旧项目仅加载几何信息，忽略已移除的调色字段；重新保存时会省略这些字段。现有的用户预设文件保持不变。
 
 **色彩管理**仅用于准确解释输入/输出：内嵌的输入色彩配置优先；未标记的扫描件需显式指定配置或提供匹配的 RGB ICC。浮点预览保留扩展 RGB 范围，导出时嵌入输出色彩配置。不进行自动负片转换。详见[色彩管理说明](docs/film-color-management.md)。
 
@@ -77,36 +74,3 @@ script/build_and_run.sh --verify   # 确认进程正在运行
 script/build_and_run.sh --debug    # 在 lldb 下启动
 script/build_and_run.sh --logs     # 流式查看统一日志
 ```
-
-## 数据目录
-
-`FFFilm/Catalog.json` 是源数据：33 个相机档案、15 种编解码器、四种媒体容量（512 GB / 1 / 2 / 4 TB，十进制），帧率从 23.976 到 660 fps。传感器几何数据在厂商公布毫米值时一律采用公布值。
-
-```sh
-python3 script/validate_catalog.py
-```
-
-该校验脚本检查解码器与计算引擎所依赖的不变量：id 唯一、码率表键能解析到真实存在的相机/编解码器/分辨率组合、码率为有限正数，以及几何数据不超出公布的传感器范围。
-
-## 项目结构
-
-| 路径 | 职责 |
-| --- | --- |
-| `FFFilm/CalculatorEngine.swift` | 兼容性规则、码率查询、媒体规划、有效成像区域几何、快门计算。 |
-| `FFFilm/CalculatorStore.swift` | 按窗口的工作流状态、收藏与固定方案。 |
-| `FFFilm/Models.swift` | 目录、设置与结果类型。 |
-| `FFFilm/ContentView.swift` | 自适应工作台。 |
-| `FFFilm/CameraLibraryView.swift` | 目录搜索、收藏与相机详情。 |
-| `FFFilm/QuickStartView.swift` | 相机快捷入口。 |
-| `FFFilm/SettingsView.swift`、`StorageUnit.swift` | 单位偏好及其 GB↔GiB 换算。 |
-| `FFFilm/MacWorkbenchToolbar.swift`、`WorkbenchComponents.swift` | 桌面端工具栏与共享视图组件。 |
-| `FFFilm/DisplayFormat.swift`、`Localization.swift`、`PlatformClipboard.swift` | 格式化、非视图字符串、剪贴板。 |
-| `FFFilm/Catalog.json`、`Localizable.xcstrings` | 源数据与本地化字符串。 |
-| `FFFilmTests/`、`FFFilmUITests/` | 测试目标，通过 `FFFilm.xctestplan` 运行。 |
-| `design/` | 应用图标源文件、导出与已审定稿。 |
-| `script/` | 构建/运行、目录校验与图标工具。 |
-| `DESIGN.md`、`AGENT.md` | UI 约定与工作笔记。 |
-
-## 产品边界
-
-显示的码率仅为视频规划估算值。正式拍摄前请核对相机固件、编解码器设置与记录媒体。快门与频闪结果为理论模型，不保证适用于 LED 灯具、PWM 调光、卷帘快门或不稳定的供电环境。

@@ -10,6 +10,7 @@
 
 ## Project plan
 
+- Export compliance: declare `ITSAppUsesNonExemptEncryption = NO` for the iOS generated Info.plist and macOS source plist while the app and linked dependencies use no non-exempt encryption. Reassess if encryption-related capabilities or dependencies are added.
 - Repository hygiene: exclude local `.codex/` configuration, macOS metadata, Xcode user state and build products through `.gitignore`. Keep shared Xcode schemes, tests, project documentation and icon design sources/explorations versionable.
 
 - Build a native SwiftUI format, data-rate and shutter calculator for iOS and macOS only.
@@ -291,3 +292,8 @@ All displayed rates are video-only planning estimates. Validate camera firmware,
 - Restore the film workbench source, tests, documentation, localization and macOS file configuration from the merged film-processing PR. The previous `main` merge commit recorded the local parent's tree and omitted those PR changes.
 - Keep the later version, signing and Info.plist settings from `main`; resolve the Xcode project conflict with one macOS-specific file-access, entitlement and project-type setting per build configuration.
 - Verification: project and configuration plists are valid; the complete macOS `FFFilmTests` target and iOS Simulator build pass, as do string-catalog JSON and staged diff checks. The macOS UI test runner exited before bootstrapping in both the full-scheme run and a focused retry with parallel testing disabled, so UI-test success is not claimed.
+
+## Single macOS workbench navigation (2026-09-24)
+
+- Keep the macOS recording and shutter workbenches below the native titlebar without the duplicate in-content header. The titlebar owns workbench selection, settings, pin, copy and reset; its copy action also handles shutter summaries and keeps the shutter invalid-result disabled state. iOS retains its content header.
+- Verification: macOS and iOS Simulator builds passed, and the rebuilt macOS recording window showed exactly one workbench selector in the titlebar with no in-content header. The focused macOS UI test compiled but did not execute because the XCTest runner exited before bootstrapping on this host.

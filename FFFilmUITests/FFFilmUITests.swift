@@ -581,7 +581,9 @@ final class FFFilmUITests: XCTestCase {
         app.launch()
         XCTAssertTrue(app.buttons["more-action"].firstMatch.waitForExistence(timeout: 5))
         XCTAssertTrue(app.toolbars.buttons["copy-action"].exists)
-        XCTAssertTrue(app.staticTexts["Recording calculator"].exists)
+        // The titlebar is the only macOS workbench navigation; the old content header is gone.
+        XCTAssertEqual(app.segmentedControls.matching(identifier: "calculator-view-picker").count, 1)
+        XCTAssertFalse(app.staticTexts["Recording calculator"].exists)
         let rateScreenshot = XCTAttachment(screenshot: app.screenshot())
         rateScreenshot.name = "Native macOS recording workbench"
         rateScreenshot.lifetime = .keepAlways
@@ -590,13 +592,14 @@ final class FFFilmUITests: XCTestCase {
         // Commands target the active window; toolbar shortcuts preserve standard text-field Copy.
         app.typeKey("2", modifierFlags: .command)
         XCTAssertTrue(app.textFields["shutter-sensorFps"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.toolbars.buttons["copy-action"].exists)
         enter("60", field: "sensorFps", in: app)
         finishEditing(app)
         XCTAssertEqual(app.textFields["shutter-sensorFps"].value as? String, "60")
         app.typeKey("r", modifierFlags: [.command, .shift])
         XCTAssertEqual(app.textFields["shutter-sensorFps"].value as? String, "24")
         app.typeKey("1", modifierFlags: .command)
-        XCTAssertTrue(app.staticTexts["Recording calculator"].exists)
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "rate-results").firstMatch.exists)
         app.typeKey("p", modifierFlags: [.command, .shift])
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "pinned-setups").firstMatch.exists)
         app.typeKey("c", modifierFlags: [.command, .shift])

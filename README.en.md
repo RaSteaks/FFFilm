@@ -6,8 +6,6 @@
 
 Data rate, storage runtime and shutter planning for the camera you actually have on set. Native SwiftUI on iPhone, iPad and Mac, with no third-party dependencies.
 
-Rates come from published manufacturer recording tables held in this repository, not from a generic bitrate formula.
-
 ## Features
 
 **Recording** — camera, format and cadence in; rate and storage out.
@@ -36,8 +34,6 @@ Preset frame rates carry their exact rational values; typed decimals stay litera
 Open **Film** in the Mac toolbar, or press **⌘3**. Import a TIFF or experimental Flextight FFF strip, detect frame gaps or draw frames manually, then crop, rotate, reorder and export. Automatic boundaries are candidates and should be checked. Save `.fffilm` projects to resume slicing without modifying the scan.
 
 Export current, checked or all frames as 16-bit Adobe RGB TIFF or 8-bit sRGB JPEG. Whole-strip output places rotated crops in their original slots, clipping to the slot boundaries; individual exports retain full rotated bounds. Zoom, undo/redo and batch selection remain available.
-
-The workbench contains no film-base correction, tone, curve, histogram or preset tools. Old projects load their geometry and ignore removed grading fields; resaving omits those fields. Existing user-preset files remain untouched.
 
 **Color management** remains for accurate input/output interpretation: embedded input profiles take precedence; untagged scans require explicit assignment or a matching RGB ICC. Floating-point previews preserve extended RGB and exports embed their output profiles. No automatic negative conversion is applied. See [color-management notes](docs/film-color-management.md).
 
@@ -77,36 +73,3 @@ script/build_and_run.sh --verify   # confirm the process is running
 script/build_and_run.sh --debug    # launch under lldb
 script/build_and_run.sh --logs     # stream the unified log
 ```
-
-## Catalog
-
-`FFFilm/Catalog.json` is the source data: 33 camera profiles, 15 codecs, four media capacities (512 GB / 1 / 2 / 4 TB, decimal) and frame rates from 23.976 to 660 fps. Sensor geometry uses published millimeters wherever the manufacturer provides them.
-
-```sh
-python3 script/validate_catalog.py
-```
-
-Checks the invariants the decoder and calculation engine rely on: unique ids, rate-table keys that resolve to real camera/codec/resolution triples, finite positive rates, and geometry that stays inside the published sensor.
-
-## Project structure
-
-| Path | Role |
-| --- | --- |
-| `FFFilm/CalculatorEngine.swift` | Compatibility rules, rate lookup, media planning, active-area geometry, shutter math. |
-| `FFFilm/CalculatorStore.swift` | Per-window workflow state, favorites and pinned setups. |
-| `FFFilm/Models.swift` | Catalog, settings and result types. |
-| `FFFilm/ContentView.swift` | The adaptive workbench. |
-| `FFFilm/CameraLibraryView.swift` | Catalog search, favorites and camera details. |
-| `FFFilm/QuickStartView.swift` | Camera shortcuts. |
-| `FFFilm/SettingsView.swift`, `StorageUnit.swift` | Unit preference and its GB↔GiB conversion. |
-| `FFFilm/MacWorkbenchToolbar.swift`, `WorkbenchComponents.swift` | Desktop toolbar and shared view primitives. |
-| `FFFilm/DisplayFormat.swift`, `Localization.swift`, `PlatformClipboard.swift` | Formatting, non-view strings, clipboard. |
-| `FFFilm/Catalog.json`, `Localizable.xcstrings` | Source data and localized strings. |
-| `FFFilmTests/`, `FFFilmUITests/` | Test targets, run through `FFFilm.xctestplan`. |
-| `design/` | App-icon sources, exports and approved artwork. |
-| `script/` | Build/run, catalog validation and icon tooling. |
-| `DESIGN.md`, `AGENT.md` | UI contract and working notes. |
-
-## Product boundary
-
-Displayed rates are video-only planning estimates. Validate camera firmware, codec settings and recording media before production use. Shutter and flicker results are theoretical models, not guarantees for LED fixtures, PWM dimming, rolling shutters or unstable supply.

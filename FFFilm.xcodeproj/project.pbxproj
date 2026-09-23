@@ -408,6 +408,8 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				"INFOPLIST_FILE[sdk=macosx*]" = Configuration/FFFilm.macOS.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = FFFilm;
+				/* Declare exempt/no encryption in the generated iOS Info.plist. */
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.video";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
@@ -458,6 +460,8 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				"INFOPLIST_FILE[sdk=macosx*]" = Configuration/FFFilm.macOS.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = FFFilm;
+				/* Declare exempt/no encryption in the generated iOS Info.plist. */
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.video";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;

@@ -85,7 +85,10 @@ struct ContentView: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(spacing: Layout.sectionSpacing) {
+                        #if os(iOS)
+                        // macOS keeps navigation and calculator actions in the window toolbar.
                         HeaderView(store: store)
+                        #endif
                         FeedbackBanner(store: store)
 
                         if store.activeView == .rate {
@@ -133,6 +136,7 @@ struct ContentView: View {
     }
 }
 
+#if os(iOS)
 private struct HeaderView: View {
     @Bindable var store: CalculatorStore
     @AppStorage(StorageUnit.preferenceKey) private var unit: StorageUnit = .decimal
@@ -145,16 +149,6 @@ private struct HeaderView: View {
         horizontalSizeClass == .compact
         #else
         false
-        #endif
-    }
-
-    /// The macOS toolbar owns `reset-action`, so this header copy needs its own
-    /// identifier; on iOS the header is the only reset, keeping the known name.
-    private var resetIdentifier: String {
-        #if os(macOS)
-        "reset-action-header"
-        #else
-        "reset-action"
         #endif
     }
 
@@ -197,36 +191,12 @@ private struct HeaderView: View {
     }
 
     private var title: some View {
-        // Group gives the #if branches a @ViewBuilder context so one trailing
-        // modifier can follow both platform variants.
-        Group {
-            #if os(macOS)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(workbenchTitle)
-                    .font(.title2.weight(.semibold))
-                Text("app.title")
-                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                    .tracking(1.4)
-            }
-            #else
-            Text("app.title")
-                .font(.system(size: 12, weight: .semibold, design: .monospaced))
-                .tracking(1.7)
-                .lineLimit(1)
-            #endif
-        }
-        .accessibilityIdentifier("app-title")
+        Text("app.title")
+            .font(.system(size: 12, weight: .semibold, design: .monospaced))
+            .tracking(1.7)
+            .lineLimit(1)
+            .accessibilityIdentifier("app-title")
     }
-
-    #if os(macOS)
-    private var workbenchTitle: LocalizedStringKey {
-        switch store.activeView {
-        case .rate: return "mac.recordingCalculator"
-        case .shutter: return "mac.shutterWorkbench"
-        case .film: return "mac.filmWorkbench"
-        }
-    }
-    #endif
 
     private var viewPicker: some View {
         Picker("nav.workbench", selection: Binding(get: { store.activeView }, set: store.setActiveView)) {
@@ -235,7 +205,7 @@ private struct HeaderView: View {
             }
         }
         .pickerStyle(.segmented)
-        // A third segment (Film, macOS) needs more room than the original two.
+        // iOS keeps its two workbenches in the content header.
         .frame(maxWidth: usesCompactLayout ? .infinity : 300)
         .accessibilityIdentifier("calculator-view-picker")
     }
@@ -279,8 +249,6 @@ private struct HeaderView: View {
 
                 moreMenu
             }
-            // The macOS film workbench shows no calculator actions; its editor
-            // supplies its own document controls.
         }
         .font(.system(size: 10, weight: .semibold, design: .monospaced))
     }
@@ -292,12 +260,10 @@ private struct HeaderView: View {
                     PlatformClipboard.copy(store.configurationText)
                 }
             }
-            // The macOS toolbar already registers ⇧⌘R; a second registration in
-            // the same window leaves that key equivalent resolving ambiguously.
             Button("nav.reset", systemImage: "arrow.counterclockwise") {
                 store.resetActiveView()
             }
-            .accessibilityIdentifier(resetIdentifier)
+            .accessibilityIdentifier("reset-action")
         } label: {
             // IconOnly and TitleAndIcon are distinct label-style types, so the
             // compact decision branches instead of going through one ternary.
@@ -348,6 +314,7 @@ private struct HeaderView: View {
         }
     }
 }
+#endif
 
 private struct FeedbackBanner: View {
     let store: CalculatorStore

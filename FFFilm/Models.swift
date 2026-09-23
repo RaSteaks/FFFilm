@@ -236,6 +236,10 @@ struct PinnedSetup: Identifiable, Hashable {
 enum CalculatorView: String, CaseIterable, Identifiable, Hashable {
     case rate = "RATE"
     case shutter = "SHUTTER"
+    // The film editor is macOS-only, so its navigation segment never appears on iOS.
+    #if os(macOS)
+    case film = "FILM"
+    #endif
 
     var id: Self { self }
 
@@ -243,6 +247,9 @@ enum CalculatorView: String, CaseIterable, Identifiable, Hashable {
         switch self {
         case .rate: "nav.recording"
         case .shutter: "nav.shutter"
+        #if os(macOS)
+        case .film: "nav.film"
+        #endif
         }
     }
 }

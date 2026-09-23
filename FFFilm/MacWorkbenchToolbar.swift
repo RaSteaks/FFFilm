@@ -21,8 +21,8 @@ struct MacWorkbenchToolbar: ToolbarContent {
             }
             .pickerStyle(.segmented)
             .labelsHidden()
-            .frame(width: 200)
-            .help("Rate ⌘1 · Shutter ⌘2")
+            .frame(width: 260)
+            .help("Rate ⌘1 · Shutter ⌘2 · Film ⌘3")
             .accessibilityIdentifier("calculator-view-picker")
         }
         ToolbarItemGroup(placement: .primaryAction) {
@@ -60,22 +60,26 @@ struct MacWorkbenchToolbar: ToolbarContent {
                 .accessibilityIdentifier("copy-action")
                 .onDisappear { copyResetTask?.cancel(); copied = false }
             }
-            Menu {
-                if store.activeView == .rate {
-                    Button("nav.copyLink", systemImage: "link") {
-                        PlatformClipboard.copy(store.configurationText)
+            // Calculator reset/copy do not apply to the film editor, whose own
+            // toolbar items appear while the film tab is showing.
+            if store.activeView != .film {
+                Menu {
+                    if store.activeView == .rate {
+                        Button("nav.copyLink", systemImage: "link") {
+                            PlatformClipboard.copy(store.configurationText)
+                        }
                     }
+                    Button("nav.reset", systemImage: "arrow.counterclockwise") {
+                        store.resetActiveView()
+                    }
+                    .help(Text("nav.reset"))
+                    .keyboardShortcut("r", modifiers: [.command, .shift])
+                    .accessibilityIdentifier("reset-action")
+                } label: {
+                    Label("nav.more", systemImage: "ellipsis.circle")
                 }
-                Button("nav.reset", systemImage: "arrow.counterclockwise") {
-                    store.resetActiveView()
-                }
-                .help(Text("nav.reset"))
-                .keyboardShortcut("r", modifiers: [.command, .shift])
-                .accessibilityIdentifier("reset-action")
-            } label: {
-                Label("nav.more", systemImage: "ellipsis.circle")
+                .accessibilityIdentifier("more-action")
             }
-            .accessibilityIdentifier("more-action")
         }
     }
 }
@@ -91,6 +95,9 @@ struct MacWorkbenchCommands: Commands {
                 .disabled(store == nil)
             Button("nav.shutter") { store?.setActiveView(.shutter) }
                 .keyboardShortcut("2")
+                .disabled(store == nil)
+            Button("nav.film") { store?.setActiveView(.film) }
+                .keyboardShortcut("3")
                 .disabled(store == nil)
         }
     }

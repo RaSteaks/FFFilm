@@ -3,7 +3,7 @@
 
 # Local Codex environment and workspace state
 /.codex/
-
+/.claude/
 # Xcode user state and local build products
 xcuserdata/
 *.xcuserstate
@@ -13,11 +13,21 @@ build/
 *.dSYM
 *.dSYM.zip
 *.ipa
+*.xcarchive
 
 # Swift Package Manager local artifacts
 .build/
 
+# Python helper caches
+__pycache__/
+*.py[cod]
+
+# Generated UI audit output contains machine-specific paths
+/premium-audit.json
+
+# One-off validation report for a private, external scan (keep locally)
+/research/
+
 # Editor swap files
 *.swp
 *~
-research/fff-007-validation.md

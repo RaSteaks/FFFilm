@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <!-- A tiny version of the support site's angled film-slice mark. -->
+  <title id="title">FFFilm</title>
+  <desc id="desc">Three angled monochrome film slices on a dark square.</desc>
+  <rect width="64" height="64" fill="#151918"/>
+  <path d="M12 45 30 19h8L20 45h-8Z" fill="#eff0ec"/>
+  <path d="M25 45 43 19h8L33 45h-8Z" fill="#a1a59e"/>
+  <path d="M38 45 56 19h4L44 45h-6Z" fill="#d8bb77"/>
+</svg>

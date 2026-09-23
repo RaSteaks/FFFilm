@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0d0f0f">
+    <meta name="description" content="FFFilm 技术支持、常见问题和问题反馈说明。">
+    <title>技术支持 · FFFilm</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <a class="skip-link" href="#main">跳到主要内容</a>
+    <div class="site-frame">
+      <header class="site-header">
+        <!-- Shared header: keep the support and privacy routes one tap apart. -->
+        <a class="brand" href="index.html" aria-label="FFFilm 支持首页">
+          <span class="brand-mark" aria-hidden="true">F</span>
+          <span>FFFilm / support</span>
+        </a>
+        <nav class="site-nav" aria-label="主要导航">
+          <a href="support.html" aria-current="page">技术支持</a>
+          <a href="privacy.html">隐私政策</a>
+        </nav>
+      </header>
+
+      <main id="main">
+        <section class="hero" aria-labelledby="page-title">
+          <div class="hero-copy">
+            <p class="eyebrow"><span class="eyebrow-dot" aria-hidden="true"></span> FFFILM / SUPPORT</p>
+            <h1 id="page-title">技术支持<span class="title-mark">。</span></h1>
+            <p class="lede">把拍摄现场的格式、数据率、容量和快门问题整理清楚，再继续拍摄。</p>
+          </div>
+          <aside class="hero-panel" aria-label="支持信息">
+            <p class="panel-label">SUPPORT STATUS</p>
+            <p class="panel-value"><span class="status-dot" aria-hidden="true"></span> READY TO HELP</p>
+            <dl class="panel-meta">
+              <dt>Updated</dt>
+              <dd>2026.09.24</dd>
+              <dt>Platforms</dt>
+              <dd>iOS / macOS</dd>
+            </dl>
+          </aside>
+        </section>
+
+        <div class="content-layout">
+          <aside class="section-index" aria-label="技术支持章节">
+            <p class="section-label">INDEX</p>
+            <ol>
+              <li><a href="#about">应用介绍</a></li>
+              <li><a href="#faq">常见问题</a></li>
+              <li><a href="#report">提交问题</a></li>
+              <li><a href="#contact">联系邮箱</a></li>
+            </ol>
+          </aside>
+
+          <article class="content">
+            <section class="content-section" id="about" aria-labelledby="about-title">
+              <p class="section-label">01 / ABOUT</p>
+              <h2 id="about-title">FFFilm 是什么</h2>
+              <p>FFFilm 是面向影视拍摄规划的本地计算工具，提供数据率、存储容量、录制时长和快门换算功能，帮助你在拍摄前快速估算介质需求和曝光相关参数；Mac 版还内置胶片切片工作台，用于处理整条扫描。</p>
+              <dl class="data-table">
+                <div class="data-row">
+                  <dt>数据率</dt>
+                  <dd>根据相机、格式、分辨率、编码和帧率估算视频数据率。</dd>
+                </div>
+                <div class="data-row">
+                  <dt>存储规划</dt>
+                  <dd>根据介质容量和拍摄时长估算每小时数据量、可录时长和每日总量。</dd>
+                </div>
+                <div class="data-row">
+                  <dt>快门换算</dt>
+                  <dd>在不同拍摄帧率、项目帧率和理论快门角度之间进行换算，并提供频闪参考；灯光源支持市电 50/60 Hz、自定义光学频率，或 2–16 台显示器的刷新率组合。</dd>
+                </div>
+                <div class="data-row">
+                  <dt>胶片切片（仅 Mac）</dt>
+                  <dd>导入 TIFF 或实验性 Flextight FFF 整条扫描，自动识别或手动框选片框，裁切、旋转拉直并排序后，导出 16 位 Adobe RGB TIFF 或 8 位 sRGB JPEG。原始扫描文件不会被修改。</dd>
+                </div>
+              </dl>
+            </section>
+
+            <section class="content-section" id="faq" aria-labelledby="faq-title">
+              <p class="section-label">02 / FAQ</p>
+              <h2 id="faq-title">常见问题</h2>
+              <div class="faq-list">
+                <details class="faq" open>
+                  <summary>为什么计算结果与实际录制文件不同？</summary>
+                  <p>计算结果是规划估算。实际数据量可能受到摄影机固件、编码方式、拍摄内容、音频、文件封装和存储介质格式化容量等因素影响，请以实际设备测试和厂商说明为准。</p>
+                </details>
+                <details class="faq">
+                  <summary>FFFilm 会上传我的计算数据吗？</summary>
+                  <p>当前版本的核心计算在设备本地完成，不要求登录，也不会把计算输入、结果或本地偏好上传到开发者服务器。完整说明请查看<a href="privacy.html">隐私政策</a>。</p>
+                </details>
+                <details class="faq">
+                  <summary>为什么 GB 和 GiB 的数值不同？</summary>
+                  <p>GB 使用 1000 进制，GiB 使用 1024 进制。FFFilm 的设置可以切换显示单位；码率、实际可录时长和容量占用百分比的计算逻辑不因此改变。</p>
+                </details>
+                <details class="faq">
+                  <summary>频闪参考快门是否保证现场不闪？</summary>
+                  <p>不能保证。参考候选基于输入的光学频率和理论模型；LED、PWM、滚动快门、电源波动和现场灯具差异都可能影响结果。请在实际灯光和摄影机组合下测试。</p>
+                </details>
+                <details class="faq">
+                  <summary>多台显示器场景下提示“折衷快门”是什么意思？</summary>
+                  <p>当 2–16 台显示器的刷新率组合不存在完全无频闪的快门角度时，FFFilm 会给出使各显示器频闪误差最小的折衷曝光参考，并标注每台显示器的剩余误差。这是理论最优解，不替代现场实测。</p>
+                </details>
+                <details class="faq">
+                  <summary>iPhone 或 iPad 上为什么没有胶片工作台？</summary>
+                  <p>胶片切片目前仅在 Mac 版提供：在 Mac 工具栏打开“胶片”标签（或按 ⌘3）。iPhone 和 iPad 版本提供完整的数据率与快门计算功能。</p>
+                </details>
+                <details class="faq">
+                  <summary>胶片切片会修改我的原始扫描文件吗？</summary>
+                  <p>不会。原始扫描只被读取；分帧、裁切和旋转等调整保存在你选择位置保存的 .fffilm 项目文件中，导出图像只写入你主动选择的文件夹。删除应用不影响原始扫描和已导出的文件。</p>
+                </details>
+                <details class="faq">
+                  <summary>为什么导入扫描时要求选择输入色彩配置？</summary>
+                  <p>未嵌入色彩配置的扫描无法被准确解释。FFFilm 会要求你指定扫描软件实际输出的色彩空间（如 sRGB、Adobe RGB），或提供匹配的 RGB ICC 文件；仅知道数据是线性的，不足以推断色彩原色。FFFilm 不做自动负片转换，色调调整请交给专业后期软件。</p>
+                </details>
+                <details class="faq">
+                  <summary>Flextight FFF 扫描支持到什么程度？</summary>
+                  <p>FFF 支持为实验性：已测试样本的 16 位 RGB 解码可用，但无法覆盖所有专有变体或校准过的扫描仪色彩；相机 RAW FFF 与 FlexColor 处理历史不受支持。请在自己的样本上验证后再纳入工作流。</p>
+                </details>
+                <details class="faq">
+                  <summary>FFFilm 支持哪些设备？</summary>
+                  <p>当前版本面向 iPhone、iPad 和 Mac，需要 iOS / iPadOS 18.6 或 macOS 15.6 及以上系统。相机目录中的规格与录制模式来自应用内置资料，不代表对某台摄影机全部固件或全部能力的穷尽说明。</p>
+                </details>
+              </div>
+            </section>
+
+            <section class="content-section" id="report" aria-labelledby="report-title">
+              <p class="section-label">03 / REPORT</p>
+              <h2 id="report-title">提交问题时请附上</h2>
+              <p>为了更快复现问题，请在邮件中尽量提供以下信息：</p>
+              <ul>
+                <li><strong>应用版本：</strong>可在系统或 App Store 的应用信息中查看。</li>
+                <li><strong>设备与系统：</strong>例如 iPhone 17 Pro、iPad 或 Mac，以及对应的 iOS / iPadOS / macOS 版本。</li>
+                <li><strong>复现步骤：</strong>从打开应用到出现问题的具体操作顺序。</li>
+                <li><strong>当前设置：</strong>相机、模式、分辨率、编码、帧率、介质和拍摄时长等相关选项。</li>
+                <li><strong>胶片切片（如涉及）：</strong>扫描格式（TIFF 或 FFF）、导入与分帧的操作步骤、导出格式与质量设置，以及 .fffilm 项目能否正常重新打开。</li>
+                <li><strong>截图或录屏：</strong>如能帮助说明问题，请一并附上；请先移除不必要的个人或项目敏感信息。</li>
+              </ul>
+            </section>
+
+            <section class="content-section" id="contact" aria-labelledby="contact-title">
+              <p class="section-label">04 / CONTACT</p>
+              <h2 id="contact-title">联系支持</h2>
+              <!-- Keep the public support address synchronized with privacy.html. -->
+              <div class="contact-card">
+                <p>反馈邮箱：</p>
+                <p class="email-placeholder"><a href="mailto:zhuyutian041119@foxmail.com">zhuyutian041119@foxmail.com</a></p>
+                <p>请附上应用版本、设备型号、系统版本、操作步骤和问题截图。</p>
+              </div>
+            </section>
+          </article>
+        </div>
+      </main>
+
+      <footer class="footer">
+        <p><span class="footer-label">FFFilm</span> 技术支持 · 更新于 2026.09.24</p>
+        <p><a href="privacy.html">隐私政策 ↗</a></p>
+      </footer>
+    </div>
+  </body>
+</html>

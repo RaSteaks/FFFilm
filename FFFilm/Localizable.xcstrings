@@ -2125,6 +2125,7 @@
       }
     },
     "mac.filmWorkbench" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2141,6 +2142,7 @@
       }
     },
     "mac.recordingCalculator" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2157,6 +2159,7 @@
       }
     },
     "mac.shutterWorkbench" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {

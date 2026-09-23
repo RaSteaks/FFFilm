@@ -17,6 +17,7 @@ build/
 
 # Swift Package Manager local artifacts
 .build/
+/exports/
 
 # Python helper caches
 __pycache__/

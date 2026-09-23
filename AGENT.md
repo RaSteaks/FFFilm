@@ -168,6 +168,13 @@ All displayed rates are video-only planning estimates. Validate camera firmware,
 - Label standalone ProRes comparison cadence as `PROJECT FPS`; include each camera name in the separate favorite button's VoiceOver label.
 - Verification: the complete macOS `FFFilmTests` target passed with the new cross-window and shutter-undo regressions. Focused iPhone 17 Pro simulator UI tests passed for camera favorites and standalone ProRes comparison. `audit_project.py --mode strict` reported zero findings; `git diff --check` passed. Xcode used a temporary DerivedData path and disabled signing for local checks.
 
+## Film workbench as a main-window tab (2026-09-23)
+
+- The film editor no longer opens as an independent window. `CalculatorView` gains a macOS-only `film` case (`#if os(macOS)`), so the segmented workbench picker in the header and the macOS titlebar show FILM directly beside SHUTTER; iOS keeps exactly two segments and no film UI. `nav.film`/`mac.filmWorkbench` were added to `Localizable.xcstrings`.
+- `ContentView` owns the `FilmStore` on macOS, so the film document, renderer and undo stacks survive workbench-tab switches; the editor fills the entire window content below the unified titlebar with no in-content header — the titlebar segmented control is the single navigation (an initial in-content header duplicated the titlebar picker and was removed), and the editor's own toolbar items (import/project/undo/redo) appear in the titlebar while the FILM tab is showing. `FilmWindowGuard` is attached at the ContentView root, keeping unsaved-film close/quit protection active even on other tabs. `resetActiveView` is a no-op on the FILM tab.
+- The standalone `WindowGroup(id: "film-workbench")` was removed. ⌘3 now switches the focused main window to the FILM tab (Calculator menu); the Film menu keeps import/save/undo/redo acting through the focused scene's film store.
+- Verification: macOS and iOS Simulator builds pass; the complete macOS `FFFilmTests` target passes (63 cases); catalog and string-catalog JSON validation pass. The previously running app instance was not restarted; live tab switching and the film editor inside the main window still need a manual look after rebuild, and window widths below the split view's ~810pt pane minimum clip the inspector edge on the FILM tab.
+
 ## macOS film workbench (2026-09-23)
 
 - Film processing is isolated behind `#if os(macOS)` in FilmModels, FilmRenderer, FilmStore and FilmWorkbenchView. The existing calculator retains its state/navigation; toolbar Film and ⌘3 open an independent editor window. iOS has no film UI or image-processing implementation. File read/write and app-scoped bookmark entitlements are macOS-only.

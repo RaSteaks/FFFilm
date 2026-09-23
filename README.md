@@ -2,109 +2,111 @@
 
 # FFFilm
 
-Data rate, storage runtime and shutter planning for the camera you actually have on set. Native SwiftUI on iPhone, iPad and Mac, with no third-party dependencies.
+[English](README.en.md) | **简体中文**
 
-Rates come from published manufacturer recording tables held in this repository, not from a generic bitrate formula.
+为你在片场实际使用的相机做数据率、存储时长与快门规划。原生 SwiftUI，支持 iPhone、iPad 与 Mac，无任何第三方依赖。
 
-## Features
+数据率来自本仓库内置的厂商官方录制参数表，而非通用码率公式。
 
-**Recording** — camera, format and cadence in; rate and storage out.
+## 功能
 
-- Data rate as GB/h or GiB/h, with the matching Mb/s bitrate.
-- Storage plan: capacity for a planned duration, the card's actual capture runtime, and a warning when the plan exceeds the card.
-- Direct duration entry (0.25–24 hours) with inline validation, a native stepper and 1/4/8/12-hour presets. An incomplete draft keeps the last valid result.
-- Snapshot comparisons: pin up to four setups; duplicates are rejected.
-- Per-camera format memory. Media and planned duration stay per-window.
-- Playback duration, active image area and the calculation basis stay in a collapsed details disclosure.
+**录制** —— 输入相机、格式与帧率，得出码率与存储需求。
 
-**Shutter** — three modes sharing camera FPS and a user-set maximum angle.
+- 数据率以 GB/小时 或 GiB/小时 显示，并给出对应的 Mb/s 码率。
+- 存储计划：按计划时长计算所需容量、存储卡的实际可录时长，计划超出卡容量时给出警告。
+- 直接输入时长（0.25–24 小时），带行内校验、原生步进器与 1/4/8/12 小时预设。未完成的草稿保留上一次有效结果。
+- 快照对比：最多固定四个方案，重复方案会被拒绝。
+- 各相机独立记忆格式设置；媒体与计划时长按窗口分别保留。
+- 回放时长、有效成像区域与计算依据收在折叠的详情栏中。
 
-- **Convert** — angle ⇄ exposure time, with the primary readout following the conversion direction.
-- **Flicker reference** — flicker-free angles against mains (50/60 Hz), a custom optical rate, or 2–16 display refresh rates.
-- **Over / undercrank** — match an exposure by keeping the angle or the time, with playback speed and an optional light check.
+**快门** —— 三种模式共享相机 FPS 与用户设置的最大快门角度。
 
-Preset frame rates carry their exact rational values; typed decimals stay literal.
+- **换算** —— 角度 ⇄ 曝光时间，主读数跟随换算方向。
+- **频闪参考** —— 针对市电（50/60 Hz）、自定义光学频率或 2–16 档显示器刷新率的无频闪角度。
+- **升格 / 降格** —— 通过保持角度或保持时间来匹配曝光，含回放速度与可选的灯光检查。
 
-**Camera catalog** — 33 profiles across ARRI, Sony, RED, DJI, Kinefinity and standalone Apple ProRes, with manufacturer-grouped search, reorderable favorites and per-camera recording-mode details.
+预设帧率携带精确的有理数值；手动输入的小数按字面值使用。
 
-**Settings** — decimal GB/TB or binary GiB/TiB, applied to rates and totals without changing bitrate or runtime. Simplified Chinese and English follow the system language, falling back to English; camera models, codec names and FPS stay in their source form.
+**相机目录** —— 33 个机型档案，涵盖 ARRI、Sony、RED、DJI、Kinefinity 与独立 Apple ProRes，支持按厂商分组搜索、可拖动排序的收藏，以及每台相机的录制模式详情。
 
-## Film slicing (macOS only)
+**设置** —— 十进制 GB/TB 或二进制 GiB/TiB，应用于码率与总量，不影响比特率与时长。简体中文与英文跟随系统语言，无对应语言时回退到英文；相机型号、编解码器名称与 FPS 保持原文。
 
-Open **Film** in the Mac toolbar, or press **⌘3**. Import a TIFF or experimental Flextight FFF strip, detect frame gaps or draw frames manually, then crop, rotate, reorder and export. Automatic boundaries are candidates and should be checked. Save `.fffilm` projects to resume slicing without modifying the scan.
+## 胶片切片（仅 macOS）
 
-Export current, checked or all frames as 16-bit Adobe RGB TIFF or 8-bit sRGB JPEG. Whole-strip output places rotated crops in their original slots, clipping to the slot boundaries; individual exports retain full rotated bounds. Zoom, undo/redo and batch selection remain available.
+在 Mac 工具栏打开**胶片**，或按 **⌘3**。导入 TIFF 或实验性的 Flextight FFF 条带，自动检测片框间隙或手动绘制片框，然后裁剪、旋转、排序并导出。自动边界仅为候选结果，请人工核对。保存 `.fffilm` 项目可随时继续切片，且不修改原始扫描件。
 
-The workbench contains no film-base correction, tone, curve, histogram or preset tools. Old projects load their geometry and ignore removed grading fields; resaving omits those fields. Existing user-preset files remain untouched.
+可将当前、已勾选或全部片框导出为 16 位 Adobe RGB TIFF 或 8 位 sRGB JPEG。整条导出时，旋转后的裁剪结果放回原始槽位并裁切至槽位边界；单帧导出保留完整的旋转边界。缩放、撤销/重做与批量选择均可使用。
 
-**Color management** remains for accurate input/output interpretation: embedded input profiles take precedence; untagged scans require explicit assignment or a matching RGB ICC. Floating-point previews preserve extended RGB and exports embed their output profiles. No automatic negative conversion is applied. See [color-management notes](docs/film-color-management.md).
+工作台不提供片基校正、色调、曲线、直方图或预设工具。旧项目仅加载几何信息，忽略已移除的调色字段；重新保存时会省略这些字段。现有的用户预设文件保持不变。
 
-**FFF compatibility is experimental:** ImageIO full-resolution 16-bit RGB decoding works for the tested sample, but this does not establish every proprietary variant or calibrated scanner color. Camera RAW FFF and FlexColor processing history are not supported.
+**色彩管理**仅用于准确解释输入/输出：内嵌的输入色彩配置优先；未标记的扫描件需显式指定配置或提供匹配的 RGB ICC。浮点预览保留扩展 RGB 范围，导出时嵌入输出色彩配置。不进行自动负片转换。详见[色彩管理说明](docs/film-color-management.md)。
 
-## Build, run and test
+**FFF 兼容性为实验性：** ImageIO 的全分辨率 16 位 RGB 解码在已测试样本上可用，但这并不能覆盖所有专有变体或校准过的扫描仪色彩。不支持相机 RAW FFF 与 FlexColor 处理历史。
 
-Requires Xcode 26.3 or later, and iOS/iPadOS 18.6+ or macOS 15.6+. Open `FFFilm.xcodeproj`, or use:
+## 构建、运行与测试
+
+需要 Xcode 26.3 或更高版本，以及 iOS/iPadOS 18.6+ 或 macOS 15.6+。打开 `FFFilm.xcodeproj`，或使用：
 
 ```sh
-# macOS app
+# macOS 应用
 xcodebuild -project FFFilm.xcodeproj -scheme FFFilm \
   -destination 'platform=macOS' build
 
-# iOS Simulator
+# iOS 模拟器
 xcodebuild -project FFFilm.xcodeproj -scheme FFFilm \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build
 ```
 
 ```sh
-# Unit tests — catalog integrity, rate tables, media planning, shutter math
+# 单元测试 —— 目录完整性、码率表、媒体规划、快门计算
 xcodebuild -project FFFilm.xcodeproj -scheme FFFilm \
   -destination 'platform=macOS' -only-testing:FFFilmTests test
 
-# UI tests — run on a simulator; the flag avoids a clone-launch flake
+# UI 测试 —— 需在模拟器上运行；该标志可避免克隆启动的不稳定问题
 xcodebuild -project FFFilm.xcodeproj -scheme FFFilm \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
   -parallel-testing-enabled NO -only-testing:FFFilmUITests test
 ```
 
-UI tests select elements by accessibility identifier rather than visible label, so they run against any system language.
+UI 测试通过辅助功能标识符（而非可见文本）选取元素，因此可在任意系统语言下运行。
 
 ```sh
-# macOS app lifecycle
-script/build_and_run.sh            # build and launch
-script/build_and_run.sh --verify   # confirm the process is running
-script/build_and_run.sh --debug    # launch under lldb
-script/build_and_run.sh --logs     # stream the unified log
+# macOS 应用生命周期
+script/build_and_run.sh            # 构建并启动
+script/build_and_run.sh --verify   # 确认进程正在运行
+script/build_and_run.sh --debug    # 在 lldb 下启动
+script/build_and_run.sh --logs     # 流式查看统一日志
 ```
 
-## Catalog
+## 数据目录
 
-`FFFilm/Catalog.json` is the source data: 33 camera profiles, 15 codecs, four media capacities (512 GB / 1 / 2 / 4 TB, decimal) and frame rates from 23.976 to 660 fps. Sensor geometry uses published millimeters wherever the manufacturer provides them.
+`FFFilm/Catalog.json` 是源数据：33 个相机档案、15 种编解码器、四种媒体容量（512 GB / 1 / 2 / 4 TB，十进制），帧率从 23.976 到 660 fps。传感器几何数据在厂商公布毫米值时一律采用公布值。
 
 ```sh
 python3 script/validate_catalog.py
 ```
 
-Checks the invariants the decoder and calculation engine rely on: unique ids, rate-table keys that resolve to real camera/codec/resolution triples, finite positive rates, and geometry that stays inside the published sensor.
+该校验脚本检查解码器与计算引擎所依赖的不变量：id 唯一、码率表键能解析到真实存在的相机/编解码器/分辨率组合、码率为有限正数，以及几何数据不超出公布的传感器范围。
 
-## Project structure
+## 项目结构
 
-| Path | Role |
+| 路径 | 职责 |
 | --- | --- |
-| `FFFilm/CalculatorEngine.swift` | Compatibility rules, rate lookup, media planning, active-area geometry, shutter math. |
-| `FFFilm/CalculatorStore.swift` | Per-window workflow state, favorites and pinned setups. |
-| `FFFilm/Models.swift` | Catalog, settings and result types. |
-| `FFFilm/ContentView.swift` | The adaptive workbench. |
-| `FFFilm/CameraLibraryView.swift` | Catalog search, favorites and camera details. |
-| `FFFilm/QuickStartView.swift` | Camera shortcuts. |
-| `FFFilm/SettingsView.swift`, `StorageUnit.swift` | Unit preference and its GB↔GiB conversion. |
-| `FFFilm/MacWorkbenchToolbar.swift`, `WorkbenchComponents.swift` | Desktop toolbar and shared view primitives. |
-| `FFFilm/DisplayFormat.swift`, `Localization.swift`, `PlatformClipboard.swift` | Formatting, non-view strings, clipboard. |
-| `FFFilm/Catalog.json`, `Localizable.xcstrings` | Source data and localized strings. |
-| `FFFilmTests/`, `FFFilmUITests/` | Test targets, run through `FFFilm.xctestplan`. |
-| `design/` | App-icon sources, exports and approved artwork. |
-| `script/` | Build/run, catalog validation and icon tooling. |
-| `DESIGN.md`, `AGENT.md` | UI contract and working notes. |
+| `FFFilm/CalculatorEngine.swift` | 兼容性规则、码率查询、媒体规划、有效成像区域几何、快门计算。 |
+| `FFFilm/CalculatorStore.swift` | 按窗口的工作流状态、收藏与固定方案。 |
+| `FFFilm/Models.swift` | 目录、设置与结果类型。 |
+| `FFFilm/ContentView.swift` | 自适应工作台。 |
+| `FFFilm/CameraLibraryView.swift` | 目录搜索、收藏与相机详情。 |
+| `FFFilm/QuickStartView.swift` | 相机快捷入口。 |
+| `FFFilm/SettingsView.swift`、`StorageUnit.swift` | 单位偏好及其 GB↔GiB 换算。 |
+| `FFFilm/MacWorkbenchToolbar.swift`、`WorkbenchComponents.swift` | 桌面端工具栏与共享视图组件。 |
+| `FFFilm/DisplayFormat.swift`、`Localization.swift`、`PlatformClipboard.swift` | 格式化、非视图字符串、剪贴板。 |
+| `FFFilm/Catalog.json`、`Localizable.xcstrings` | 源数据与本地化字符串。 |
+| `FFFilmTests/`、`FFFilmUITests/` | 测试目标，通过 `FFFilm.xctestplan` 运行。 |
+| `design/` | 应用图标源文件、导出与已审定稿。 |
+| `script/` | 构建/运行、目录校验与图标工具。 |
+| `DESIGN.md`、`AGENT.md` | UI 约定与工作笔记。 |
 
-## Product boundary
+## 产品边界
 
-Displayed rates are video-only planning estimates. Validate camera firmware, codec settings and recording media before production use. Shutter and flicker results are theoretical models, not guarantees for LED fixtures, PWM dimming, rolling shutters or unstable supply.
+显示的码率仅为视频规划估算值。正式拍摄前请核对相机固件、编解码器设置与记录媒体。快门与频闪结果为理论模型，不保证适用于 LED 灯具、PWM 调光、卷帘快门或不稳定的供电环境。

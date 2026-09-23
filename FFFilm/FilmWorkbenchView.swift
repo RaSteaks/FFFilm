@@ -3,9 +3,16 @@ import SwiftUI
 import AppKit
 
 struct FilmWorkbenchView: View {
-    @State private var store = FilmStore()
-    @State private var drawMode = 0
-    @State private var exportScope = 0
+    /// Owned by the embedding workbench (ContentView) so the film document and
+    /// renderer survive workbench-tab switches; no longer a standalone window.
+    @Bindable var store: FilmStore
+
+    /// Split-pane minimums plus the divider: the narrowest window that keeps both
+    /// panes visible. ContentView raises the window minimum to this while the
+    /// film tab is showing, instead of the calculator's smaller default.
+    static let canvasMinimumWidth: CGFloat = 500
+    static let inspectorMinimumWidth: CGFloat = 300
+    static var minimumWindowWidth: CGFloat { canvasMinimumWidth + inspectorMinimumWidth + 20 }
 
     var body: some View {
         HSplitView {
@@ -22,7 +29,7 @@ struct FilmWorkbenchView: View {
                 } else {
                     canvasToolbar
                     sourceIdentity
-                    FilmCanvas(store: store, drawMode: $drawMode)
+                    FilmCanvas(store: store, drawMode: $store.drawMode)
                     frameStrip
                 }
                 if !store.notice.isEmpty {
@@ -37,14 +44,11 @@ struct FilmWorkbenchView: View {
                         if store.exporting { Button(filmText("取消导出", "Cancel export")) { store.exportTask?.cancel() } }
                     }.padding(10)
                 }
-            }.frame(minWidth: 500, maxWidth: .infinity, maxHeight: .infinity)
-            inspector.frame(minWidth: 300, idealWidth: 330, maxWidth: 380)
+            }.frame(minWidth: Self.canvasMinimumWidth, maxWidth: .infinity, maxHeight: .infinity)
+            inspector.frame(minWidth: Self.inspectorMinimumWidth, idealWidth: 330, maxWidth: 380)
         }
         .background(Palette.background)
-        .preferredColorScheme(.dark)
-        .frame(minWidth: 880, minHeight: 640)
         .toolbar { toolbar }
-        .background(FilmWindowGuard(store: store))
         .alert(filmText("操作未完成", "Operation failed"), isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) {
             Button(filmText("好", "OK")) { store.error = nil }
         } message: { Text(store.error ?? "") }
@@ -140,10 +144,10 @@ struct FilmWorkbenchView: View {
     private var cropControls: some View {
         VStack(alignment: .leading, spacing: 10) {
             Button(filmText("自动识别帧间隙", "Detect frame gaps")) { store.detect() }
-            Picker(filmText("画布工具", "Canvas tool"), selection: $drawMode) {
+            Picker(filmText("画布工具", "Canvas tool"), selection: $store.drawMode) {
                 Text(filmText("选择", "Select")).tag(0)
                 Text(filmText("框选新帧", "Draw frame")).tag(1)
-            }.onChange(of: drawMode) { _, mode in if mode != 0 { store.showStrip = true } }
+            }.onChange(of: store.drawMode) { _, mode in if mode != 0 { store.showStrip = true } }
             HStack {
                 Button(filmText("添加帧", "Add frame")) { store.addFrame() }
                 Button(filmText("删除所选", "Remove selected")) { store.removeFrame() }.disabled(store.frame == nil)
@@ -184,7 +188,7 @@ struct FilmWorkbenchView: View {
     private var exportControls: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(filmText("导出", "Export")).font(.headline)
-            Picker(filmText("范围", "Scope"), selection: $exportScope) {
+            Picker(filmText("范围", "Scope"), selection: $store.exportScope) {
                 Text(filmText("当前帧", "Current frame")).tag(0)
                 Text(filmText("所选帧", "Selected frames")).tag(1)
                 Text(filmText("全部帧", "All frames")).tag(2)
@@ -200,8 +204,8 @@ struct FilmWorkbenchView: View {
             if !store.failedExports.isEmpty {
                 Button(filmText("重试失败项目…", "Retry failed exports…")) { store.export(scope: 4) }
             }
-            Button(filmText("选择文件夹并导出…", "Choose folder & export…")) { store.export(scope: exportScope) }
-                .disabled(exportScope != 3 && store.frame == nil)
+            Button(filmText("选择文件夹并导出…", "Choose folder & export…")) { store.export(scope: store.exportScope) }
+                .disabled(store.exportScope != 3 && store.frame == nil)
         }
     }
 }
@@ -464,12 +468,11 @@ struct FilmCanvas: View {
 extension FocusedValues { @Entry var filmStore: FilmStore? }
 
 struct FilmCommands: Commands {
-    @Environment(\.openWindow) private var openWindow
+    // The film workbench is now a tab of the main window; these commands act on
+    // the focused scene's film store whenever that tab is showing.
     @FocusedValue(\.filmStore) private var store
     var body: some Commands {
         CommandMenu(filmText("胶片", "Film")) {
-            Button(filmText("打开胶片工作台", "Open film workbench")) { openWindow(id: "film-workbench") }.keyboardShortcut("3")
-            Divider()
             Button(filmText("导入扫描…", "Import scan…")) { store?.openScan() }.keyboardShortcut("o", modifiers: [.command, .shift]).disabled(store == nil || store?.busy == true || store?.exporting == true || store?.presentingSheet == true)
             Button(filmText("保存项目", "Save project")) { store?.saveProject() }.keyboardShortcut("s").disabled(store?.info == nil || store?.busy == true || store?.exporting == true || store?.presentingSheet == true)
             Button(filmText("撤销胶片调整", "Undo film edit")) { store?.undo() }.keyboardShortcut("z").disabled(store?.undoStack.isEmpty != false || store?.busy == true || store?.exporting == true || store?.presentingSheet == true)

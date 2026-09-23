@@ -1739,6 +1739,7 @@
     },
     "Film workbench ⌘3" : {
       "comment" : "macOS film workbench",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2123,6 +2124,22 @@
         }
       }
     },
+    "mac.filmWorkbench" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Film workbench"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "胶片工作台"
+          }
+        }
+      }
+    },
     "mac.recordingCalculator" : {
       "localizations" : {
         "en" : {
@@ -2273,6 +2290,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "收藏"
+          }
+        }
+      }
+    },
+    "nav.film" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Film"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "胶片"
           }
         }
       }
@@ -2441,6 +2474,7 @@
     },
     "Open film workbench" : {
       "comment" : "macOS film workbench",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2561,7 +2595,7 @@
         }
       }
     },
-    "Rate ⌘1 · Shutter ⌘2" : {
+    "Rate ⌘1 · Shutter ⌘2 · Film ⌘3" : {
 
     },
     "Redo" : {
@@ -2598,23 +2632,6 @@
         }
       }
     },
-    "Remove selected" : {
-      "comment" : "macOS film workbench",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Remove selected"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "删除所选"
-          }
-        }
-      }
-    },
     "Relative to Home" : {
       "comment" : "Source scan path base in the macOS film workbench",
       "localizations" : {
@@ -2628,6 +2645,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "相对主目录"
+          }
+        }
+      }
+    },
+    "Remove selected" : {
+      "comment" : "macOS film workbench",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove selected"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "删除所选"
           }
         }
       }

@@ -183,6 +183,10 @@ final class CalculatorStore {
     }
 
     func resetActiveView() {
+        #if os(macOS)
+        // The film workbench owns its document lifecycle; calculator reset does not apply.
+        guard activeView != .film else { return }
+        #endif
         cameraMemories = Self.loadCameraMemories(defaults: defaults, catalog: catalog)
         resetUndoSnapshot = ResetUndoSnapshot(
             settings: settings,

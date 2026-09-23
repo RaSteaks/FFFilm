@@ -34,6 +34,10 @@ final class FilmStore {
     var overview: CGImage?
     var info: FilmRenderer.SourceInfo?
     var showStrip = true
+    // The canvas tool and export scope live here, not in the view's @State:
+    // switching workbench tabs removes the film view, which would reset them.
+    var drawMode = 0
+    var exportScope = 0
     var busy = false
     var exporting = false
     var presentingSheet = false
@@ -251,7 +255,7 @@ final class FilmStore {
                 sourceGeneration += 1
                 if restoring == nil { projectURL = nil }
                 undoStack.removeAll(); redoStack.removeAll(); selection.removeAll()
-                selected = next.frames.first?.id; showStrip = true; zoom = 1
+                selected = next.frames.first?.id; showStrip = true; zoom = 1; drawMode = 0; exportScope = 0
                 // Both views share the untouched scan preview until edits require compositing.
                 overview = base; image = initial
                 displayedProject = next; displayedFrameID = nil

@@ -218,6 +218,12 @@ struct CalculatorEngine {
                                                       target: settings.preferredAngle, maximum: settings.maxAngle) else {
                 return ShutterCalculation(status: .numericalLimit)
             }
+            if candidates.isEmpty, settings.light == .displays {
+                guard let compromise = displayCompromise(settings: settings, target: settings.preferredAngle) else {
+                    return ShutterCalculation(status: .numericalLimit)
+                }
+                return ShutterCalculation(status: .valid, exposure: compromise.exposure, compromise: compromise)
+            }
             return ShutterCalculation(status: candidates.isEmpty ? .noCandidates : .valid,
                                       exposure: candidates.first?.exposure, candidates: candidates)
         }
@@ -240,9 +246,90 @@ struct CalculatorEngine {
                 // A complete positive integer number of light cycles is a model check, not a guarantee.
                 result.matchesLightCycles = cycles.rounded() >= 1 && shutterClose(cycles, cycles.rounded())
                 result.candidates = candidates
+                if candidates.isEmpty, settings.light == .displays {
+                    result.compromise = displayCompromise(settings: settings, target: exposure.angle)
+                }
             }
         }
         return result
+    }
+
+    private func displayCompromise(settings: ShutterSettings, target: Double) -> ShutterCompromise? {
+        guard let milliHz = settings.displayRefreshMilliHz else { return nil }
+        let rates = Set(milliHz).sorted().map { Double($0) / 1_000 }
+        let maximumTime = settings.maxAngle / (360 * settings.sensorFps)
+        guard maximumTime.isFinite, maximumTime > 0 else { return nil }
+        let preferredTime = min(target, settings.maxAngle) / (360 * settings.sensorFps)
+        let budget = 4_096
+        let boundaryCount = rates.reduce(0.0) { $0 + max(0, floor(maximumTime * $1 - 0.5)) }
+        let approximate = boundaryCount > Double(budget)
+        var intervals: [(Double, Double)] = []
+        if !approximate {
+            // Between half-cycle boundaries, each device's nearest positive integer is fixed.
+            // The maximum absolute error is convex on that interval, so its minimum is exact.
+            var boundaries: Set<Double> = [0, maximumTime]
+            for hz in rates {
+                let count = Int(max(0, floor(maximumTime * hz - 0.5)))
+                if count > 0 {
+                    for n in 1...count { boundaries.insert((Double(n) + 0.5) / hz) }
+                }
+            }
+            let sorted = boundaries.sorted()
+            intervals = Array(zip(sorted, sorted.dropFirst()))
+        } else {
+            // Very high Hz / low fps can have billions of boundaries. Optimize sampled cells
+            // with a fixed budget and expose that approximation instead of claiming a global optimum.
+            var visited = Set<Double>()
+            let seeds = (1...budget).map { maximumTime * Double($0) / Double(budget) } + [preferredTime]
+            for time in seeds {
+                var lower = 0.0, upper = maximumTime
+                for hz in rates {
+                    let n = max(1, (time * hz).rounded())
+                    if n > 1 { lower = max(lower, (n - 0.5) / hz) }
+                    upper = min(upper, (n + 0.5) / hz)
+                }
+                if lower <= upper, visited.insert(lower).inserted { intervals.append((lower, upper)) }
+            }
+        }
+        var bestTime = maximumTime
+        func error(_ time: Double) -> Double {
+            rates.reduce(0) { max($0, abs(time * $1 - max(1, (time * $1).rounded()))) }
+        }
+        var bestError = error(bestTime)
+        func consider(_ time: Double) {
+            guard time > 0, time <= maximumTime else { return }
+            let candidateError = error(time)
+            let tied = abs(candidateError - bestError) <= 1e-12
+            let distance = abs(time - preferredTime), bestDistance = abs(bestTime - preferredTime)
+            if candidateError < bestError - 1e-12 || (tied && (distance < bestDistance || (distance == bestDistance && time < bestTime))) {
+                bestTime = time
+                bestError = candidateError
+            }
+        }
+        for (lower, upper) in intervals {
+            let middle = lower + (upper - lower) / 2
+            let counts = rates.map { max(1, (middle * $0).rounded()) }
+            var lo = lower, hi = upper
+            // max(hz*t - n) increases and max(n - hz*t) decreases. Their crossing minimizes
+            // the worst device's error; clamping also handles exposures shorter than one cycle.
+            for _ in 0..<48 {
+                let time = lo + (hi - lo) / 2
+                var increasing = -Double.infinity, decreasing = -Double.infinity
+                for (hz, n) in zip(rates, counts) {
+                    increasing = max(increasing, time * hz - n)
+                    decreasing = max(decreasing, n - time * hz)
+                }
+                if increasing < decreasing { lo = time } else { hi = time }
+            }
+            consider(lower)
+            consider(upper)
+            consider(lo + (hi - lo) / 2)
+            consider(min(max(preferredTime, lower), upper))
+        }
+        guard let exposure = shutterExposure(seconds: bestTime, fps: settings.sensorFps) else { return nil }
+        return ShutterCompromise(exposure: exposure,
+                                displays: rates.map { DisplayCycleMatch(hz: $0, cycles: bestTime * $0) },
+                                approximateSearch: approximate)
     }
 
     private func shutterExposure(seconds: Double, fps: Double) -> ShutterExposure? {

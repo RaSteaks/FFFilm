@@ -428,6 +428,22 @@ struct ShutterCandidate: Equatable, Hashable, Identifiable {
     var id: Double { cycles }
 }
 
+/// A cycle-domain mismatch, not an estimate of measured flicker or brightness.
+struct DisplayCycleMatch: Equatable, Hashable, Identifiable {
+    let hz: Double
+    let cycles: Double
+    var nearestCycles: Double { max(1, cycles.rounded()) }
+    var error: Double { abs(cycles - nearestCycles) }
+    var id: Double { hz }
+}
+
+struct ShutterCompromise: Equatable, Hashable {
+    let exposure: ShutterExposure
+    let displays: [DisplayCycleMatch]
+    let approximateSearch: Bool
+    var worstError: Double { displays.map(\.error).max() ?? 0 }
+}
+
 enum ShutterStatus: Equatable, Hashable {
     case valid, exceedsMaximum, noCandidates
     case invalidInput(ShutterInputField)
@@ -442,4 +458,6 @@ struct ShutterCalculation: Equatable, Hashable {
     var durationMultiplier: Double? = nil
     var matchesLightCycles: Bool? = nil
     var candidates: [ShutterCandidate] = []
+    // Separate from exact candidates so matching mode never replaces its target exposure.
+    var compromise: ShutterCompromise? = nil
 }

@@ -122,8 +122,17 @@ All displayed rates are video-only planning estimates. Validate camera firmware,
 
 - LIGHT SOURCE → 多显示设备 accepts 2–16 comma-separated fixed refresh rates, 0.001–1000000 Hz with up to three decimal places; decimal points are explicit, Chinese commas are accepted. Preserve raw text across mode changes/import and reset with shutter defaults.
 - Parse exact integer milli-Hz, then compute the GCD: the shortest common exposure is `1000 / gcd(milliHz)`. Reuse bounded candidate ranking and maximum-angle enforcement; never round nearby rates together or silently substitute a partial match.
-- Support both flicker candidates and the optional matching check. DETAILS reports per-device refresh cycles; invalid lists clear results and impossible common exposures have actionable empty-state text.
+- Support both flicker candidates and the optional matching check. DETAILS reports per-device refresh cycles; invalid lists clear results. When no exact common exposure fits, provide the qualified compromise described below.
 - Fixed refresh is a theoretical model, not a guarantee for PWM, VRR, scanout or rolling shutters; environmental lighting is excluded from the display-only selection. Periodic-exposure background: https://www.red.com/learn/red-101/flicker-free-video-tutorial .
+
+### Multi-display compromise optimization (2026-09-23)
+
+- Exact common-cycle candidates retain priority and existing preferred-angle ordering. Only if no exact candidate fits, minimize `max_i |Hz_i * t - max(1, round(Hz_i * t))|` over positive exposures within the user angle limit. Positive integer targets prevent the zero-exposure degeneracy. All devices have equal priority; duplicate Hz values are equivalent. Ties (1e-12 cycles numerical tolerance) favor the preferred angle, then the lower angle.
+- Split the exposure domain at half-cycle boundaries (starting at 1.5 cycles). In each interval the nearest positive integers are fixed; minimize the convex upper envelope by bisecting the increasing/decreasing envelope crossing, including endpoints. Up to 4096 boundaries are exhausted; beyond that, optimize cells from a bounded 4096-point sampling plus the preferred exposure and label the search approximate, never globally optimal.
+- `ShutterCompromise` stays separate from exact candidates. Flicker mode displays its angle/time with a visible qualification; matching keeps the target, status and playback ratios, showing the compromise only as a reference in details. Details and clipboard expose per-Hz cycles, nearest positive integers and deviations. These are cycle errors, not measured brightness or flicker percentages.
+- English and Simplified Chinese strings live in `Localizable.xcstrings`; `AppText` owns dynamic detail and clipboard formatting. Reuse the native result/details layout without introducing new UI tokens.
+- Regression coverage includes analytical 50/60 Hz minimax, independent dense-search oracles, exact-solution priority, duplicates/order, decimal rates, short exposures, numerical underflow, bounded extreme-rate search, matching-target preservation and clipboard reference values.
+- Verified: macOS complete unit target (49 passing test entries), subsequent focused ShutterTests including preferred-angle ties, and iPhone 17 Pro multiple-display UI regression (exact → compromise → invalid → exact, per-device details, reset). macOS and iOS Simulator builds and string-catalog JSON validation pass. The first Pro Max UI attempt failed before feature interaction because an old simulator app could not terminate; the final Pro run passed, with screenshots inspected.
 
 ## UI and interaction optimization (2026-09-22)
 

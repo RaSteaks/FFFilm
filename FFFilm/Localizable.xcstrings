@@ -1,6 +1,102 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "shutter.compromise.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "COMPROMISE REFERENCE"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "折中推荐"
+          }
+        }
+      }
+    },
+    "shutter.compromise.notice": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No exact common exposure fits the angle limit. A compromise reference is available in details; flicker may remain."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "角度限制内无严格共同解，已提供折中参考（详见详情）；仍可能出现频闪。"
+          }
+        }
+      }
+    },
+    "shutter.compromise.method": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Minimizes the worst deviation from a positive whole refresh cycle across devices; ties favor the preferred angle. Cycle deviation is not measured flicker. Verify with test footage."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "优先降低各设备距正整数刷新周期的最大偏差，同等偏差时接近期望角度。周期偏差不代表实测频闪强度，请实拍确认。"
+          }
+        }
+      }
+    },
+    "shutter.compromise.approximate": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "High cycle counts: bounded numerical search, not a guaranteed global optimum."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "周期数过多：采用有上限的数值搜索，结果为近似参考，不保证全局最优。"
+          }
+        }
+      }
+    },
+    "shutter.compromise.error": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Worst cycle deviation: %@ cycles"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最大周期偏差：%@ 周期"
+          }
+        }
+      }
+    },
+    "shutter.compromise.device": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ Hz · %@ cycles · nearest %@ · deviation %@ cycles"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ Hz · %@ 周期 · 最近整数 %@ · 偏差 %@ 周期"
+          }
+        }
+      }
+    },
     "%@\n%@/h": {
       "localizations": {
         "en": {

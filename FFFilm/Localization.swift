@@ -68,8 +68,28 @@ enum AppText {
         guard let exposure = calculation.exposure else {
             return resolve("copy.invalidShutterSummary", defaultValue: "Shutter result is unavailable because the input is invalid.", comment: "Clipboard text when shutter input is invalid.")
         }
-        return resolve("copy.shutterSummary",
+        let summary = resolve("copy.shutterSummary",
                        defaultValue: "Mode: \(mode)\nAngle: \(DisplayFormat.shutterNumber(exposure.angle))°\nShutter time: \(DisplayFormat.shutterTime(exposure))\nExposure: \(DisplayFormat.exposureDuration(exposure))\nResult is a theoretical estimate; verify camera and lighting behavior with test footage.",
                        comment: "Readable shutter estimate copied to the clipboard.")
+        guard let compromise = calculation.compromise else { return summary }
+        // Copy the qualification and reference angle as well as the main exposure; in matching
+        // mode these are different values and must not be mistaken for the target.
+        return summary + "\n" + String(localized: "shutter.compromise.notice")
+            + "\n" + String(localized: "shutter.compromise.title")
+            + ": \(DisplayFormat.shutterNumber(compromise.exposure.angle))° · \(DisplayFormat.shutterTime(compromise.exposure))"
+            + "\n" + compromiseError(compromise.worstError)
+            + "\n" + compromise.displays.map { displayCycleMatch($0) }.joined(separator: "\n")
+            + "\n" + String(localized: "shutter.compromise.method")
+            + (compromise.approximateSearch ? "\n" + String(localized: "shutter.compromise.approximate") : "")
+    }
+
+    static func compromiseError(_ error: Double) -> String {
+        resolve("shutter.compromise.error",
+                defaultValue: "Worst cycle deviation: \(DisplayFormat.shutterNumber(error)) cycles")
+    }
+
+    static func displayCycleMatch(_ display: DisplayCycleMatch) -> String {
+        resolve("shutter.compromise.device",
+                defaultValue: "\(DisplayFormat.shutterNumber(display.hz)) Hz · \(DisplayFormat.shutterNumber(display.cycles)) cycles · nearest \(DisplayFormat.shutterNumber(display.nearestCycles)) · deviation \(DisplayFormat.shutterNumber(display.error)) cycles")
     }
 }

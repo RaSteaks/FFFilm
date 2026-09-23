@@ -1161,7 +1161,9 @@ private struct ShutterView: View {
                         .monospacedDigit()
                         .accessibilityIdentifier("shutter-time-primary")
                 } else {
-                    Text(store.shutterSettings.mode == .flicker ? "shutter.primary.recommended" : "shutter.primary.angle")
+                    Text(store.shutterSettings.mode == .flicker
+                         ? (calculation.compromise == nil ? "shutter.primary.recommended" : "shutter.compromise.title")
+                         : "shutter.primary.angle")
                         .font(.system(.caption, design: .monospaced))
                         .foregroundStyle(Palette.muted)
                     Text("\(DisplayFormat.shutterNumber(exposure.angle))°")
@@ -1203,6 +1205,11 @@ private struct ShutterView: View {
                 EmptyView()
             }
 
+            if calculation.compromise != nil {
+                // Keep the qualification visible even when the details disclosure is collapsed.
+                statusLabel(String(localized: "shutter.compromise.notice"), symbol: "info.circle")
+                    .accessibilityIdentifier("shutter-compromise-notice")
+            }
             if calculation.exposure != nil {
                 DisclosureGroup {
                     shutterDetails
@@ -1259,7 +1266,22 @@ private struct ShutterView: View {
                     statusLabel(matches ? String(localized: String.LocalizationValue(completeKey))
                                 : String(localized: String.LocalizationValue(incompleteKey)),
                                 symbol: matches ? "checkmark.circle" : "info.circle")
-                    if calculation.candidates.isEmpty { noCandidates }
+                    if calculation.candidates.isEmpty && calculation.compromise == nil { noCandidates }
+                }
+                if let compromise = calculation.compromise {
+                    Divider().overlay(Palette.line)
+                    Text("shutter.compromise.title").font(.system(.caption, design: .monospaced))
+                    Text("\(DisplayFormat.shutterNumber(compromise.exposure.angle))° · \(DisplayFormat.shutterTime(compromise.exposure))")
+                        .accessibilityIdentifier("shutter-compromise-output")
+                    Text(AppText.compromiseError(compromise.worstError))
+                    ForEach(compromise.displays) { display in
+                        Text(AppText.displayCycleMatch(display))
+                            .font(.system(.caption, design: .monospaced))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Detail("shutter.compromise.method")
+                    if compromise.approximateSearch { Detail("shutter.compromise.approximate") }
+                    if store.shutterSettings.mode == .matching { Detail("shutter.referenceOnly") }
                 }
                 if !calculation.candidates.isEmpty {
                     Divider().overlay(Palette.line)

@@ -227,17 +227,18 @@ struct ShutterTests {
         settings.mode = .flicker
         settings.light = .displays
         #expect(engine.calculateShutter(settings: settings).candidates.map(\.exposure.angle) == [144, 288])
+        #expect(engine.calculateShutter(settings: settings).compromise == nil)
         settings.displayRefreshRates = "60, 120, 144"
-        #expect(engine.calculateShutter(settings: settings).status == .noCandidates)
+        #expect(engine.calculateShutter(settings: settings).compromise != nil)
         settings.sensorFps = 12
         #expect(try #require(engine.calculateShutter(settings: settings).exposure).angle == 360)
         settings.displayRefreshRates = "50, 60"
         settings.sensorFps = 24
-        #expect(engine.calculateShutter(settings: settings).status == .noCandidates)
+        #expect(engine.calculateShutter(settings: settings).compromise != nil)
         settings.sensorFps = 10
         #expect(try #require(engine.calculateShutter(settings: settings).exposure).angle == 360)
         settings.maxAngle = 359.999
-        #expect(engine.calculateShutter(settings: settings).status == .noCandidates)
+        #expect(engine.calculateShutter(settings: settings).compromise != nil)
     }
 
     @MainActor
@@ -252,7 +253,7 @@ struct ShutterTests {
         settings.displayRefreshRates = "119.880, 59.940, 59.94"
         #expect(engine.calculateShutter(settings: settings) == result)
         settings.displayRefreshRates = "59.94, 60"
-        #expect(engine.calculateShutter(settings: settings).status == .noCandidates)
+        #expect(engine.calculateShutter(settings: settings).compromise != nil)
         settings.displayRefreshRates = "1000000, 1000000"
         #expect(engine.calculateShutter(settings: settings).candidates.count == 3)
     }
@@ -303,6 +304,92 @@ struct ShutterTests {
             #expect(actual.count == min(3, expected.count))
             for (a, b) in zip(actual, expected.prefix(3)) { #expect(abs(a - b) < 1e-9) }
         }
+    }
+
+    @MainActor
+    @Test("Compromise minimizes the worst positive-cycle deviation, not a near-zero exposure")
+    func compromiseOptimum() throws {
+        var settings = ShutterSettings.default
+        settings.mode = .flicker
+        settings.light = .displays
+        settings.displayRefreshRates = "50, 60"
+        let result = engine.calculateShutter(settings: settings)
+        let compromise = try #require(result.compromise)
+        #expect(result.status == .valid)
+        #expect(result.candidates.isEmpty)
+        #expect(abs(compromise.exposure.shutterDenominator - 55) < 1e-9)
+        #expect(abs(compromise.worstError - 1.0 / 11) < 1e-10)
+        #expect(!compromise.approximateSearch)
+        #expect(result.exposure == compromise.exposure)
+        settings.displayRefreshRates = "60, 50, 50"
+        #expect(engine.calculateShutter(settings: settings).compromise == compromise)
+        // Symmetric minima around the 0.1 s common period have the same worst error.
+        // The preferred angle must choose between them without changing the minimax priority.
+        settings.sensorFps = 10.5
+        settings.preferredAngle = 60
+        let early = try #require(engine.calculateShutter(settings: settings).compromise)
+        settings.preferredAngle = 300
+        let late = try #require(engine.calculateShutter(settings: settings).compromise)
+        #expect(abs(early.exposure.exposureSeconds - 1.0 / 55) < 1e-10)
+        #expect(abs(late.exposure.exposureSeconds - 9.0 / 110) < 1e-10)
+        #expect(abs(early.worstError - late.worstError) < 1e-10)
+        settings.maxAngle = 1
+        let limited = try #require(engine.calculateShutter(settings: settings).compromise)
+        #expect(abs(limited.exposure.angle - 1) < 1e-10)
+        #expect(limited.displays.allSatisfy { $0.nearestCycles == 1 })
+        settings.maxAngle = .leastNonzeroMagnitude
+        #expect(engine.calculateShutter(settings: settings).status == .numericalLimit)
+    }
+
+    @MainActor
+    @Test("Common compromise beats an independent dense search across the permitted exposure range")
+    func compromiseOracle() throws {
+        for rates in [[50.0, 60], [60, 144], [50, 60, 144], [59.94, 60], [25, 144, 240]] {
+            for fps in [24.0, 60, 240] {
+                var settings = ShutterSettings.default
+                settings.mode = .flicker
+                settings.light = .displays
+                settings.sensorFps = fps
+                settings.displayRefreshRates = rates.map(String.init(describing:)).joined(separator: ",")
+                let compromise = try #require(engine.calculateShutter(settings: settings).compromise)
+                // This oracle samples the original objective rather than reproducing the interval solver.
+                var sampledBest = Double.infinity
+                for step in 1...10_000 {
+                    let time = Double(step) / (10_000 * fps)
+                    let worst = rates.map { hz in abs(time * hz - max(1, (time * hz).rounded())) }.max()!
+                    sampledBest = min(sampledBest, worst)
+                }
+                #expect(compromise.worstError <= sampledBest + 1e-9)
+                #expect(compromise.exposure.angle <= settings.maxAngle + 1e-9)
+                #expect(!compromise.approximateSearch)
+            }
+        }
+    }
+
+    @MainActor
+    @Test("Extreme inputs use bounded search, and matching preserves its original exposure and copy qualification")
+    func compromiseMatchingAndLimits() throws {
+        var settings = ShutterSettings.default
+        settings.mode = .matching
+        settings.light = .displays
+        settings.displayRefreshRates = "50, 60"
+        settings.checksFlicker = true
+        let result = engine.calculateShutter(settings: settings)
+        #expect(result.exposure?.angle == 180)
+        #expect(result.matchesLightCycles == false)
+        let compromise = try #require(result.compromise)
+        #expect(abs(compromise.exposure.angle - 8640.0 / 55) < 1e-9)
+        #expect(AppText.shutterSummary(settings: settings, calculation: result).contains(DisplayFormat.shutterNumber(compromise.exposure.angle)))
+        settings.sensorFps = 60
+        #expect(engine.calculateShutter(settings: settings).status == .exceedsMaximum)
+        settings.checksFlicker = false
+        #expect(engine.calculateShutter(settings: settings).compromise == nil)
+        settings.mode = .flicker
+        settings.displayRefreshRates = "1000000, 999999.999"
+        let high = try #require(engine.calculateShutter(settings: settings).compromise)
+        #expect(high.approximateSearch)
+        #expect(high.worstError.isFinite)
+        #expect(high.exposure.angle > 0 && high.exposure.angle <= settings.maxAngle + 1e-9)
     }
 
     @MainActor

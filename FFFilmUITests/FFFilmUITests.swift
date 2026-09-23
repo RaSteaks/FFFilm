@@ -428,14 +428,17 @@ final class FFFilmUITests: XCTestCase {
         choose("Flicker reference", picker: "shutter-mode", in: app)
         choose("Multiple displays", picker: "shutter-light-source", in: app)
         XCTAssertTrue(resultText().contains("144°"), resultText())
-        // Exercise real text edits: no-common-period and invalid input must not retain a stale angle.
+        // A missing exact solution now produces a qualified compromise; invalid text still clears it.
         enter("50, 60", field: "display-rates", in: app)
         finishEditing(app)
         XCTAssertFalse(resultText().contains("144°"))
-        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "shutter-no-candidates").firstMatch.exists)
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "shutter-compromise-notice").firstMatch.exists)
+        XCTAssertTrue(resultText().contains("157.090909°"), resultText())
         enter("60,", field: "display-rates", in: app)
         finishEditing(app)
         XCTAssertFalse(resultText().contains("144°"))
+        XCTAssertFalse(resultText().contains("157.090909°"))
+        XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "shutter-compromise-notice").firstMatch.exists)
         enter("60, 120", field: "display-rates", in: app)
         finishEditing(app)
         XCTAssertTrue(resultText().contains("144°"), resultText())
@@ -461,6 +464,27 @@ final class FFFilmUITests: XCTestCase {
         attachment.name = "Multiple display shutter candidates"
         attachment.lifetime = .keepAlways
         add(attachment)
+        // Replacing the list passes through an invalid draft, which recreates collapsed details.
+        enter("50, 60", field: "display-rates", in: app)
+        finishEditing(app)
+        reveal(details, in: app)
+        #if os(macOS)
+        details.click()
+        #else
+        details.tap()
+        #endif
+        let compromiseExpanded = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            resultText().contains("Worst cycle deviation: 0.090909 cycles")
+        }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [compromiseExpanded], timeout: 3), .completed, resultText())
+        XCTAssertTrue(resultText().contains("Worst cycle deviation: 0.090909 cycles"), resultText())
+        XCTAssertTrue(resultText().contains("50 Hz · 0.909091 cycles · nearest 1"), resultText())
+        let compromiseOutput = app.descendants(matching: .any).matching(identifier: "shutter-compromise-output").firstMatch
+        reveal(compromiseOutput, in: app)
+        let compromiseImage = XCTAttachment(screenshot: app.screenshot())
+        compromiseImage.name = "Multi-display compromise reference"
+        compromiseImage.lifetime = .keepAlways
+        add(compromiseImage)
         openMore(in: app)
         let reset = app.buttons["reset-action"].firstMatch
         reveal(reset, in: app)

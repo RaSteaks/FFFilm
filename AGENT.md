@@ -167,3 +167,121 @@ All displayed rates are video-only planning estimates. Validate camera firmware,
 - Reload camera-format memory on camera switches and merge each camera edit with the latest UserDefaults payload. Reset undo restores only the default camera record it changed, preserving later edits to other cameras in other windows.
 - Label standalone ProRes comparison cadence as `PROJECT FPS`; include each camera name in the separate favorite button's VoiceOver label.
 - Verification: the complete macOS `FFFilmTests` target passed with the new cross-window and shutter-undo regressions. Focused iPhone 17 Pro simulator UI tests passed for camera favorites and standalone ProRes comparison. `audit_project.py --mode strict` reported zero findings; `git diff --check` passed. Xcode used a temporary DerivedData path and disabled signing for local checks.
+
+## Film workbench as a main-window tab (2026-09-23)
+
+- The film editor no longer opens as an independent window. `CalculatorView` gains a macOS-only `film` case (`#if os(macOS)`), so the segmented workbench picker in the header and the macOS titlebar show FILM directly beside SHUTTER; iOS keeps exactly two segments and no film UI. `nav.film`/`mac.filmWorkbench` were added to `Localizable.xcstrings`.
+- `ContentView` owns the `FilmStore` on macOS, so the film document, renderer and undo stacks survive workbench-tab switches; the editor fills the entire window content below the unified titlebar with no in-content header — the titlebar segmented control is the single navigation (an initial in-content header duplicated the titlebar picker and was removed), and the editor's own toolbar items (import/project/undo/redo) appear in the titlebar while the FILM tab is showing. `FilmWindowGuard` is attached at the ContentView root, keeping unsaved-film close/quit protection active even on other tabs. `resetActiveView` is a no-op on the FILM tab.
+- The standalone `WindowGroup(id: "film-workbench")` was removed. ⌘3 now switches the focused main window to the FILM tab (Calculator menu); the Film menu keeps import/save/undo/redo acting through the focused scene's film store.
+- Verification: macOS and iOS Simulator builds pass; the complete macOS `FFFilmTests` target passes (63 cases); catalog and string-catalog JSON validation pass. The previously running app instance was not restarted; live tab switching and the film editor inside the main window still need a manual look after rebuild, and window widths below the split view's ~810pt pane minimum clip the inspector edge on the FILM tab.
+
+## macOS film workbench (2026-09-23)
+
+- Film processing is isolated behind `#if os(macOS)` in FilmModels, FilmRenderer, FilmStore and FilmWorkbenchView. The existing calculator retains its state/navigation; toolbar Film and ⌘3 open an independent editor window. iOS has no film UI or image-processing implementation. File read/write and app-scoped bookmark entitlements are macOS-only.
+- Input is TIFF and experimental Flextight 3F/FFF via ImageIO. Choose the largest exposed image and reject FFF decode below 16-bit RGB. This does not prove complete proprietary 3F support: actual FFF samples and reference pixel/profile checks are still required. Never claim a decoded preview establishes compatibility. Camera FFF RAW and FlexColor edit history are excluded.
+- FilmRenderer owns a reusable background Core Image context, original source, reduced preview, base sampling, gap candidates, high-precision edits and original-resolution export. Crops are normalized top-left coordinates of the EXIF-oriented source. Preview results are revision-gated and superseded tasks cancelled.
+- Base sampling and manual linear RGB values edit the same parameters; strip defaults permit frame overrides. Positive mode bypasses inversion and defaults to no base correction. Negative conversion is base normalization followed by inversion; B&W conversion removes saturation. This first implementation is not a calibrated scanner/film-stock color model.
+- Per-frame tone and four-channel curves are independent of crop geometry. Curve presets store curves only, copy values into projects, support named local persistence and JSON exchange, and use a shared atomic library across windows. User preset changes cannot retroactively change project images.
+- Versioned `.fffilm` JSON stores source security bookmark/path, frames, corrections, curves and export options; raw scans are not rewritten. Missing sources can be relinked. Project state has bounded snapshot undo/redo and grouped drag edits. File operations and save/discard prompts use non-blocking sheets. A forwarding window delegate and macOS-only application delegate protect close and quit.
+- Export current/checked/all frames as 16-bit Adobe RGB TIFF or 8-bit sRGB JPEG. Whole-strip preview/export composites graded frames in their source crop slots, clipping rotated edges to those slots; individual frame export preserves the full rotated bounds. Export serially to temporary files and rename completed results, avoid name collisions, allow cancellation, report failures.
+- Verification: synthetic 16-bit TIFF decoder/sample/crop/export integration, curve interpolation/validation, project/preset JSON, gap detection and undo tests; full macOS unit suite passed 53 tests (57 executions including parameterized cases), macOS and iOS Simulator builds passed, and strict UI audit/diff checks passed. Live checks passed for TIFF import, three-frame detection, manual RGB editing, curve-point editing and named preset save, `.fffilm` save/reopen with a source bookmark, and TIFF export. The exported file was confirmed as 1800×600, 16-bit Adobe RGB. Real FFF and large scanner-file performance remain unverified pending samples.
+
+## Film review fixes (2026-09-23)
+
+- Both build configurations bind the film entitlements and project-type Info.plist only for macOS, with user-selected file read/write access. iOS retains its existing build settings.
+- Saving without a decoded source must return failure when the document is dirty, so a failed import cannot authorize close/quit without saving. A regression exercises failed loading and verifies that the existing project file and unsaved state remain intact.
+- Failed-import cleanup keeps the editor busy until renderer cleanup and error reporting finish. Verification: complete macOS unit-test target passed including the new failed-import regression; macOS ad-hoc signed and iOS Simulator builds passed. The built macOS bundle contains the `.fffilm` type declaration and sandbox, user-selected read/write and app-scoped bookmark entitlements. Plist validation and `git diff --check` passed. Interactive save/export panels were not retested.
+
+## Real FFF sample validation (2026-09-23)
+
+- User-provided `007.fff` successfully decodes at 5167 × 16443, 16-bit RGB through the production renderer; the small thumbnail is not used. Preview, gap detection, base sampling, full-size TIFF/JPEG export and rotated crop export passed. The detailed private-sample report remains local and is excluded from version control.
+- No standard embedded ICC profile was found; testing assumed Linear sRGB. Base-sampled output still needs tone adjustment and reference color validation. Do not generalize this one sample to all FFF variants or claim parity with FlexColor. No production code changed in this validation task.
+
+## Local artifact hygiene (2026-09-23)
+
+- Exclude generated `premium-audit.json`, the one-off private FFF validation report, Python caches and Xcode archives. Keep local reports on disk; untrack the previously committed audit output. Preserve versioned source, tests, configuration, shared project settings and intentional icon design assets.
+
+## Film rotation button directions (2026-09-23)
+
+- Counterclockwise adds 90 degrees and clockwise subtracts 90 degrees, matching Core Image's bottom-left coordinate system. Preserve renderer and saved-project angle semantics; only correct the button actions.
+
+## Manual film-base correction (2026-09-23)
+
+- Film-base correction is manual only: retain RGB sliders/numeric fields, enable/disable, strip defaults, per-frame overrides, neutral reset and undo/redo. Remove both canvas sampling entries and the store/renderer sampling APIs; automatic frame-gap detection remains independent.
+- Preserve version-1 project values and rendering semantics so previously saved base corrections remain editable. Update the renderer integration test to supply explicit manual RGB and verify the known base normalizes to black. Remove obsolete sampling localization entries and update README/DESIGN.
+- Verification: full macOS unit-test target (including manual-RGB renderer integration) and iOS Simulator build passed; strict UI audit, string-catalog JSON validation and `git diff --check` passed. Interactive desktop controls were not retested in this change.
+
+## Film classification without image changes (2026-09-23)
+
+- Film type is metadata only. Remove implicit inversion/desaturation and the picker's base-correction toggle; preview and export use only explicit manual adjustments. Neutral processing returns the decoded scan directly. Previously saved type values remain readable but no longer trigger automatic conversion.
+- Renderer regression verifies all three types preserve original preview pixels and expected export RGB. Manual base normalization now correctly expects white rather than an automatically inverted black result.
+- Skip neutral frame compositing in strip view to avoid fractional-preview resampling. Full macOS tests pass, including a large-strip pixel equality regression. Real `007.fff` revalidation confirms 5167 × 16443, 16-bit source and identical original/preview pixels for all three types. iOS Simulator build, strict UI audit and diff checks passed; no app restart or live file-panel test was performed.
+
+## Curve-based cast correction (2026-09-23)
+
+- Replace RGB division-based mask correction with the existing manual four-channel curve editor and presets. No separate mask controls or sampling remain. Corrections belong to the current frame; sync and preset application support checked frames.
+- Keep legacy version-1 mask fields decodable/round-trippable but inert, including per-frame overrides. Classification stays metadata-only and neutral curves preserve original scan appearance. Renderer tests verify independent curves map a synthetic cast to neutral RGB despite non-neutral legacy mask values.
+- Verification: full macOS unit tests passed, including curve-neutralization, neutral-import, project round-trip and preset/undo tests. iOS Simulator build, strict UI audit, localization JSON validation and diff checks passed. Desktop interactive curve dragging was not rerun; the app was not restarted.
+
+## Encoded RGB curve inversion (2026-09-23)
+
+- Curves operate on encoded sRGB channel levels: convert linear working RGB to sRGB before the curve LUT, then convert back to linear for compositing/export. Identity curves bypass the LUT. Film classification remains metadata only.
+- Regression checks RGB/master inversion, three individual inverted channels, and blue-only inversion on gray and colored inputs, in both preview and Adobe RGB TIFF exported back to sRGB. This aligns the inversion math with an sRGB Photoshop document, not every Photoshop profile or spline implementation.
+- Verification: full macOS unit-test target and iOS Simulator build pass; real 5167 × 16443 16-bit `007.fff` produces an inspected inverted crop preview without the previous washed-out linear inversion. Strict UI audit and diff checks pass. No Photoshop reference export was supplied, so full Photoshop parity is not claimed; original scan profiling and remaining color-cast grading are separate from this inversion fix.
+
+## ICC-managed film workflow (2026-09-23)
+
+- Follow `docs/film-color-management.md`: distinguish assigned/embedded input profiles, explicit document curve space and output encoding. Preserve embedded RGB ICCs; untagged imports require selecting the actual scan output space or loading RGB ICC bytes retained in the project. Never infer sRGB primaries from linear encoding or film type.
+- Keep extended-linear sRGB as an internal 32-bit-float connection/processing space, not a fixed curve gamut. Match to/from the selected sRGB/Adobe RGB/Display P3 curve space using Core Image color matching. Skip identity curves. Preview as tagged extended-linear RGBAh; export converts once to the chosen output ICC.
+- The native Color management disclosure reports source profile provenance and editing-space selection. User presets carry their curve domain; mismatches fail explicitly without changing the project, while generic built-in shapes use the active space. Old optional-field-free projects/presets retain sRGB curve semantics.
+- Preserve manual curve grading and film-type-as-metadata behavior. ICC colorimetry is not a calibrated negative inversion or scanner/film-stock reconstruction; real 007.fff has no verified input profile, so no automatic accuracy claim or guessed film-stock model is introduced.
+- Verification: full macOS unit tests and iOS Simulator build passed; regressions cover per-space inversion, embedded ICC precedence, persisted custom assignment, invalid ICC rejection, old project migration, preset domain mismatch and P3-green preview preservation. Strict UI audit, localization JSON validation and diff checks passed. The native profile-selection panel/display UI was not interactively retested; the application was not restarted. The shared rationale lives in `docs/` because `research/` is intentionally ignored for local reports.
+
+## Curve histogram and movable endpoints (2026-09-23)
+
+- Display a 256-bin pre-curve histogram behind the active frame's curve in its selected editing space, after crop/rotation/tone. RGB combines the channel counts. Use bounded preview sampling, ignore transparent corners, cache independent of curve points, and revision-gate store publication. Include a visibility toggle and identify the sampling/domain in the UI.
+- Every control point, including both endpoints, moves in X and Y; retain strictly increasing X and clamp Y to 0–1. Outside the first/last X, hold endpoint output rather than extrapolate. The graph includes these flat extensions. Expand handle hit targets with edge padding; numeric entry remains available; at least two points must remain.
+- Verification: full macOS unit tests and iOS Simulator build passed; regressions cover endpoint movement/order/constant extension/JSON and histogram bin counts, pre-curve stability, crop/tone/space changes. Strict UI audit, JSON and diff checks passed. The actual editor was rendered offscreen at 350pt using real FFF histogram data; histogram, inset endpoints and flat extensions were visually inspected. Live pointer dragging and the running application were not exercised/restarted.
+
+## Curve alignment guides and histogram contrast (2026-09-23)
+
+- The selected point projects yellow dashed horizontal and vertical guides across the entire plot, updated from its actual coordinates during drag and numeric editing. Guides ignore hit testing and accessibility traversal.
+- Increase histogram fill from 22% to 46% white and add a 32% contour to separate the distribution from the grid while retaining the white curve and yellow selection hierarchy. Document these visual choices in DESIGN.md.
+- Verification: macOS build, strict UI audit and diff checks passed. An offscreen snapshot using the actual editor code with a seeded selected-point state and real FFF histogram data was visually inspected. No renderer/model logic changed; no new tests were added. The running app was not restarted.
+
+## Slicing/export-only scope (2026-09-23, supersedes grading plans above)
+
+- Film workbench now exposes only import/project workflow, automatic/manual slicing, crop/rotation/reorder, preview/zoom, batch selection and export. Remove film type, original comparison, tone, cast correction, curves/histograms/guides, editing-space controls, presets and adjustment sync.
+- Delete grading/filter/statistics/preset execution paths and their models. Version-1 project decoding ignores retired fields; saving emits only geometry, source/input ICC and export data. No old curve library is read or deleted. Preserve source ICC assignment and display/output conversion for faithful color handling.
+- Replace obsolete grading tests with legacy-project geometry-only pixel/export regression, crop/rotation and grouped undo/batch-removal tests. Retain ICC, wide-gamut, gap detection, save/error and failed-import protections.
+- Verification: full macOS unit-test target, iOS Simulator build, strict UI audit, localization JSON validation and diff checks passed. Real 007.fff decoded at 5167 × 16443 / 16-bit, produced three gap candidates and exported a 5167 × 6614 / 16-bit Adobe RGB TIFF. An offscreen snapshot of the actual simplified workbench was visually inspected. The existing app was not restarted; live file panels were not retested.
+
+## Film first-preview performance (2026-09-23)
+
+- Probe the largest image IFD's metadata before asking for an untagged scan's input ICC, then load the scan only once. The preview uses ImageIO subsampling of that same full-size IFD when it preserves RGB bit depth and expected dimensions; it never uses a separate embedded FFF thumbnail. Keep the original full-resolution image for export.
+- Materialize one extended-linear, half-float preview and reuse it for the canvas, frame thumbnails, gap detection and later geometry edits. Initial project state is published only after preview rendering succeeds. `close()` releases the source and preview and clears CI caches.
+- Read-only renderer benchmark comparisons with local graphics access: real 5167 × 16443 / 16-bit `007.fff` improved from 18.14 s / 2.26 GB maximum resident memory to 0.30 s / 0.56 GB; a 5167 × 16443 / 16-bit TIFF improved from 20.45 s / 2.24 GB to 0.30 s / 0.56 GB. These times cover renderer load and first preview, not file-panel interaction or user ICC selection. Real FFF preview was visually compared with the prior output and a 518 × 1645 / 16-bit full-source TIFF crop exported successfully. The full macOS unit target passed (59 test cases), including profile probing, cache reuse, restored rotation, color, export and close behavior. Other TIFF compression and FFF variants may fall back to full decode.
+
+## Direct crop-border dragging (2026-09-23)
+
+- In the strip canvas Select tool, start a drag within eight display points of any frame's left, right, top or bottom border to resize that side. Prefer the selected frame's border when frames overlap; dragging inside a frame still moves it, and Draw frame still creates a new crop.
+- Keep the opposite border fixed, clamp to the source bounds and a valid minimum size, and group each drag into one undo entry. Preserve valid narrow crops from older projects.
+- Cover four-side geometry, bounds, narrow crops and border hit testing in `FilmTests`.
+- Verification: the focused `FilmTests` and the complete macOS `FFFilmTests` target passed (59 reported cases); the strict UI audit found zero issues, and whitespace/diff checks passed. Pointer dragging in a running window was not exercised.
+
+## Full-width crop border and interaction feedback (2026-09-23)
+
+- For a border touching the canvas boundary, extend its pointer hit band 24 display points inward; keep the eight-point band for other borders. This lets a full-width or full-height crop's edge be grabbed without relying on the clipped exterior half of the band.
+- Show inset grips on the selected crop in Select mode. Highlight the hovered or actively dragged edge in yellow and use the matching macOS resize cursor. Hide grips in Draw frame mode; retain numeric crop fields for keyboard use.
+- Full-extent hit and resize regressions passed in focused `FilmTests`; the complete macOS `FFFilmTests` target passed. Strict UI audit reported zero findings, and diff/Swift whitespace checks passed. Live pointer dragging was not exercised.
+
+## Source scan identity (2026-09-23)
+
+- In the macOS film workbench, show the loaded scan's filename and a path relative to the current user's Home directory above the preview. Derive both from the loaded project's `sourcePath`, including when reopening a project or relocating its source; keep long paths selectable with full accessibility text.
+
+## Film review corrections (2026-09-23)
+
+- Flatten rotated single-frame JPEG output onto white before encoding, while leaving TIFF alpha intact. Generate rotated frame-strip thumbnails from the cached preview at thumbnail size and refresh them after source or frame changes.
+- Serialize file panels and unsaved-work sheets per film window. Disable document commands during presentation/export, and let an accepted Don't Save decision close once without repeating the prompt. Localize the missing-source export error.
+- A fresh import is intentionally dirty because the source link, bookmark and default frame have not been saved as a project. Preserve the current aspect-ratio fallback: when the width-derived height exceeds available space, the height-derived width is smaller than the original width and valid. Preserve `CGColorSpace.name`'s nil fallback for unnamed custom ICC profiles.
+- Verification: focused `FilmTests` and full macOS `FFFilmTests` passed, including new JPEG corner/rotation and sheet-gating regressions; `git diff --check` passed. Live sheet reentry and pointer interactions were not exercised.

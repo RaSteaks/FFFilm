@@ -14,6 +14,11 @@ private struct RateResultOffsetKey: PreferenceKey {
 
 struct ContentView: View {
     @State private var store = CalculatorStore()
+    #if os(macOS)
+    // The film editor lives inside the main workbench; owning its store here keeps
+    // the document alive across workbench-tab switches instead of discarding it.
+    @State private var filmStore = FilmStore()
+    #endif
     @State private var keyboardVisible = false
     @State private var compactSummaryVisible = false
 
@@ -25,53 +30,23 @@ struct ContentView: View {
 
             ZStack(alignment: .top) {
                 Palette.background.ignoresSafeArea()
-                ScrollViewReader { proxy in
-                    ScrollView {
-                        VStack(spacing: Layout.sectionSpacing) {
-                            HeaderView(store: store)
-                            FeedbackBanner(store: store)
 
-                            if store.activeView == .rate {
-                                RateView(store: store,
-                                         contentWidth: contentWidth,
-                                         isWide: isWide,
-                                         scrollProxy: proxy)
-                            } else {
-                                ShutterView(store: store, scrollProxy: proxy)
-                            }
-
-                            Text("footer.estimate")
-                                .font(.system(size: 9, weight: .medium, design: .monospaced))
-                                .tracking(0.8)
-                                .foregroundStyle(Palette.mutedDeep)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.top, 4)
-                                .accessibilityLabel(Text("footer.estimateAccessibility"))
-                        }
-                        .frame(maxWidth: Layout.maximumContentWidth)
-                        .padding(.horizontal, Layout.pageGutter)
-                        .padding(.top, 12)
-                        .padding(.bottom, 28)
-                        .frame(maxWidth: .infinity)
-                    }
-                    .coordinateSpace(.named("workbenchScroll"))
-                    .scrollDismissesKeyboard(.interactively)
-                    .onPreferenceChange(RateResultOffsetKey.self) { offset in
-                        guard isCompactPhone, store.activeView == .rate else {
-                            compactSummaryVisible = false
-                            return
-                        }
-                        compactSummaryVisible = offset < -8 && !keyboardVisible
-                    }
+                #if os(macOS)
+                if store.activeView == .film {
+                    // The film editor fills the whole window; the titlebar segmented
+                    // control stays the single navigation, so an in-content header
+                    // with a second picker would duplicate it.
+                    FilmWorkbenchView(store: filmStore)
+                } else {
+                    calculatorWorkbench(contentWidth: contentWidth,
+                                        isWide: isWide,
+                                        isCompactPhone: isCompactPhone)
                 }
-
-                if compactSummaryVisible && store.activeView == .rate && !keyboardVisible {
-                    CompactRateSummary(store: store)
-                        .padding(.horizontal, Layout.pageGutter)
-                        .padding(.top, 6)
-                        .transition(.move(edge: .top).combined(with: .opacity))
-                        .accessibilityAddTraits(.isHeader)
-                }
+                #else
+                calculatorWorkbench(contentWidth: contentWidth,
+                                    isWide: isWide,
+                                    isCompactPhone: isCompactPhone)
+                #endif
             }
             .animation(.snappy(duration: 0.18), value: compactSummaryVisible)
         }
@@ -93,10 +68,68 @@ struct ContentView: View {
         }
         #endif
         #if os(macOS)
-        .frame(minWidth: 760, minHeight: 560)
+        // The film workbench's split panes need more room than the calculator;
+        // the raised minimum also grows an already-narrow window on tab switch.
+        .frame(minWidth: store.activeView == .film ? FilmWorkbenchView.minimumWindowWidth : 760, minHeight: 560)
         .toolbar { MacWorkbenchToolbar(store: store) }
         .focusedSceneValue(\.calculatorStore, store)
+        // Attached at the root so the unsaved-film close guard keeps protecting the
+        // window even while another workbench tab is showing.
+        .background(FilmWindowGuard(store: filmStore))
         #endif
+    }
+
+    /// The scrolling RATE/SHUTTER workbench; kept separate from the full-bleed film editor.
+    private func calculatorWorkbench(contentWidth: CGFloat, isWide: Bool, isCompactPhone: Bool) -> some View {
+        ZStack(alignment: .top) {
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(spacing: Layout.sectionSpacing) {
+                        HeaderView(store: store)
+                        FeedbackBanner(store: store)
+
+                        if store.activeView == .rate {
+                            RateView(store: store,
+                                     contentWidth: contentWidth,
+                                     isWide: isWide,
+                                     scrollProxy: proxy)
+                        } else {
+                            ShutterView(store: store, scrollProxy: proxy)
+                        }
+
+                        Text("footer.estimate")
+                            .font(.system(size: 9, weight: .medium, design: .monospaced))
+                            .tracking(0.8)
+                            .foregroundStyle(Palette.mutedDeep)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.top, 4)
+                            .accessibilityLabel(Text("footer.estimateAccessibility"))
+                    }
+                    .frame(maxWidth: Layout.maximumContentWidth)
+                    .padding(.horizontal, Layout.pageGutter)
+                    .padding(.top, 12)
+                    .padding(.bottom, 28)
+                    .frame(maxWidth: .infinity)
+                }
+                .coordinateSpace(.named("workbenchScroll"))
+                .scrollDismissesKeyboard(.interactively)
+                .onPreferenceChange(RateResultOffsetKey.self) { offset in
+                    guard isCompactPhone, store.activeView == .rate else {
+                        compactSummaryVisible = false
+                        return
+                    }
+                    compactSummaryVisible = offset < -8 && !keyboardVisible
+                }
+            }
+
+            if compactSummaryVisible && store.activeView == .rate && !keyboardVisible {
+                CompactRateSummary(store: store)
+                    .padding(.horizontal, Layout.pageGutter)
+                    .padding(.top, 6)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .accessibilityAddTraits(.isHeader)
+            }
+        }
     }
 }
 
@@ -169,7 +202,7 @@ private struct HeaderView: View {
         Group {
             #if os(macOS)
             VStack(alignment: .leading, spacing: 2) {
-                Text(store.activeView == .rate ? "mac.recordingCalculator" : "mac.shutterWorkbench")
+                Text(workbenchTitle)
                     .font(.title2.weight(.semibold))
                 Text("app.title")
                     .font(.system(size: 10, weight: .semibold, design: .monospaced))
@@ -185,6 +218,16 @@ private struct HeaderView: View {
         .accessibilityIdentifier("app-title")
     }
 
+    #if os(macOS)
+    private var workbenchTitle: LocalizedStringKey {
+        switch store.activeView {
+        case .rate: return "mac.recordingCalculator"
+        case .shutter: return "mac.shutterWorkbench"
+        case .film: return "mac.filmWorkbench"
+        }
+    }
+    #endif
+
     private var viewPicker: some View {
         Picker("nav.workbench", selection: Binding(get: { store.activeView }, set: store.setActiveView)) {
             ForEach(CalculatorView.allCases) { view in
@@ -192,7 +235,8 @@ private struct HeaderView: View {
             }
         }
         .pickerStyle(.segmented)
-        .frame(maxWidth: usesCompactLayout ? .infinity : 250)
+        // A third segment (Film, macOS) needs more room than the original two.
+        .frame(maxWidth: usesCompactLayout ? .infinity : 300)
         .accessibilityIdentifier("calculator-view-picker")
     }
 
@@ -223,44 +267,52 @@ private struct HeaderView: View {
                 .accessibilityIdentifier("copy-action")
                 .accessibilityHint(Text("copy.summaryHint"))
                 .sensoryFeedback(.success, trigger: copied) { _, newValue in newValue }
-            } else {
+
+                moreMenu
+            } else if store.activeView == .shutter {
                 Button(action: copyCurrent) {
                     actionLabel(copied ? "nav.copied" : "nav.copy", systemImage: copied ? "checkmark" : "doc.on.doc")
                 }
                 .disabled(store.shutterCalculation.exposure == nil)
                 .accessibilityIdentifier("copy-action")
                 .accessibilityHint(Text("copy.shutterHint"))
-            }
 
-            Menu {
-                if store.activeView == .rate {
-                    Button("nav.copyLink", systemImage: "link") {
-                        PlatformClipboard.copy(store.configurationText)
-                    }
-                }
-                // The macOS toolbar already registers ⇧⌘R; a second registration in
-                // the same window leaves that key equivalent resolving ambiguously.
-                Button("nav.reset", systemImage: "arrow.counterclockwise") {
-                    store.resetActiveView()
-                }
-                .accessibilityIdentifier(resetIdentifier)
-            } label: {
-                // IconOnly and TitleAndIcon are distinct label-style types, so the
-                // compact decision branches instead of going through one ternary.
-                if usesCompactLayout {
-                    Label("nav.more", systemImage: "ellipsis.circle")
-                        .labelStyle(.iconOnly)
-                        .frame(minWidth: 44, minHeight: 44)
-                } else {
-                    Label("nav.more", systemImage: "ellipsis.circle")
-                        .labelStyle(.titleAndIcon)
-                        .frame(minHeight: 44)
-                }
+                moreMenu
             }
-            .accessibilityIdentifier("more-action")
-            .help(Text("nav.more"))
+            // The macOS film workbench shows no calculator actions; its editor
+            // supplies its own document controls.
         }
         .font(.system(size: 10, weight: .semibold, design: .monospaced))
+    }
+
+    private var moreMenu: some View {
+        Menu {
+            if store.activeView == .rate {
+                Button("nav.copyLink", systemImage: "link") {
+                    PlatformClipboard.copy(store.configurationText)
+                }
+            }
+            // The macOS toolbar already registers ⇧⌘R; a second registration in
+            // the same window leaves that key equivalent resolving ambiguously.
+            Button("nav.reset", systemImage: "arrow.counterclockwise") {
+                store.resetActiveView()
+            }
+            .accessibilityIdentifier(resetIdentifier)
+        } label: {
+            // IconOnly and TitleAndIcon are distinct label-style types, so the
+            // compact decision branches instead of going through one ternary.
+            if usesCompactLayout {
+                Label("nav.more", systemImage: "ellipsis.circle")
+                    .labelStyle(.iconOnly)
+                    .frame(minWidth: 44, minHeight: 44)
+            } else {
+                Label("nav.more", systemImage: "ellipsis.circle")
+                    .labelStyle(.titleAndIcon)
+                    .frame(minHeight: 44)
+            }
+        }
+        .accessibilityIdentifier("more-action")
+        .help(Text("nav.more"))
     }
 
     private func copyCurrent() {

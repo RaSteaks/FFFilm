@@ -2785,22 +2785,6 @@
         }
       }
     },
-    "result.overCapacity" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Planned footage exceeds the selected card. Shorten the recording time or choose a larger card."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "计划素材超出所选存储卡容量。请缩短录制时长或更换更大容量的卡。"
-          }
-        }
-      }
-    },
     "result.perHour" : {
       "localizations" : {
         "en" : {
@@ -3569,6 +3553,7 @@
       }
     },
     "shutter.displayHint" : {
+      "comment" : "Keep commas in the example because they are the refresh-rate input separator.",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3579,7 +3564,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "用逗号分隔，例如 60、120、144；小数点使用 .。"
+            "value" : "用逗号分隔，例如 60, 120, 144；小数点使用 .。"
           }
         }
       }

@@ -25,7 +25,7 @@ spacing:
   phone-gutter: "12pt"
   regular-gutter: "16pt"
   section-gap: "12pt"
-  page-max: "920pt"
+  page-max: "920pt iPhone / 1180pt iPad"
 components:
   button:
     minHeight: "44pt touch / 28pt macOS"
@@ -72,6 +72,8 @@ SF Pro is used for native controls and action labels. SF Mono is reserved for me
 ## Layout
 
 Spacing follows a 4pt rhythm. Compact iPhone layouts use 12pt gutters, put the live result above the settings list and render each setting as a horizontal row with a minimum 44pt control region. At 900pt of usable content width, the page changes to a 55:45 parameter/result split; below that threshold the result-first single-column flow remains. Capture format and storage plan groups stay expanded. Content respects safe areas and the page remains a single vertical scroller.
+
+On iPad, use the available window width rather than size class alone: the workbench spans up to 1180pt and changes to the same 55:45 parameter/result split at 900pt, where the form panel has room for native pickers. RATE and SHUTTER use one page scroller with both columns moving together; narrower iPad windows put the result first. Field columns follow their actual panel width, and resizing must preserve draft input. The camera library uses a collapsible list/detail split on iPad, while settings text stays within a 680pt reading width. iPhone and macOS retain their existing layout rules.
 
 ## Elevation & Depth
 

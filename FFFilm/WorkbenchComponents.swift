@@ -62,7 +62,7 @@ struct FieldCard<Content: View>: View {
                     fieldLabel
                     content
                         .font(.system(size: 12, design: .monospaced))
-                        .frame(maxWidth: .infinity, minHeight: 28, alignment: .leading)
+                        .frame(maxWidth: .infinity, minHeight: Layout.controlHeight, alignment: .leading)
                 }
                 .padding(.horizontal, 10)
                 .padding(.vertical, 8)
@@ -176,6 +176,9 @@ struct PresetButtonStyle: ButtonStyle {
 }
 
 enum Layout {
+    /// Usable workbench width at which the controls and result fit side by side.
+    static let wideContentThreshold: CGFloat = 900
+    static let workbenchColumnSpacing: CGFloat = 16
     #if os(macOS)
     static let shutterResultMinimumHeight: CGFloat = 100
     static let controlHeight: CGFloat = 28
@@ -185,10 +188,54 @@ enum Layout {
     #else
     static let shutterResultMinimumHeight: CGFloat = 150
     static let controlHeight: CGFloat = 44
-    static let maximumContentWidth: CGFloat = 920
+    static let maximumContentWidth: CGFloat = 1180
+    static let phoneMaximumContentWidth: CGFloat = 920
     static let pageGutter: CGFloat = 12
     static let sectionSpacing: CGFloat = 12
     #endif
+}
+
+/// Keeps both workbench children alive while a resized iPad switches between
+/// two columns and a result-first stack, preserving in-progress field drafts.
+struct AdaptiveWorkbenchLayout: SwiftUI.Layout {
+    let wide: Bool
+    let resultFirstWhenStacked: Bool
+    let leadingFraction: CGFloat
+    // Preserve the existing column gap and the section token for stacked panels.
+    private var spacing: CGFloat { wide ? Layout.workbenchColumnSpacing : Layout.sectionSpacing }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let width = proposal.width ?? 0
+        guard subviews.count == 2 else { return .zero }
+        if wide {
+            let leadingWidth = max(0, (width - spacing) * leadingFraction)
+            let trailingWidth = max(0, width - spacing - leadingWidth)
+            let leading = subviews[0].sizeThatFits(.init(width: leadingWidth, height: nil))
+            let trailing = subviews[1].sizeThatFits(.init(width: trailingWidth, height: nil))
+            return CGSize(width: width, height: max(leading.height, trailing.height))
+        }
+        let first = subviews[0].sizeThatFits(.init(width: width, height: nil))
+        let second = subviews[1].sizeThatFits(.init(width: width, height: nil))
+        return CGSize(width: width, height: first.height + spacing + second.height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        guard subviews.count == 2 else { return }
+        if wide {
+            let leadingWidth = max(0, (bounds.width - spacing) * leadingFraction)
+            let trailingWidth = max(0, bounds.width - spacing - leadingWidth)
+            subviews[0].place(at: bounds.origin, proposal: .init(width: leadingWidth, height: nil))
+            subviews[1].place(at: CGPoint(x: bounds.minX + leadingWidth + spacing, y: bounds.minY),
+                              proposal: .init(width: trailingWidth, height: nil))
+        } else {
+            let firstIndex = resultFirstWhenStacked ? 1 : 0
+            let secondIndex = 1 - firstIndex
+            let firstHeight = subviews[firstIndex].sizeThatFits(.init(width: bounds.width, height: nil)).height
+            subviews[firstIndex].place(at: bounds.origin, proposal: .init(width: bounds.width, height: nil))
+            subviews[secondIndex].place(at: CGPoint(x: bounds.minX, y: bounds.minY + firstHeight + spacing),
+                                        proposal: .init(width: bounds.width, height: nil))
+        }
+    }
 }
 
 enum Palette {
@@ -206,7 +253,8 @@ extension View {
         pickerStyle(.menu)
             .labelsHidden()
             .lineLimit(1)
-            .frame(maxWidth: .infinity, minHeight: compact ? 44 : 28, alignment: compact ? .trailing : .leading)
+            // Native iPad menus still need a full touch region in regular width.
+            .frame(maxWidth: .infinity, minHeight: Layout.controlHeight, alignment: compact ? .trailing : .leading)
     }
 
     @ViewBuilder

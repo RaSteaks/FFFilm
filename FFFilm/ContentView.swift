@@ -24,8 +24,21 @@ struct ContentView: View {
 
     var body: some View {
         GeometryReader { geometry in
-            let contentWidth = min(max(0, geometry.size.width - Layout.pageGutter * 2), Layout.maximumContentWidth)
-            let isWide = contentWidth >= 900
+            #if os(iOS)
+            let isPad = UIDevice.current.userInterfaceIdiom == .pad
+            let maximumWidth: CGFloat = isPad ? Layout.maximumContentWidth : Layout.phoneMaximumContentWidth
+            #else
+            let maximumWidth = Layout.maximumContentWidth
+            #endif
+            let contentWidth = min(max(0, geometry.size.width - Layout.pageGutter * 2), maximumWidth)
+            // A 55% form panel needs roughly 486pt for its native pickers.
+            let isWide = contentWidth >= Layout.wideContentThreshold
+            #if os(iOS)
+            // iPad can split SHUTTER; iPhone keeps its original stacked layout.
+            let shutterWide = isPad && isWide
+            #else
+            let shutterWide = false
+            #endif
             let isCompactPhone = geometry.size.width < 600
 
             ZStack(alignment: .top) {
@@ -39,12 +52,16 @@ struct ContentView: View {
                     FilmWorkbenchView(store: filmStore)
                 } else {
                     calculatorWorkbench(contentWidth: contentWidth,
+                                        maximumWidth: maximumWidth,
                                         isWide: isWide,
+                                        shutterWide: shutterWide,
                                         isCompactPhone: isCompactPhone)
                 }
                 #else
                 calculatorWorkbench(contentWidth: contentWidth,
+                                    maximumWidth: maximumWidth,
                                     isWide: isWide,
+                                    shutterWide: shutterWide,
                                     isCompactPhone: isCompactPhone)
                 #endif
             }
@@ -80,14 +97,15 @@ struct ContentView: View {
     }
 
     /// The scrolling RATE/SHUTTER workbench; kept separate from the full-bleed film editor.
-    private func calculatorWorkbench(contentWidth: CGFloat, isWide: Bool, isCompactPhone: Bool) -> some View {
+    private func calculatorWorkbench(contentWidth: CGFloat, maximumWidth: CGFloat, isWide: Bool,
+                                     shutterWide: Bool, isCompactPhone: Bool) -> some View {
         ZStack(alignment: .top) {
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(spacing: Layout.sectionSpacing) {
                         #if os(iOS)
                         // macOS keeps navigation and calculator actions in the window toolbar.
-                        HeaderView(store: store)
+                        HeaderView(store: store, availableWidth: contentWidth)
                         #endif
                         FeedbackBanner(store: store)
 
@@ -97,7 +115,7 @@ struct ContentView: View {
                                      isWide: isWide,
                                      scrollProxy: proxy)
                         } else {
-                            ShutterView(store: store, scrollProxy: proxy)
+                            ShutterView(store: store, isWide: shutterWide, scrollProxy: proxy)
                         }
 
                         Text("footer.estimate")
@@ -108,7 +126,7 @@ struct ContentView: View {
                             .padding(.top, 4)
                             .accessibilityLabel(Text("footer.estimateAccessibility"))
                     }
-                    .frame(maxWidth: Layout.maximumContentWidth)
+                    .frame(maxWidth: maximumWidth)
                     .padding(.horizontal, Layout.pageGutter)
                     .padding(.top, 12)
                     .padding(.bottom, 28)
@@ -139,6 +157,7 @@ struct ContentView: View {
 #if os(iOS)
 private struct HeaderView: View {
     @Bindable var store: CalculatorStore
+    let availableWidth: CGFloat
     @AppStorage(StorageUnit.preferenceKey) private var unit: StorageUnit = .decimal
     @State private var copied = false
     @State private var copyResetTask: Task<Void, Never>?
@@ -146,7 +165,7 @@ private struct HeaderView: View {
 
     private var usesCompactLayout: Bool {
         #if os(iOS)
-        horizontalSizeClass == .compact
+        horizontalSizeClass == .compact || availableWidth < 640
         #else
         false
         #endif
@@ -359,16 +378,10 @@ private struct RateView: View {
         VStack(spacing: Layout.sectionSpacing) {
             // The quick bar stays directly below the workbench switch on phones.
             QuickStartView(store: store)
-            if isWide {
-                HStack(alignment: .top, spacing: 16) {
-                    CaptureControls(store: store)
-                        .frame(width: max(0, (contentWidth - 16) * 0.55), alignment: .topLeading)
-                    RateResults(store: store, showsScrollOffset: false)
-                        .frame(width: max(0, (contentWidth - 16) * 0.45), alignment: .topLeading)
-                }
-            } else {
-                RateResults(store: store, showsScrollOffset: true)
-                CaptureControls(store: store)
+            AdaptiveWorkbenchLayout(wide: isWide, resultFirstWhenStacked: true, leadingFraction: 0.55) {
+                CaptureControls(store: store, availableWidth: isWide ? (contentWidth - Layout.workbenchColumnSpacing) * 0.55 : contentWidth)
+                RateResults(store: store, showsScrollOffset: !isWide)
+                    .accessibilitySortPriority(isWide ? 0 : 1)
             }
             if !store.pinnedSetups.isEmpty {
                 PinnedSetups(store: store)
@@ -379,7 +392,9 @@ private struct RateView: View {
 
 private struct CaptureControls: View {
     let store: CalculatorStore
+    let availableWidth: CGFloat
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @FocusState private var durationFocused: Bool
     @State private var durationDraft = ""
     @State private var durationError: String?
@@ -387,7 +402,7 @@ private struct CaptureControls: View {
 
     private var usesCompactLayout: Bool {
         #if os(iOS)
-        horizontalSizeClass == .compact
+        horizontalSizeClass == .compact || availableWidth < 410 || dynamicTypeSize.isAccessibilitySize
         #else
         false
         #endif
@@ -725,18 +740,10 @@ private struct RateResults: View {
                 .accessibilityIdentifier("record-time-output")
             planningRow(title: "result.cardDuration",
                         value: DisplayFormat.duration(result.captureRuntimeHours),
-                        // The card row owns the plan-versus-card comparison, so the
-                        // utilization figure belongs here rather than in a fourth row.
+                        // Keep the capacity comparison in this row without adding
+                        // a separate warning to the compact result surface.
                         detail: "\(DisplayFormat.compactStorage(result.media.capacityGb, unit: unit)) · \(selectedCardLabel) · \(result.media.label) · \(DisplayFormat.number(result.dayUsagePercent, decimals: 0))%")
                 .accessibilityIdentifier("card-runtime-output")
-
-            if result.dayUsagePercent > 100 {
-                // Losing this warning would leave the plan silently over the card.
-                Label("result.overCapacity", systemImage: "exclamationmark.triangle")
-                    .font(.callout)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .accessibilityIdentifier("plan-over-capacity")
-            }
 
             HStack(spacing: 8) {
                 Button { store.pinCurrentSetup() } label: {
@@ -766,7 +773,7 @@ private struct RateResults: View {
             } label: {
                 Text("result.technicalDetails")
                     .font(.system(.caption, design: .monospaced))
-                    .frame(minHeight: usesCompactLayout ? 44 : 28, alignment: .leading)
+                    .frame(minHeight: Layout.controlHeight, alignment: .leading)
             }
             .accessibilityIdentifier("rate-technical-details")
         }
@@ -992,6 +999,7 @@ private struct ComparisonSnapshotRow: View {
 
 private struct ShutterView: View {
     let store: CalculatorStore
+    let isWide: Bool
     let scrollProxy: ScrollViewProxy
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -1013,10 +1021,22 @@ private struct ShutterView: View {
     }
 
     var body: some View {
-        VStack(spacing: Layout.sectionSpacing) {
-            if usesCompactLayout { shutterResult }
-            controls
-            if !usesCompactLayout { shutterResult }
+        Group {
+            #if os(iOS)
+            // A single layout keeps focused fields and draft text alive through
+            // resizing. iPad and compact iPhone lead with the result; regular
+            // iPhone width keeps the original controls-first stack.
+            let resultFirstWhenStacked = UIDevice.current.userInterfaceIdiom == .pad || usesCompactLayout
+            AdaptiveWorkbenchLayout(wide: isWide, resultFirstWhenStacked: resultFirstWhenStacked, leadingFraction: 0.55) {
+                controls
+                shutterResult.accessibilitySortPriority(!isWide && resultFirstWhenStacked ? 1 : 0)
+            }
+            #else
+            VStack(spacing: Layout.sectionSpacing) {
+                controls
+                shutterResult
+            }
+            #endif
         }
         .shutterInputToolbar(focusedInput: $focusedInput)
         .task(id: focusedInput) {
@@ -1235,7 +1255,7 @@ private struct ShutterView: View {
                 } label: {
                     Text("result.technicalDetails")
                         .font(.system(.caption, design: .monospaced))
-                        .frame(minHeight: usesCompactLayout ? 44 : 28, alignment: .leading)
+                        .frame(minHeight: Layout.controlHeight, alignment: .leading)
                 }
                 .accessibilityElement(children: .contain)
                 .accessibilityIdentifier("shutter-details")

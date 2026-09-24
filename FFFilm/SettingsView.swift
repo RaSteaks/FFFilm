@@ -1,5 +1,9 @@
 import SwiftUI
 
+#if os(iOS)
+import UIKit
+#endif
+
 /// AppStorage shares the preference across windows and retains it after relaunch.
 struct SettingsView: View {
     @AppStorage(StorageUnit.preferenceKey) private var unit: StorageUnit = .decimal
@@ -32,6 +36,12 @@ struct SettingsView: View {
             } header: { Text("settings.capacity") }
         }
         .formStyle(.grouped)
+        #if os(iOS)
+        // Keep explanatory text readable in a wide iPad sheet while allowing
+        // the same native form to fill an iPhone or a narrow Stage Manager window.
+        .frame(maxWidth: UIDevice.current.userInterfaceIdiom == .pad ? 680 : .infinity)
+        .frame(maxWidth: .infinity)
+        #endif
         .navigationTitle("settings.title")
         .preferredColorScheme(.dark)
         #if os(macOS)
@@ -63,6 +73,7 @@ struct SettingsButton: View {
                     .toolbar {
                         ToolbarItem(placement: .confirmationAction) {
                             Button("nav.done") { isPresented = false }
+                                .accessibilityIdentifier("settings-done")
                         }
                     }
             }

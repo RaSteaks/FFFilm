@@ -1,10 +1,20 @@
 import SwiftUI
 
+#if os(iOS)
+import UIKit
+#endif
+
+private enum CameraLibraryRoute: Hashable {
+    case favorites
+    case camera(String)
+}
+
 /// One shared store keeps browsing, details, favorites and the calculator strip in sync.
 struct CameraLibraryView: View {
     let store: CalculatorStore
     @Environment(\.dismiss) private var dismiss
     @State private var query = ""
+    @State private var selectedRoute: CameraLibraryRoute?
 
     private var matchingCameras: [CameraProfile] {
         let search = query.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -15,56 +25,42 @@ struct CameraLibraryView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            List {
-                Section {
-                    NavigationLink {
-                        CameraFavoritesView(store: store)
-                    } label: {
-                        HStack {
-                            Label("nav.favorites", systemImage: "star.fill")
-                            Spacer()
-                            Text(store.quickStartCameraIds.count.formatted())
-                                .foregroundStyle(.secondary)
-                        }
-                        .frame(minHeight: Layout.controlHeight)
-                    }
-                    .accessibilityIdentifier("camera-favorites")
-                } footer: {
-                    Text("camera.favoriteHint")
-                }
-
-                if matchingCameras.isEmpty {
-                    ContentUnavailableView.search(text: query)
-                } else {
-                    ForEach(CameraManufacturer.allCases, id: \.self) { manufacturer in
-                        let cameras = matchingCameras.filter { $0.manufacturer == manufacturer }
-                        if !cameras.isEmpty {
-                            Section(manufacturer.rawValue) {
-                                ForEach(cameras) { camera in
-                                    HStack(spacing: 12) {
-                                        NavigationLink(value: camera) { CameraSummary(camera: camera) }
-                                            .accessibilityIdentifier("catalog-camera-\(camera.id)")
-                                        Spacer(minLength: 0)
-                                        CameraFavoriteButton(store: store, camera: camera, compact: true)
-                                    }
-                                }
+        Group {
+            #if os(iOS)
+            if UIDevice.current.userInterfaceIdiom == .pad {
+                NavigationSplitView {
+                    catalogList(split: true)
+                        .navigationSplitViewColumnWidth(min: 300, ideal: 360, max: 420)
+                } detail: {
+                    NavigationStack {
+                        // Keep favorites in the detail column while a camera
+                        // pushes onto its stack, including after split collapse.
+                        switch selectedRoute {
+                        case .favorites:
+                            CameraFavoritesView(store: store)
+                        case .camera(let id):
+                            if let camera = store.sortedCameras.first(where: { $0.id == id }) {
+                                CameraDetailView(store: store, camera: camera)
+                            } else {
+                                // Clear a stale selection so the split view returns to its empty state.
+                                ContentUnavailableView("nav.cameras", systemImage: "camera")
+                                    .task { selectedRoute = nil }
                             }
+                        case nil:
+                            ContentUnavailableView("nav.cameras", systemImage: "camera")
                         }
                     }
+                    .navigationDestination(for: CameraProfile.self) { camera in
+                        CameraDetailView(store: store, camera: camera)
+                    }
                 }
+                .navigationSplitViewStyle(.balanced)
+            } else {
+                stackLibrary
             }
-            .navigationTitle("nav.cameras")
-            .searchable(text: $query, prompt: Text("camera.search"))
-            .navigationDestination(for: CameraProfile.self) { camera in
-                CameraDetailView(store: store, camera: camera)
-            }
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("nav.done") { dismiss() }
-                        .accessibilityIdentifier("camera-library-done")
-                }
-            }
+            #else
+            stackLibrary
+            #endif
         }
         .tint(Palette.text)
         .preferredColorScheme(.dark)
@@ -73,6 +69,88 @@ struct CameraLibraryView: View {
         #else
         .presentationDetents([.large])
         #endif
+    }
+
+    private var stackLibrary: some View {
+        NavigationStack {
+            catalogList(split: false)
+                .navigationDestination(for: CameraProfile.self) { camera in
+                    CameraDetailView(store: store, camera: camera)
+                }
+        }
+    }
+
+    private func catalogList(split: Bool) -> some View {
+        Group {
+            if split {
+                List(selection: $selectedRoute) { catalogRows(split: true) }
+            } else {
+                // iPhone and macOS retain their original plain List behavior.
+                List { catalogRows(split: false) }
+            }
+        }
+        .navigationTitle("nav.cameras")
+        .searchable(text: $query, prompt: Text("camera.search"))
+        .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+                Button("nav.done") { dismiss() }
+                    .accessibilityIdentifier("camera-library-done")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func catalogRows(split: Bool) -> some View {
+        // Filter and sort once per list update, then preserve that order within each section.
+        let camerasByManufacturer = Dictionary(grouping: matchingCameras, by: \.manufacturer)
+        Section {
+            Group {
+                if split {
+                    NavigationLink(value: CameraLibraryRoute.favorites) { favoritesLabel }
+                } else {
+                    NavigationLink { CameraFavoritesView(store: store) } label: { favoritesLabel }
+                }
+            }
+            .accessibilityIdentifier("camera-favorites")
+        } footer: {
+            Text("camera.favoriteHint")
+        }
+
+        if camerasByManufacturer.isEmpty {
+            ContentUnavailableView.search(text: query)
+        } else {
+            ForEach(CameraManufacturer.allCases, id: \.self) { manufacturer in
+                let cameras = camerasByManufacturer[manufacturer] ?? []
+                if !cameras.isEmpty {
+                    Section(manufacturer.rawValue) {
+                        ForEach(cameras) { camera in
+                            HStack(spacing: 12) {
+                                Group {
+                                    if split {
+                                        NavigationLink(value: CameraLibraryRoute.camera(camera.id)) { CameraSummary(camera: camera) }
+                                    } else {
+                                        NavigationLink(value: camera) { CameraSummary(camera: camera) }
+                                    }
+                                }
+                                .accessibilityIdentifier("catalog-camera-\(camera.id)")
+                                Spacer(minLength: 0)
+                                CameraFavoriteButton(store: store, camera: camera, compact: true)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private var favoritesLabel: some View {
+        HStack {
+            Label("nav.favorites", systemImage: "star.fill")
+            Spacer()
+            Text(store.quickStartCameraIds.count.formatted())
+                .foregroundStyle(.secondary)
+        }
+        .frame(minHeight: Layout.controlHeight)
     }
 }
 

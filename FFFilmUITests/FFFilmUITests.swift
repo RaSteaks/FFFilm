@@ -1,6 +1,13 @@
 import XCTest
 
+#if os(iOS)
+import UIKit
+#endif
+
 final class FFFilmUITests: XCTestCase {
+    // Mirrors the app's 900pt usable-width threshold plus two 12pt page gutters.
+    private let splitWindowWidth: CGFloat = 924
+
     override func setUpWithError() throws {
         continueAfterFailure = false
     }
@@ -20,12 +27,95 @@ final class FFFilmUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "record-time-output").firstMatch.exists)
 
         #if os(iOS)
-        if app.windows.firstMatch.frame.height > app.windows.firstMatch.frame.width {
-            // The portrait phone layout keeps the live result above the detailed capture controls.
+        let windowWidth = app.windows.firstMatch.frame.width
+        if windowWidth < splitWindowWidth, app.windows.firstMatch.frame.height > windowWidth {
+            // Narrow iPad windows and portrait phones keep the live result first.
             XCTAssertLessThan(result.frame.minY, controls.frame.minY)
+        } else if windowWidth >= splitWindowWidth {
+            // Wide iPad windows show parameters beside the live result.
+            XCTAssertLessThan(controls.frame.maxX, result.frame.minX)
         }
         #endif
     }
+
+    #if os(iOS)
+    @MainActor
+    func testIPadWorkbenchAndCatalogKeepVisibleContext() throws {
+        guard UIDevice.current.userInterfaceIdiom == .pad else { return }
+        XCUIDevice.shared.orientation = .portrait
+        defer { XCUIDevice.shared.orientation = .portrait }
+        let app = XCUIApplication()
+        app.launch()
+        for _ in 0..<30 where app.windows.firstMatch.frame.width > app.windows.firstMatch.frame.height {
+            Thread.sleep(forTimeInterval: 0.2)
+        }
+        XCTAssertLessThan(app.windows.firstMatch.frame.width, app.windows.firstMatch.frame.height)
+
+        let rateControls = app.descendants(matching: .any).matching(identifier: "capture-controls").firstMatch
+        let rateResult = app.descendants(matching: .any).matching(identifier: "rate-results").firstMatch
+        XCTAssertTrue(rateControls.waitForExistence(timeout: 5))
+        if app.windows.firstMatch.frame.width >= splitWindowWidth {
+            XCTAssertLessThan(rateControls.frame.maxX, rateResult.frame.minX)
+        } else {
+            XCTAssertLessThan(rateResult.frame.minY, rateControls.frame.minY)
+        }
+
+        XCUIDevice.shared.orientation = .landscapeLeft
+        // Rotation is asynchronous in XCTest; wait for the app window's
+        // geometry before checking the responsive two-column placement.
+        for _ in 0..<30 where app.windows.firstMatch.frame.width <= app.windows.firstMatch.frame.height {
+            Thread.sleep(forTimeInterval: 0.2)
+        }
+        XCTAssertGreaterThan(app.windows.firstMatch.frame.width, app.windows.firstMatch.frame.height)
+        XCTAssertLessThan(rateControls.frame.maxX, rateResult.frame.minX)
+
+        let picker = app.segmentedControls["calculator-view-picker"].firstMatch
+        picker.buttons.element(boundBy: 1).tap()
+        let shutterControls = app.descendants(matching: .any).matching(identifier: "shutter-controls").firstMatch
+        let shutterResult = app.descendants(matching: .any).matching(identifier: "shutter-results").firstMatch
+        XCTAssertTrue(shutterControls.waitForExistence(timeout: 3))
+        if app.windows.firstMatch.frame.width >= splitWindowWidth {
+            XCTAssertLessThan(shutterControls.frame.maxX, shutterResult.frame.minX)
+        }
+
+        picker.buttons.element(boundBy: 0).tap()
+        app.buttons["settings-action"].firstMatch.tap()
+        let storagePicker = app.descendants(matching: .any).matching(identifier: "storage-unit-picker").firstMatch
+        XCTAssertTrue(storagePicker.waitForExistence(timeout: 3))
+        XCTAssertLessThanOrEqual(storagePicker.frame.width, 680)
+        app.buttons["settings-done"].firstMatch.tap()
+
+        app.buttons["camera-library"].firstMatch.tap()
+        let camera = app.descendants(matching: .any).matching(identifier: "catalog-camera-alexa35").firstMatch
+        XCTAssertTrue(camera.waitForExistence(timeout: 5))
+        camera.tap()
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "camera-detail").firstMatch.waitForExistence(timeout: 3))
+        if app.windows.firstMatch.frame.width >= splitWindowWidth {
+            XCTAssertTrue(camera.isHittable)
+        }
+    }
+
+    @MainActor
+    func testWidePhoneLandscapeKeepsShutterControlsFirst() throws {
+        guard UIDevice.current.userInterfaceIdiom == .phone else { return }
+        XCUIDevice.shared.orientation = .landscapeLeft
+        defer { XCUIDevice.shared.orientation = .portrait }
+        let app = XCUIApplication()
+        app.launch()
+        for _ in 0..<30 where app.windows.firstMatch.frame.width <= app.windows.firstMatch.frame.height {
+            Thread.sleep(forTimeInterval: 0.2)
+        }
+        // Only wide phones exercise the former regular-width stack order.
+        guard app.windows.firstMatch.frame.width >= splitWindowWidth else { return }
+
+        app.segmentedControls["calculator-view-picker"].firstMatch.buttons.element(boundBy: 1).tap()
+        let controls = app.descendants(matching: .any).matching(identifier: "shutter-controls").firstMatch
+        let result = app.descendants(matching: .any).matching(identifier: "shutter-results").firstMatch
+        XCTAssertTrue(controls.waitForExistence(timeout: 3))
+        XCTAssertTrue(result.exists)
+        XCTAssertLessThan(controls.frame.minY, result.frame.minY)
+    }
+    #endif
 
     @MainActor
     func testPrimaryActionsExposeImmediateFeedback() throws {

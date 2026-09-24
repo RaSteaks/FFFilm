@@ -124,7 +124,7 @@ All displayed rates are video-only planning estimates. Validate camera firmware,
 
 ## Multiple display shutter calculation (2026-09-22)
 
-- LIGHT SOURCE → 多显示设备 accepts 2–16 comma-separated fixed refresh rates, 0.001–1000000 Hz with up to three decimal places; decimal points are explicit, Chinese commas are accepted. Preserve raw text across mode changes/import and reset with shutter defaults.
+- LIGHT SOURCE → 多显示设备 accepts 2–16 comma-separated fixed refresh rates, 0.001–1000000 Hz with up to three decimal places; decimal points are explicit, Chinese commas are accepted. Show commas in localized input examples so the sample matches the field separator. Preserve raw text across mode changes/import and reset with shutter defaults.
 - Parse exact integer milli-Hz, then compute the GCD: the shortest common exposure is `1000 / gcd(milliHz)`. Reuse bounded candidate ranking and maximum-angle enforcement; never round nearby rates together or silently substitute a partial match.
 - Support both flicker candidates and the optional matching check. DETAILS reports per-device refresh cycles; invalid lists clear results. When no exact common exposure fits, provide the qualified compromise described below.
 - Fixed refresh is a theoretical model, not a guarantee for PWM, VRR, scanout or rolling shutters; environmental lighting is excluded from the display-only selection. Periodic-exposure background: https://www.red.com/learn/red-101/flicker-free-video-tutorial .
@@ -139,6 +139,11 @@ All displayed rates are video-only planning estimates. Validate camera firmware,
 - Verified: macOS complete unit target (49 passing test entries), subsequent focused ShutterTests including preferred-angle ties, and iPhone 17 Pro multiple-display UI regression (exact → compromise → invalid → exact, per-device details, reset). macOS and iOS Simulator builds and string-catalog JSON validation pass. The first Pro Max UI attempt failed before feature interaction because an old simulator app could not terminate; the final Pro run passed, with screenshots inspected.
 
 ## UI and interaction optimization (2026-09-22)
+
+### iPad layout (2026-09-24)
+
+- iPad RATE and SHUTTER use available content width: up to 1180pt, with a 55:45 parameter/result split from 900pt so native form controls do not overflow. Both columns scroll with the page. Narrow windows show results first, and the shared layout retains field drafts through rotation and window resizing. iPhone keeps its 900pt split threshold and 920pt cap; macOS remains unchanged.
+- The iPad camera sheet uses a collapsible native list/detail split; selection, search and favorite actions remain in the same library state. Settings limits reading width to 680pt in wide iPad sheets. Keep the monochrome tokens, native controls and 44pt touch regions.
 
 - Keep `CalculatorEngine` as the only compatibility/number-validation authority, `CalculatorStore` as the per-window workflow owner, and `WorkbenchComponents`/shared SwiftUI views as the presentation layer. `Localization.swift` owns non-view clipboard and feedback strings; `Localizable.xcstrings` contains English and Simplified Chinese, with other locales falling back to English.
 - Recording uses the compact order workbench switch → favorites → result → parameters. At 900pt usable width the result and parameter groups use a 55:45 split; otherwise the page remains one vertical scroller. Results lead with GB/h or GiB/h and keep plan capacity, actual planned recording time and selected-card runtime visible; technical details stay collapsed.
@@ -157,12 +162,12 @@ All displayed rates are video-only planning estimates. Validate camera firmware,
 ## Code review follow-up (2026-09-23)
 
 - Restore the storage-unit symbol on the primary recording rate: the headline readout must read `GB/h` or `GiB/h`, never a unitless "per hour", so binary and decimal plans stay distinguishable. The compact summary, snapshot and pinned rows already used `\(unit.symbol)/h`; the headline now matches them.
-- Restore the plan-versus-card comparison. The card-duration row carries the utilization percentage again, and a warning appears whenever the plan exceeds the selected card — without it, an over-capacity plan is silent, which is the one safety signal this calculator owes a planner.
+- Keep the plan-versus-card comparison in the card-duration row, including utilization percentage. Per the later UI request, do not show a separate over-capacity warning.
 - The header's MORE menu no longer registers ⇧⌘R; the macOS toolbar owns that shortcut, and one window must not hold two identical key equivalents. Its reset also carries `reset-action-header` on macOS so window-wide element queries stay unambiguous (`reset-action` remains the toolbar's and iOS's). The menu's duplicated reset branch collapsed to a single button.
 - `Detail` keeps exactly one `LocalizedStringKey` initializer. The unlabeled `String` overload it once carried was removed rather than labelled: an unlabeled overload wins resolution for string literals and renders raw catalog keys, and nothing needed a verbatim path.
 - `RateResults` binds `store.calculation` once per body and passes it to the technical-details disclosure, matching `CompactSummaryView`. Every `result.` read in the body previously re-ran the engine, which the added planning rows and accessibility label had roughly doubled.
 - Each shutter frame-rate preset menu names its field in the accessibility label, because matching mode can show the camera and project menus at once, and a stable `shutter-presets-<field>` identifier replaces label-based test selection.
-- Catalog: removed 8 stale entries whose English duplicated a live key (`feedback.*`, `copy.invalidShutterSummary`, `shutter.overLimit`), giving 196 keys; added `result.overCapacity` and a zh-Hans value for `%@ hours`, which had none. Keys still used at runtime with no localization (`%@ fps`, `%@°`, `%lld/4`, `%@ Mb/s`, `180°`) are intentional: their text is language-neutral.
+- Catalog: removed 8 stale entries whose English duplicated a live key (`feedback.*`, `copy.invalidShutterSummary`, `shutter.overLimit`), giving 196 keys; added a zh-Hans value for `%@ hours`, which had none. The later UI request removed the unused `result.overCapacity` key. Keys still used at runtime with no localization (`%@ fps`, `%@°`, `%lld/4`, `%@ Mb/s`, `180°`) are intentional: their text is language-neutral.
 - Verification: macOS `FFFilmTests` 41/41 pass; the full iPhone 17 Pro UI suite passes every method in a single run. macOS UI automation remains unverified on this host (sheet hit-testing limitation above), so the macOS-only header/toolbar action duplication — pre-existing, not introduced here — still needs a manual look before deciding whether the header should render those actions at all.
 
 ## Code review fixes (2026-09-23)
@@ -300,3 +305,9 @@ All displayed rates are video-only planning estimates. Validate camera firmware,
 
 - Keep the macOS recording and shutter workbenches below the native titlebar without the duplicate in-content header. The titlebar owns workbench selection, settings, pin, copy and reset; its copy action also handles shutter summaries and keeps the shutter invalid-result disabled state. iOS retains its content header.
 - Verification: macOS and iOS Simulator builds passed, and the rebuilt macOS recording window showed exactly one workbench selector in the titlebar with no in-content header. The focused macOS UI test compiled but did not execute because the XCTest runner exited before bootstrapping on this host.
+
+## iPad workbench review fixes (2026-09-24)
+
+- Keep iPad RATE and SHUTTER side by side at 900pt of usable width, while preserving SHUTTER's earlier controls-first stack on regular-width iPhones and result-first stack on compact iPhones. Centralize the 900pt threshold, 920pt iPhone width cap and 16pt column gap in `Layout`; stacked panels use the 12pt section spacing token.
+- In the iPad camera split view, clear an invalid camera selection and show the existing empty detail state. Filter and sort the catalog once per list update before grouping it by manufacturer; keep one accessibility identifier on either navigation-link variant.
+- Verification: iOS Simulator app and test targets and the macOS app build passed. Focused UI tests passed on iPhone 17 Pro Max (landscape SHUTTER), iPad Pro 13-inch (workbench and split catalog), and iPhone 17 Pro (catalog search, favorites and details). `git diff --check` passed.

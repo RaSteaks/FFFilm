@@ -3,7 +3,8 @@ import SwiftUI
 /// The calculator only selects favorites; all catalog and editing actions live on the camera page.
 struct QuickStartView: View {
     let store: CalculatorStore
-    @State private var showsCameras = false
+    // The root presents the library outside the iOS tab bar's size-class override.
+    @Binding var showsCameras: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -38,7 +39,6 @@ struct QuickStartView: View {
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text("nav.favorites"))
         .accessibilityIdentifier("quick-start")
-        .sheet(isPresented: $showsCameras) { CameraLibraryView(store: store) }
     }
 
     private func preset(_ title: String, id: String, selected: Bool) -> some View {

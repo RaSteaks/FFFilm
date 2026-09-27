@@ -2282,6 +2282,24 @@
         }
       }
     },
+    "nav.calculate" : {
+      "comment" : "iOS bottom navigation tab label",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Calculate"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "计算"
+          }
+        }
+      }
+    },
     "nav.copy" : {
       "localizations" : {
         "en" : {

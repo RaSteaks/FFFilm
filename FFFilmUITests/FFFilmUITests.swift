@@ -39,6 +39,113 @@ final class FFFilmUITests: XCTestCase {
     }
 
     #if os(iOS)
+    /// Native tab buttons can expose their localized label instead of the Tab
+    /// identifier on older SDKs; both selectors remain scoped to the tab bar.
+    @MainActor
+    private func tabButton(_ destination: String, in app: XCUIApplication) -> XCUIElement {
+        let labels: [String]
+        switch destination {
+        case "rate": labels = ["Calculate", "计算"]
+        case "shutter": labels = ["Shutter", "快门"]
+        default: labels = ["Settings", "设置"]
+        }
+        return app.tabBars.buttons.matching(NSPredicate(
+            format: "identifier == %@ OR label IN %@", "tab-\(destination)", labels
+        )).firstMatch
+    }
+
+    @MainActor
+    private func selectTab(_ destination: String, in app: XCUIApplication) {
+        let button = tabButton(destination, in: app)
+        XCTAssertTrue(button.waitForExistence(timeout: 3), app.debugDescription)
+        button.tap()
+    }
+
+    @MainActor
+    func testBottomTabsKeepSettingsAndCalculatorStateIndependent() throws {
+        let app = XCUIApplication()
+        app.launchArguments += ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        let tabBar = app.tabBars.firstMatch
+        XCTAssertTrue(tabBar.waitForExistence(timeout: 5))
+        XCTAssertEqual(tabBar.buttons.count, 3)
+        XCTAssertFalse(app.segmentedControls["calculator-view-picker"].exists)
+        XCTAssertFalse(app.buttons["settings-action"].exists)
+        for destination in ["rate", "shutter", "settings"] {
+            let button = tabButton(destination, in: app)
+            XCTAssertTrue(button.isHittable)
+            XCTAssertGreaterThan(button.frame.midY, app.windows.firstMatch.frame.maxY * 0.75)
+        }
+        // Keep every tab's actual native chrome available for visual review.
+        let calculateScreenshot = XCTAttachment(screenshot: app.screenshot())
+        calculateScreenshot.name = "Bottom navigation - Calculate"
+        calculateScreenshot.lifetime = .keepAlways
+        add(calculateScreenshot)
+
+        let duration = app.textFields["capture-duration"].firstMatch
+        let quick12 = app.buttons["duration-quick-12"].firstMatch
+        reveal(quick12, in: app)
+        quick12.tap()
+        XCTAssertEqual(duration.value as? String, "12.00")
+        selectTab("shutter", in: app)
+        enter("60", field: "sensorFps", in: app)
+        finishEditing(app)
+        let shutterScreenshot = XCTAttachment(screenshot: app.screenshot())
+        shutterScreenshot.name = "Bottom navigation - Shutter at 60 FPS"
+        shutterScreenshot.lifetime = .keepAlways
+        add(shutterScreenshot)
+
+        selectTab("settings", in: app)
+        XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 3))
+        let settingsScreenshot = XCTAttachment(screenshot: app.screenshot())
+        settingsScreenshot.name = "Bottom navigation - Settings navigation bar"
+        settingsScreenshot.lifetime = .keepAlways
+        add(settingsScreenshot)
+        XCTAssertFalse(app.buttons["settings-done"].exists)
+        let picker = app.descendants(matching: .any).matching(identifier: "storage-unit-picker").firstMatch
+        XCTAssertTrue(picker.waitForExistence(timeout: 3))
+        let selectedUnit = (picker.value as? String ?? "") + " " + picker.label
+        XCTAssertTrue(selectedUnit.contains("GB") || selectedUnit.contains("GiB"), selectedUnit)
+        let wasBinary = selectedUnit.contains("GiB")
+        let decimal = "Decimal · 1 GB = 1000 MB"
+        let binary = "Binary · 1 GiB = 1024 MiB"
+        // Restore the app-wide preference so later tests keep their original units.
+        defer {
+            selectTab("settings", in: app)
+            choose(wasBinary ? binary : decimal, picker: "storage-unit-picker", in: app)
+        }
+        choose(wasBinary ? decimal : binary, picker: "storage-unit-picker", in: app)
+
+        selectTab("rate", in: app)
+        XCTAssertFalse(app.navigationBars["Settings"].exists)
+        XCTAssertEqual(duration.value as? String, "12.00")
+        let expectedUnit = wasBinary ? "GB per hour" : "GiB per hour"
+        let result = app.descendants(matching: .any).matching(identifier: "rate-results").firstMatch
+        XCTAssertTrue(result.descendants(matching: .any)
+            .matching(NSPredicate(format: "label CONTAINS %@", expectedUnit)).firstMatch.waitForExistence(timeout: 3))
+        // An empty duration is still an editor draft, not a request to reload the model.
+        enterText("", into: duration, in: app)
+        finishDurationEditing(app)
+        selectTab("settings", in: app)
+        selectTab("rate", in: app)
+        let durationDraft = duration.value as? String ?? ""
+        XCTAssertTrue(durationDraft.isEmpty || durationDraft == duration.placeholderValue)
+        selectTab("shutter", in: app)
+        XCTAssertEqual(app.textFields["shutter-sensorFps"].value as? String, "60")
+
+        // A tab switch must also retain invalid editor text instead of rebuilding
+        // the field from its last committed numeric value.
+        enter("", field: "sensorFps", in: app)
+        finishEditing(app)
+        selectTab("settings", in: app)
+        selectTab("shutter", in: app)
+        let field = app.textFields["shutter-sensorFps"]
+        let draft = field.value as? String ?? ""
+        XCTAssertTrue(draft.isEmpty || draft == field.placeholderValue)
+        XCTAssertTrue(app.descendants(matching: .any)
+            .matching(identifier: "shutter-error-sensorFps").firstMatch.exists)
+    }
+
     @MainActor
     func testIPadWorkbenchAndCatalogKeepVisibleContext() throws {
         guard UIDevice.current.userInterfaceIdiom == .pad else { return }
@@ -69,8 +176,7 @@ final class FFFilmUITests: XCTestCase {
         XCTAssertGreaterThan(app.windows.firstMatch.frame.width, app.windows.firstMatch.frame.height)
         XCTAssertLessThan(rateControls.frame.maxX, rateResult.frame.minX)
 
-        let picker = app.segmentedControls["calculator-view-picker"].firstMatch
-        picker.buttons.element(boundBy: 1).tap()
+        selectTab("shutter", in: app)
         let shutterControls = app.descendants(matching: .any).matching(identifier: "shutter-controls").firstMatch
         let shutterResult = app.descendants(matching: .any).matching(identifier: "shutter-results").firstMatch
         XCTAssertTrue(shutterControls.waitForExistence(timeout: 3))
@@ -78,12 +184,11 @@ final class FFFilmUITests: XCTestCase {
             XCTAssertLessThan(shutterControls.frame.maxX, shutterResult.frame.minX)
         }
 
-        picker.buttons.element(boundBy: 0).tap()
-        app.buttons["settings-action"].firstMatch.tap()
+        selectTab("settings", in: app)
         let storagePicker = app.descendants(matching: .any).matching(identifier: "storage-unit-picker").firstMatch
         XCTAssertTrue(storagePicker.waitForExistence(timeout: 3))
         XCTAssertLessThanOrEqual(storagePicker.frame.width, 680)
-        app.buttons["settings-done"].firstMatch.tap()
+        selectTab("rate", in: app)
 
         app.buttons["camera-library"].firstMatch.tap()
         let camera = app.descendants(matching: .any).matching(identifier: "catalog-camera-alexa35").firstMatch
@@ -108,7 +213,7 @@ final class FFFilmUITests: XCTestCase {
         // Only wide phones exercise the former regular-width stack order.
         guard app.windows.firstMatch.frame.width >= splitWindowWidth else { return }
 
-        app.segmentedControls["calculator-view-picker"].firstMatch.buttons.element(boundBy: 1).tap()
+        selectTab("shutter", in: app)
         let controls = app.descendants(matching: .any).matching(identifier: "shutter-controls").firstMatch
         let result = app.descendants(matching: .any).matching(identifier: "shutter-results").firstMatch
         XCTAssertTrue(controls.waitForExistence(timeout: 3))
@@ -261,8 +366,7 @@ final class FFFilmUITests: XCTestCase {
         #if os(macOS)
         app.typeKey("2", modifierFlags: .command)
         #else
-        // Segment titles are localized; index follows CalculatorView.allCases order.
-        app.segmentedControls["calculator-view-picker"].buttons.element(boundBy: 1).tap()
+        selectTab("shutter", in: app)
         #endif
         if !app.textFields["shutter-sensorFps"].waitForExistence(timeout: 3) {
             XCTFail("Missing camera FPS field: \(app.debugDescription)")
@@ -596,14 +700,12 @@ final class FFFilmUITests: XCTestCase {
         #if os(macOS)
         app.typeKey("1", modifierFlags: .command)
         #else
-        let segments = app.segmentedControls["calculator-view-picker"].buttons
-        reveal(segments.element(boundBy: 0), in: app)
-        segments.element(boundBy: 0).tap()
+        selectTab("rate", in: app)
         #endif
         #if os(macOS)
         app.typeKey("2", modifierFlags: .command)
         #else
-        app.segmentedControls["calculator-view-picker"].buttons.element(boundBy: 1).tap()
+        selectTab("shutter", in: app)
         #endif
         XCTAssertEqual(app.textFields["shutter-sensorFps"].value as? String, "48")
         reveal(importButton, in: app)

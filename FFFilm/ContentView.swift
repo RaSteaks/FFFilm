@@ -13,12 +13,96 @@ private struct RateResultOffsetKey: PreferenceKey {
 }
 
 struct ContentView: View {
+    // Both calculator tabs share their model, while each page retains its own editor state.
     @State private var store = CalculatorStore()
-    #if os(macOS)
-    // The film editor lives inside the main workbench; owning its store here keeps
-    // the document alive across workbench-tab switches instead of discarding it.
+    @State private var showsCameras = false
+    #if os(iOS)
+    @State private var selectedTab: MobileTab = .rate
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    #else
     @State private var filmStore = FilmStore()
     #endif
+
+    var body: some View {
+        Group {
+            #if os(iOS)
+            mobileTabs
+                .sensoryFeedback(.selection, trigger: selectedTab)
+                .onChange(of: selectedTab) { _, tab in
+                    switch tab {
+                    case .rate: store.setActiveView(.rate)
+                    case .shutter: store.setActiveView(.shutter)
+                    case .settings: store.clearTransientState()
+                    }
+                }
+            #else
+            Group {
+                if store.activeView == .film {
+                    FilmWorkbenchView(store: filmStore)
+                } else {
+                    CalculatorWorkbench(store: store, view: store.activeView, showsCameras: $showsCameras)
+                }
+            }
+            .frame(minWidth: store.activeView == .film ? FilmWorkbenchView.minimumWindowWidth : 760, minHeight: 560)
+            .toolbar { MacWorkbenchToolbar(store: store) }
+            .focusedSceneValue(\.calculatorStore, store)
+            // Protect unsaved film documents even when another workbench is selected.
+            .background(FilmWindowGuard(store: filmStore))
+            .sensoryFeedback(.selection, trigger: store.activeView)
+            // The desktop toolbar binds activeView directly, so clear page feedback here.
+            .onChange(of: store.activeView) { _, _ in store.clearTransientState() }
+            #endif
+        }
+        // Present outside the compact tab shell so iPad sheets retain their
+        // native regular-width list/detail presentation and window adaptation.
+        .sheet(isPresented: $showsCameras) { CameraLibraryView(store: store) }
+        .tint(Palette.text)
+        .preferredColorScheme(.dark)
+        .sensoryFeedback(.selection, trigger: store.settings)
+    }
+
+    #if os(iOS)
+    private enum MobileTab: Hashable {
+        case rate, shutter, settings
+    }
+
+    private var mobileTabs: some View {
+        TabView(selection: $selectedTab) {
+            Tab("nav.calculate", systemImage: "plus.forwardslash.minus", value: MobileTab.rate) {
+                CalculatorWorkbench(store: store, view: .rate, showsCameras: $showsCameras)
+                    .environment(\.horizontalSizeClass, horizontalSizeClass)
+            }
+            .accessibilityIdentifier("tab-rate")
+
+            Tab("nav.shutter", systemImage: "camera.aperture", value: MobileTab.shutter) {
+                CalculatorWorkbench(store: store, view: .shutter, showsCameras: $showsCameras)
+                    .environment(\.horizontalSizeClass, horizontalSizeClass)
+            }
+            .accessibilityIdentifier("tab-shutter")
+
+            Tab("nav.settings", systemImage: "gearshape", value: MobileTab.settings) {
+                // Settings has its own navigation bar and is a persistent tab, not a sheet.
+                NavigationStack {
+                    SettingsView()
+                        .navigationBarTitleDisplayMode(.large)
+                }
+                .environment(\.horizontalSizeClass, horizontalSizeClass)
+            }
+            .accessibilityIdentifier("tab-settings")
+        }
+        .tabViewStyle(.tabBarOnly)
+        // Keep navigation at the bottom on iPad too. Restore the real size class
+        // inside each tab so wide forms and camera-library split navigation survive.
+        .environment(\.horizontalSizeClass, .compact)
+    }
+    #endif
+}
+
+/// Fixed page identity preserves scroll position and drafts when switching iOS tabs.
+private struct CalculatorWorkbench: View {
+    let store: CalculatorStore
+    let view: CalculatorView
+    @Binding var showsCameras: Bool
     @State private var keyboardVisible = false
     @State private var compactSummaryVisible = false
 
@@ -44,36 +128,18 @@ struct ContentView: View {
             ZStack(alignment: .top) {
                 Palette.background.ignoresSafeArea()
 
-                #if os(macOS)
-                if store.activeView == .film {
-                    // The film editor fills the whole window; the titlebar segmented
-                    // control stays the single navigation, so an in-content header
-                    // with a second picker would duplicate it.
-                    FilmWorkbenchView(store: filmStore)
-                } else {
-                    calculatorWorkbench(contentWidth: contentWidth,
-                                        maximumWidth: maximumWidth,
-                                        isWide: isWide,
-                                        shutterWide: shutterWide,
-                                        isCompactPhone: isCompactPhone)
-                }
-                #else
                 calculatorWorkbench(contentWidth: contentWidth,
                                     maximumWidth: maximumWidth,
                                     isWide: isWide,
                                     shutterWide: shutterWide,
                                     isCompactPhone: isCompactPhone)
-                #endif
             }
             .animation(.snappy(duration: 0.18), value: compactSummaryVisible)
         }
-        .tint(Palette.text)
-        .preferredColorScheme(.dark)
-        .sensoryFeedback(.selection, trigger: store.activeView)
-        .sensoryFeedback(.selection, trigger: store.settings)
-        .onChange(of: store.activeView) { _, _ in
+        .onChange(of: view) { _, _ in compactSummaryVisible = false }
+        .onDisappear {
             compactSummaryVisible = false
-            store.clearTransientState()
+            keyboardVisible = false
         }
         #if os(iOS)
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
@@ -83,16 +149,6 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
             keyboardVisible = false
         }
-        #endif
-        #if os(macOS)
-        // The film workbench's split panes need more room than the calculator;
-        // the raised minimum also grows an already-narrow window on tab switch.
-        .frame(minWidth: store.activeView == .film ? FilmWorkbenchView.minimumWindowWidth : 760, minHeight: 560)
-        .toolbar { MacWorkbenchToolbar(store: store) }
-        .focusedSceneValue(\.calculatorStore, store)
-        // Attached at the root so the unsaved-film close guard keeps protecting the
-        // window even while another workbench tab is showing.
-        .background(FilmWindowGuard(store: filmStore))
         #endif
     }
 
@@ -105,12 +161,13 @@ struct ContentView: View {
                     VStack(spacing: Layout.sectionSpacing) {
                         #if os(iOS)
                         // macOS keeps navigation and calculator actions in the window toolbar.
-                        HeaderView(store: store, availableWidth: contentWidth)
+                        HeaderView(store: store, view: view, availableWidth: contentWidth)
                         #endif
                         FeedbackBanner(store: store)
 
-                        if store.activeView == .rate {
+                        if view == .rate {
                             RateView(store: store,
+                                     showsCameras: $showsCameras,
                                      contentWidth: contentWidth,
                                      isWide: isWide,
                                      scrollProxy: proxy)
@@ -135,7 +192,7 @@ struct ContentView: View {
                 .coordinateSpace(.named("workbenchScroll"))
                 .scrollDismissesKeyboard(.interactively)
                 .onPreferenceChange(RateResultOffsetKey.self) { offset in
-                    guard isCompactPhone, store.activeView == .rate else {
+                    guard isCompactPhone, view == .rate else {
                         compactSummaryVisible = false
                         return
                     }
@@ -143,7 +200,7 @@ struct ContentView: View {
                 }
             }
 
-            if compactSummaryVisible && store.activeView == .rate && !keyboardVisible {
+            if compactSummaryVisible && view == .rate && !keyboardVisible {
                 CompactRateSummary(store: store)
                     .padding(.horizontal, Layout.pageGutter)
                     .padding(.top, 6)
@@ -156,7 +213,8 @@ struct ContentView: View {
 
 #if os(iOS)
 private struct HeaderView: View {
-    @Bindable var store: CalculatorStore
+    let store: CalculatorStore
+    let view: CalculatorView
     let availableWidth: CGFloat
     @AppStorage(StorageUnit.preferenceKey) private var unit: StorageUnit = .decimal
     @State private var copied = false
@@ -172,41 +230,18 @@ private struct HeaderView: View {
     }
 
     var body: some View {
-        Group {
-            if usesCompactLayout {
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack(spacing: 8) {
-                        title
-                        Spacer(minLength: 4)
-                        SettingsButton()
-                        actions
-                    }
-                    viewPicker
-                }
-            } else {
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: 12) {
-                        title
-                        SettingsButton()
-                        Spacer(minLength: 8)
-                        viewPicker
-                        actions
-                    }
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack {
-                            title
-                            SettingsButton()
-                            Spacer()
-                            actions
-                        }
-                        viewPicker
-                    }
-                }
-            }
+        // Page actions stay near the result; top-level navigation lives in TabView.
+        HStack(spacing: 8) {
+            title
+            Spacer(minLength: 4)
+            actions
         }
         .padding(usesCompactLayout ? 12 : 14)
         .workbenchSurface(cornerRadius: 16)
-        .onDisappear { copyResetTask?.cancel() }
+        .onDisappear {
+            copyResetTask?.cancel()
+            copied = false
+        }
     }
 
     private var title: some View {
@@ -217,36 +252,31 @@ private struct HeaderView: View {
             .accessibilityIdentifier("app-title")
     }
 
-    private var viewPicker: some View {
-        Picker("nav.workbench", selection: Binding(get: { store.activeView }, set: store.setActiveView)) {
-            ForEach(CalculatorView.allCases) { view in
-                Text(view.label).tag(view)
-            }
-        }
-        .pickerStyle(.segmented)
-        // iOS keeps its two workbenches in the content header.
-        .frame(maxWidth: usesCompactLayout ? .infinity : 300)
-        .accessibilityIdentifier("calculator-view-picker")
-    }
-
     @ViewBuilder
     private var actions: some View {
         HStack(spacing: 7) {
-            if store.activeView == .rate {
+            if view == .rate {
                 Button {
                     store.pinCurrentSetup()
                 } label: {
-                    Label {
-                        Text("nav.addComparison")
+                    HStack(spacing: 4) {
+                        // Compact headers use the symbol and count so Chinese labels do not wrap.
+                        if usesCompactLayout {
+                            Image(systemName: "plus")
+                                .font(.system(size: 15, weight: .semibold))
+                        } else {
+                            Label("nav.addComparison", systemImage: "plus")
+                        }
                         Text("\(store.pinnedSetups.count)/4")
                             .monospacedDigit()
                             .foregroundStyle(Palette.muted)
-                    } icon: {
-                        Image(systemName: "plus"
-                        )
                     }
+                    .fixedSize(horizontal: true, vertical: false)
+                    .frame(minWidth: 44, minHeight: 44)
                 }
                 .disabled(store.pinnedSetups.count >= 4)
+                .accessibilityLabel(Text("nav.addComparison"))
+                .accessibilityValue("\(store.pinnedSetups.count)/4")
                 .accessibilityIdentifier("pin-action")
                 .accessibilityHint(Text("comparison.addHint"))
 
@@ -258,7 +288,7 @@ private struct HeaderView: View {
                 .sensoryFeedback(.success, trigger: copied) { _, newValue in newValue }
 
                 moreMenu
-            } else if store.activeView == .shutter {
+            } else if view == .shutter {
                 Button(action: copyCurrent) {
                     actionLabel(copied ? "nav.copied" : "nav.copy", systemImage: copied ? "checkmark" : "doc.on.doc")
                 }
@@ -274,7 +304,7 @@ private struct HeaderView: View {
 
     private var moreMenu: some View {
         Menu {
-            if store.activeView == .rate {
+            if view == .rate {
                 Button("nav.copyLink", systemImage: "link") {
                     PlatformClipboard.copy(store.configurationText)
                 }
@@ -301,7 +331,7 @@ private struct HeaderView: View {
     }
 
     private func copyCurrent() {
-        let summary = store.activeView == .rate
+        let summary = view == .rate
             ? store.readableRecordingSummary(storageUnit: unit)
             : store.readableShutterSummary()
         PlatformClipboard.copy(summary)
@@ -370,14 +400,15 @@ private struct FeedbackBanner: View {
 
 private struct RateView: View {
     let store: CalculatorStore
+    @Binding var showsCameras: Bool
     let contentWidth: CGFloat
     let isWide: Bool
     let scrollProxy: ScrollViewProxy
 
     var body: some View {
         VStack(spacing: Layout.sectionSpacing) {
-            // The quick bar stays directly below the workbench switch on phones.
-            QuickStartView(store: store)
+            // Favorites stay directly below the page actions on phones.
+            QuickStartView(store: store, showsCameras: $showsCameras)
             AdaptiveWorkbenchLayout(wide: isWide, resultFirstWhenStacked: true, leadingFraction: 0.55) {
                 CaptureControls(store: store, availableWidth: isWide ? (contentWidth - Layout.workbenchColumnSpacing) * 0.55 : contentWidth)
                 RateResults(store: store, showsScrollOffset: !isWide)
@@ -397,6 +428,7 @@ private struct CaptureControls: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @FocusState private var durationFocused: Bool
     @State private var durationDraft = ""
+    @State private var durationInitialized = false
     @State private var durationError: String?
     @State private var durationPending = false
 
@@ -420,8 +452,13 @@ private struct CaptureControls: View {
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("capture-controls")
         .onAppear {
-            if durationDraft.isEmpty { durationDraft = DisplayFormat.number(store.settings.shootHours, decimals: 2) }
+            // Seed once: an empty draft must survive returning from another tab.
+            guard !durationInitialized else { return }
+            durationDraft = DisplayFormat.number(store.settings.shootHours, decimals: 2)
+            durationInitialized = true
         }
+        // Leaving a tab dismisses editing without discarding an unfinished duration.
+        .onDisappear { durationFocused = false }
         .onChange(of: store.settings.shootHours) { _, value in
             durationDraft = DisplayFormat.number(value, decimals: 2)
             durationError = nil
@@ -1038,6 +1075,8 @@ private struct ShutterView: View {
             }
             #endif
         }
+        // Tab switches cancel focus-driven scrolling while preserving input drafts.
+        .onDisappear { focusedInput = nil }
         .shutterInputToolbar(focusedInput: $focusedInput)
         .task(id: focusedInput) {
             #if os(iOS)

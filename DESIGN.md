@@ -73,7 +73,7 @@ SF Pro is used for native controls and action labels. SF Mono is reserved for me
 
 Spacing follows a 4pt rhythm. Compact iPhone layouts use 12pt gutters, put the live result above the settings list and render each setting as a horizontal row with a minimum 44pt control region. At 900pt of usable content width, the page changes to a 55:45 parameter/result split; below that threshold the result-first single-column flow remains. Capture format and storage plan groups stay expanded. Content respects safe areas and the page remains a single vertical scroller.
 
-On iPad, use the available window width rather than size class alone: the workbench spans up to 1180pt and changes to the same 55:45 parameter/result split at 900pt, where the form panel has room for native pickers. RATE and SHUTTER use one page scroller with both columns moving together; narrower iPad windows put the result first. Field columns follow their actual panel width, and resizing must preserve draft input. The camera library uses a collapsible list/detail split on iPad, while settings text stays within a 680pt reading width. iPhone and macOS retain their existing layout rules.
+On iPad, use the available window width rather than size class alone: the workbench spans up to 1180pt and changes to the same 55:45 parameter/result split at 900pt, where the form panel has room for native pickers. RATE and SHUTTER use one page scroller with both columns moving together; narrower iPad windows put the result first. Field columns follow their actual panel width, and resizing must preserve draft input. The camera library uses a collapsible list/detail split on iPad, while settings text stays within a 680pt reading width. The camera-library sheet is presented by the content root outside the bottom-tab size-class override, preserving the system's wide iPad split presentation. iPhone and macOS retain their existing layout rules.
 
 ## Elevation & Depth
 
@@ -95,7 +95,7 @@ Phone header actions are 44pt icon buttons with accessible names. Wider layouts 
 
 ### Navigation and data display
 
-RATE and SHUTTER remain the only top-level segmented modes. Quick Start is a horizontally scrolling preset strip with clear selected and pressed states. Live results use the strongest type hierarchy and numeric content transitions.
+iOS uses three persistent native bottom tabs in this order: Calculate (计算), Shutter (快门), and Settings (设置). `ContentView` owns tab selection and the shared calculator store; each calculator tab has a fixed page identity to retain scroll position and drafts. Settings owns an independent `NavigationStack` and title bar. The header contains page actions only. Native `TabView` supplies system Liquid Glass on supported releases and the standard tab bar on earlier releases; no custom glass overlay or extra bottom inset is added. On iPad, only the tab shell receives compact size class to keep navigation at the bottom; each page restores its actual size class for wide layouts and camera-library navigation. macOS keeps its existing toolbar navigation. Quick Start is a horizontally scrolling preset strip with clear selected and pressed states. Live results use the strongest type hierarchy and numeric content transitions.
 
 ### Forms and overlays
 
@@ -162,7 +162,7 @@ Runtime ownership: CameraLibraryView.swift owns the native catalog/favorites/det
 
 ## Storage unit settings
 
-- Native Settings scene and toolbar link on macOS; gear action and navigation sheet with Done on iOS. Settings copy is Chinese as requested; existing technical labels remain unchanged.
+- Native Settings scene and toolbar link on macOS; a dedicated bottom tab with its own navigation bar on iOS. Tab labels and settings follow the established Simplified Chinese/English system-language policy. Switching tabs dismisses keyboard focus, retains editor drafts and resets transient copy feedback.
 - `StorageUnit` owns decimal GB to binary GiB conversion; `SettingsView` owns the native preference picker. AppStorage persists and synchronizes the default (decimal) across windows. Reset does not erase this preference.
 - RATE and pinned storage rates and daily totals follow the preference using GB/TB or GiB/TiB. Engine values and manufacturer media labels remain decimal; bitrate, recording time and utilization stay invariant.
 - Explain common Apple/Windows conventions without claiming OS exclusivity; distinguish MB bytes from Mb bits.

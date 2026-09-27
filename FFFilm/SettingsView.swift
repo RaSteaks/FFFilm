@@ -51,7 +51,7 @@ struct SettingsView: View {
         }
         .formStyle(.grouped)
         #if os(iOS)
-        // Keep explanatory text readable in a wide iPad sheet while allowing
+        // Keep explanatory text readable in a wide iPad settings tab while allowing
         // the same native form to fill an iPhone or a narrow Stage Manager window.
         .frame(maxWidth: UIDevice.current.userInterfaceIdiom == .pad ? 680 : .infinity)
         .frame(maxWidth: .infinity)
@@ -64,34 +64,13 @@ struct SettingsView: View {
     }
 }
 
-/// Native settings window on Mac; a dismissible navigation sheet on touch platforms.
+#if os(macOS)
+/// The desktop toolbar opens the native settings scene; iOS uses its settings tab.
 struct SettingsButton: View {
-    #if !os(macOS)
-    @State private var isPresented = false
-    #endif
     var body: some View {
-        #if os(macOS)
         SettingsLink { Label("nav.settings", systemImage: "gearshape") }
             .help(Text("settings.shortcut"))
             .accessibilityIdentifier("settings-action")
-        #else
-        Button { isPresented = true } label: {
-            Label("nav.settings", systemImage: "gearshape")
-                .labelStyle(.iconOnly)
-                .frame(minWidth: 44, minHeight: 44)
-        }
-        .accessibilityIdentifier("settings-action")
-        .sheet(isPresented: $isPresented) {
-            NavigationStack {
-                SettingsView()
-                    .toolbar {
-                        ToolbarItem(placement: .confirmationAction) {
-                            Button("nav.done") { isPresented = false }
-                                .accessibilityIdentifier("settings-done")
-                        }
-                    }
-            }
-        }
-        #endif
     }
 }
+#endif

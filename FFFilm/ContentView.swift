@@ -32,7 +32,7 @@ struct ContentView: View {
                     switch tab {
                     case .rate: store.setActiveView(.rate)
                     case .shutter: store.setActiveView(.shutter)
-                    case .settings: store.clearTransientState()
+                    case .negative, .settings: store.clearTransientState()
                     }
                 }
             #else
@@ -63,7 +63,7 @@ struct ContentView: View {
 
     #if os(iOS)
     private enum MobileTab: Hashable {
-        case rate, shutter, settings
+        case rate, shutter, negative, settings
     }
 
     private var mobileTabs: some View {
@@ -79,6 +79,13 @@ struct ContentView: View {
                     .environment(\.horizontalSizeClass, horizontalSizeClass)
             }
             .accessibilityIdentifier("tab-shutter")
+
+            // Negative preview is a separate iOS workspace; calculator state stays untouched.
+            Tab("negative.title", systemImage: "photo", value: MobileTab.negative) {
+                NegativePreviewView()
+                    .environment(\.horizontalSizeClass, horizontalSizeClass)
+            }
+            .accessibilityIdentifier("tab-negative")
 
             Tab("nav.settings", systemImage: "gearshape", value: MobileTab.settings) {
                 // Settings has its own navigation bar and is a persistent tab, not a sheet.

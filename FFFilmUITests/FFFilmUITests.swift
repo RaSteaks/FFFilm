@@ -68,7 +68,8 @@ final class FFFilmUITests: XCTestCase {
         app.launch()
         let tabBar = app.tabBars.firstMatch
         XCTAssertTrue(tabBar.waitForExistence(timeout: 5))
-        XCTAssertEqual(tabBar.buttons.count, 3)
+        // Negative preview adds a fourth workspace without changing calculator state.
+        XCTAssertEqual(tabBar.buttons.count, 4)
         XCTAssertFalse(app.segmentedControls["calculator-view-picker"].exists)
         XCTAssertFalse(app.buttons["settings-action"].exists)
         for destination in ["rate", "shutter", "settings"] {

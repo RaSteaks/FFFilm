@@ -321,3 +321,31 @@ All displayed rates are video-only planning estimates. Validate camera firmware,
 - Apple WWDC26 confirms iPhone retains bottom tab navigation in iOS 27 (https://developer.apple.com/videos/play/wwdc2026/278/). Local tooling is Xcode 26.3 with iOS 26.2 SDK / iOS 26.3 simulator runtime, so iOS 27 runtime appearance remains unverified.
 - Present the camera-library sheet at the content root, outside the compact tab environment; `QuickStartView` receives its presentation binding. This preserves the native wide iPad list/detail sheet without custom widths. Compact header comparison actions use the symbol plus count, retaining a full accessible label.
 - Verification: iOS Simulator and macOS builds pass; all 59 unit tests pass. Focused iPhone 17 Pro / 17e navigation, settings-unit synchronization, valid/invalid draft preservation, core actions and camera tests pass. iPhone 17 Pro Max landscape and iPad Pro 13-inch bottom navigation plus portrait/landscape workbench and camera split checks pass. Three page screenshots from iPhone 17e were visually inspected. Strict UI audit, localization JSON validation and `git diff --check` pass. DESIGN.md lint reports zero errors and 13 pre-existing token warnings. iOS 27 runtime appearance, VoiceOver and largest Dynamic Type were not exercised.
+
+## iOS negative preview implementation (2026-09-27; not released)
+
+- Design contract: `docs/ios-negative-film-preview.md`; suggested branch `codex/ios-negative-film-preview`. Release scope is iPhone and iPad/iPadOS in the existing iOS app, with both device families required for acceptance; no macOS feature addition or deployment-target increase.
+- Add an independent iOS negative-preview workflow: camera or selected photo/file including large 8/16-bit TIFF, explicit film-base region sampling, locked capture configuration, managed-color inversion, comparison and TIFF/PNG/JPG export. No manual grading, presets, batch processing or additional editing tools.
+- Preserve current macOS import/slicing/export behavior; historical grading/sampling entries above describe removed implementations, not available reusable features.
+- Bind samples to source/capture configuration, reject invalid samples, require resampling after capture changes, and share the exact frozen frame through the same processing pipeline. First release is a viewing aid, not calibrated film reconstruction or full-resolution camera scanning.
+- File export retains oriented source dimensions; camera export uses the frozen frame dimensions. Specify 16-bit sRGB TIFF/PNG and 8-bit sRGB JPG. Large-TIFF acceptance includes approximately 85MP 16-bit RGB input through all three exports on the lowest supported real device; no silent downsampling or unverified unlimited-size claim.
+- Implemented `NegativePreviewView`, `NegativeStore`, `NegativeCamera`, and platform-neutral `NegativeRenderer`/`NegativeRaster`. Import via PhotosPicker file transfer or Files; preserve managed color and EXIF; sample the source region; invert encoded sRGB after linear base normalization. No additional editing tools.
+- Large-file rendering crops before GPU upload, renders bounded stripes into preallocated disk backing, and serializes file jobs. One shared full-resolution CPU pixel buffer prevents repeated LZW/PackBits decoding; real devices check their remaining process memory budget before decoding/export; do not claim fixed memory or unlimited scan size. Sharing retains temporary output until the system finishes reading it.
+- Camera work belongs to a serial queue with one pending main-actor frame delivery, lock completion gating, cancellation generations, background interruption handling and thermal fallback. The iOS-only permission string catalog is excluded on macOS. No microphone access or full photo-library permission.
+- Verification is recorded in `docs/ios-negative-film-preview.md`. The user requested simulator verification first; real camera timing, real-film appearance and lowest-device memory/thermal limits remain release gates. No app-store submission or production publication was performed.
+
+- Verified: iPhone Simulator full unit target plus negative UI and tab-state regression; iPad Simulator negative unit/state/UI checks; both simulators completed uncompressed and LZW 85MP 16-bit TIFF through all three full-size exports. Full macOS unit target and unsigned iOS device build pass. Strict UI audit/diff checks pass; DESIGN.md lint retains 13 pre-existing warnings. Real-device camera, thermal and memory acceptance remains outstanding at the user's request to prioritize simulator validation.
+
+## Negative preview review follow-up
+
+- Use typed workflow phases for camera-frame gating; localized busy keys are display values only. Ignore user cancellation when reporting import errors.
+- PhotosPicker transfers ownership of its temporary copy directly to the renderer; failed/cancelled loads delete it and successful assets retain cleanup responsibility.
+- Mirror image-centering insets on both axes and keep the Chinese README fully localized.
+- White-balance locking uses the completion-handler API returning Void; no Boolean-return check applies.
+
+## Negative camera failure recovery (2026-09-27)
+
+- Track requested capture independently of `AVCaptureSession.isRunning`, so startup failures and system-stopped interruptions reach the workflow; explicit stop/configuration failure clears that state.
+- Camera errors use the suspension path to freeze the last displayed source, cancel pending work, invalidate late callbacks and discard the old film base. Static resampling and export operate on that same frozen source.
+- Inject the camera capture interface for hardware-independent workflow regression tests. Targeted iPhone Simulator negative tests passed, including startup failure and interrupted-frame sampling/PNG export. Real-device notification timing remains unverified; the optional large-TIFF test was not enabled for this fix.
+- Verification: iOS Simulator build and 24 focused negative unit-test executions passed; the opt-in large TIFF stress test remained skipped. Cancel-import UI regression passed on an isolated iPhone 17 Pro simulator after shared-simulator interference. Zoom/rotation visual behavior and physical-camera behavior were not interactively verified in this follow-up.

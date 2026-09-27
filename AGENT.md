@@ -10,6 +10,7 @@
 
 ## Project plan
 
+- Settings display the selectable support address `zhuyutian041119@foxmail.com`, matching the support site, with Simplified Chinese and English instructions for copying it into a mail app. Issue feedback remains paused: its form, submission service, endpoint configuration and dedicated outgoing-network entitlement are removed; no GitHub issue is created from settings.
 - Support-site copyright attribution names 朱煜天 as the rights holder; FFFilm remains the product name in all three page footers.
 - App Info.plists use `NSHumanReadableCopyright = © 2026 朱煜天`: the macOS source plist declares it, and both Xcode build configurations inject the field into built apps on each platform.
 - Publish the static `support/` directory as the GitHub Pages artifact through `.github/workflows/pages.yml`; its `index.html`, `support.html`, and `privacy.html` become the site root and the two App Store Connect URLs. Trigger deployment on support-site or workflow changes, with a manual dispatch option.

@@ -1361,6 +1361,55 @@
         }
       }
     },
+    "feedback.email.hint" : {
+      "comment" : "Instructions for using the selectable support email address in settings.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copy this address into your mail app to report a problem or suggest a feature."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可复制邮箱地址，在邮件应用中发送问题或功能建议。"
+          }
+        }
+      }
+    },
+    "feedback.email.section" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Contact"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "联系与反馈"
+          }
+        }
+      }
+    },
+    "feedback.email.title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Feedback email"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "反馈邮箱"
+          }
+        }
+      }
+    },
     "feedback.importedFPS" : {
       "localizations" : {
         "en" : {

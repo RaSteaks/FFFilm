@@ -34,6 +34,20 @@ struct SettingsView: View {
                 }
                 .accessibilityIdentifier("storage-unit-details")
             } header: { Text("settings.capacity") }
+
+            Section {
+                LabeledContent {
+                    Text(verbatim: "zhuyutian041119@foxmail.com")
+                        .textSelection(.enabled)
+                        .accessibilityIdentifier("feedback-email")
+                } label: {
+                    Label("feedback.email.title", systemImage: "envelope")
+                }
+                // Keep the support address selectable so users can copy it into their preferred mail app.
+                Text("feedback.email.hint")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } header: { Text("feedback.email.section") }
         }
         .formStyle(.grouped)
         #if os(iOS)

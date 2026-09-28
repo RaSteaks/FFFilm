@@ -1839,6 +1839,338 @@
       ]
     },
     {
+      "id": "a1m2",
+      "name": "α1 II",
+      "manufacturer": "SONY",
+      "maxSensorFps": 119.88,
+      "sensorLabel": "8K Full Frame Exmor RS",
+      "sensorWidthMm": 35.9,
+      "sensorHeightMm": 24.0,
+      "nativeWidth": 8640,
+      "nativeHeight": 4860,
+      "imageCircleMm": 43.18,
+      "modes": [
+        {
+          "id": "full-frame",
+          "label": "Full Frame / Auto Crop",
+          "note": "Internal XAVC; estimated optical area includes mandatory format/fps crops, excludes optional APS-C, stabilization and lens compensation crops",
+          "resolutions": [
+            {
+              "id": "a1m2-uhd",
+              "label": "UHD · 3840 × 2160",
+              "width": 3840,
+              "height": 2160,
+              "maxSensorFps": 119.88,
+              "activeWidthMm": 35.9,
+              "activeHeightMm": 20.193749999999998,
+              "sensorCrop": {
+                "minSensorFps": 100,
+                "factor": 1.1
+              }
+            },
+            {
+              "id": "a1m2-8k",
+              "label": "8K · 7680 × 4320",
+              "width": 7680,
+              "height": 4320,
+              "maxSensorFps": 29.97,
+              "activeWidthMm": 35.9,
+              "activeHeightMm": 20.193749999999998
+            },
+            {
+              "id": "a1m2-hd",
+              "label": "Full HD · 1920 × 1080",
+              "width": 1920,
+              "height": 1080,
+              "maxSensorFps": 119.88,
+              "activeWidthMm": 35.9,
+              "activeHeightMm": 20.193749999999998
+            }
+          ]
+        }
+      ],
+      "supportedCodecIds": [
+        "xavc-si-4k",
+        "xavc-s-4k-422",
+        "xavc-s-4k-420",
+        "xavc-hs-4k-422",
+        "xavc-hs-4k-420",
+        "xavc-hs-8k",
+        "xavc-si-hd",
+        "xavc-s-hd"
+      ]
+    },
+    {
+      "id": "a9m3",
+      "name": "α9 III",
+      "manufacturer": "SONY",
+      "maxSensorFps": 119.88,
+      "sensorLabel": "4K 120 Full Frame Exmor RS",
+      "sensorWidthMm": 35.6,
+      "sensorHeightMm": 23.8,
+      "nativeWidth": 6000,
+      "nativeHeight": 3376,
+      "imageCircleMm": 42.82,
+      "modes": [
+        {
+          "id": "full-frame",
+          "label": "Full Frame",
+          "note": "Internal XAVC; estimated optical area includes mandatory format/fps crops, excludes optional APS-C, stabilization and lens compensation crops",
+          "resolutions": [
+            {
+              "id": "a9m3-uhd",
+              "label": "UHD · 3840 × 2160",
+              "width": 3840,
+              "height": 2160,
+              "maxSensorFps": 119.88,
+              "activeWidthMm": 35.6,
+              "activeHeightMm": 20.025000000000002
+            },
+            {
+              "id": "a9m3-hd",
+              "label": "Full HD · 1920 × 1080",
+              "width": 1920,
+              "height": 1080,
+              "maxSensorFps": 119.88,
+              "activeWidthMm": 35.6,
+              "activeHeightMm": 20.025000000000002
+            }
+          ]
+        }
+      ],
+      "supportedCodecIds": [
+        "xavc-si-4k",
+        "xavc-s-4k-422",
+        "xavc-s-4k-420",
+        "xavc-hs-4k-422",
+        "xavc-hs-4k-420",
+        "xavc-si-hd",
+        "xavc-s-hd"
+      ]
+    },
+    {
+      "id": "a7sm3",
+      "name": "α7S III",
+      "manufacturer": "SONY",
+      "maxSensorFps": 119.88,
+      "sensorLabel": "4K 120 Full Frame Exmor R",
+      "sensorWidthMm": 35.6,
+      "sensorHeightMm": 23.8,
+      "nativeWidth": 4240,
+      "nativeHeight": 2385,
+      "imageCircleMm": 42.82,
+      "modes": [
+        {
+          "id": "full-frame",
+          "label": "Full Frame / Auto Crop",
+          "note": "Internal XAVC; estimated optical area includes mandatory format/fps crops, excludes optional APS-C, stabilization and lens compensation crops",
+          "resolutions": [
+            {
+              "id": "a7sm3-uhd",
+              "label": "UHD · 3840 × 2160",
+              "width": 3840,
+              "height": 2160,
+              "maxSensorFps": 119.88,
+              "activeWidthMm": 35.6,
+              "activeHeightMm": 20.025000000000002,
+              "sensorCrop": {
+                "minSensorFps": 100,
+                "factor": 1.1111111111111112
+              }
+            },
+            {
+              "id": "a7sm3-hd",
+              "label": "Full HD · 1920 × 1080",
+              "width": 1920,
+              "height": 1080,
+              "maxSensorFps": 119.88,
+              "activeWidthMm": 35.6,
+              "activeHeightMm": 20.025000000000002
+            }
+          ]
+        }
+      ],
+      "supportedCodecIds": [
+        "xavc-si-4k",
+        "xavc-s-4k-422",
+        "xavc-s-4k-420",
+        "xavc-hs-4k-422",
+        "xavc-hs-4k-420",
+        "xavc-si-hd",
+        "xavc-s-hd"
+      ]
+    },
+    {
+      "id": "a7m4",
+      "name": "α7 IV",
+      "manufacturer": "SONY",
+      "maxSensorFps": 119.88,
+      "sensorLabel": "4K Full Frame Exmor R",
+      "sensorWidthMm": 35.9,
+      "sensorHeightMm": 23.9,
+      "nativeWidth": 7008,
+      "nativeHeight": 3942,
+      "imageCircleMm": 43.13,
+      "modes": [
+        {
+          "id": "full-frame",
+          "label": "Full Frame / Auto Crop",
+          "note": "Internal XAVC; estimated optical area includes mandatory format/fps crops, excludes optional APS-C, stabilization and lens compensation crops",
+          "resolutions": [
+            {
+              "id": "a7m4-uhd",
+              "label": "UHD · 3840 × 2160",
+              "width": 3840,
+              "height": 2160,
+              "maxSensorFps": 59.94,
+              "activeWidthMm": 35.9,
+              "activeHeightMm": 20.193749999999998,
+              "sensorCrop": {
+                "minSensorFps": 50,
+                "factor": 1.5
+              }
+            },
+            {
+              "id": "a7m4-hd",
+              "label": "Full HD · 1920 × 1080",
+              "width": 1920,
+              "height": 1080,
+              "maxSensorFps": 119.88,
+              "activeWidthMm": 35.9,
+              "activeHeightMm": 20.193749999999998
+            }
+          ]
+        }
+      ],
+      "supportedCodecIds": [
+        "xavc-si-4k",
+        "xavc-s-4k-422",
+        "xavc-s-4k-420",
+        "xavc-hs-4k-422",
+        "xavc-hs-4k-420",
+        "xavc-si-hd",
+        "xavc-s-hd"
+      ]
+    },
+    {
+      "id": "a7rm5",
+      "name": "α7R V",
+      "manufacturer": "SONY",
+      "maxSensorFps": 119.88,
+      "sensorLabel": "8K Full Frame Exmor R",
+      "sensorWidthMm": 35.7,
+      "sensorHeightMm": 23.8,
+      "nativeWidth": 8640,
+      "nativeHeight": 4860,
+      "imageCircleMm": 42.91,
+      "modes": [
+        {
+          "id": "full-frame",
+          "label": "Full Frame / Auto Crop",
+          "note": "Internal XAVC; estimated optical area includes mandatory format/fps crops, excludes optional APS-C, stabilization and lens compensation crops",
+          "resolutions": [
+            {
+              "id": "a7rm5-uhd",
+              "label": "UHD · 3840 × 2160",
+              "width": 3840,
+              "height": 2160,
+              "maxSensorFps": 59.94,
+              "activeWidthMm": 35.7,
+              "activeHeightMm": 20.08125,
+              "sensorCrop": {
+                "minSensorFps": 50,
+                "factor": 1.2
+              }
+            },
+            {
+              "id": "a7rm5-8k",
+              "label": "8K · 7680 × 4320",
+              "width": 7680,
+              "height": 4320,
+              "maxSensorFps": 25,
+              "activeWidthMm": 35.7,
+              "activeHeightMm": 20.08125,
+              "sensorCrop": {
+                "minSensorFps": 0,
+                "factor": 1.2
+              }
+            },
+            {
+              "id": "a7rm5-hd",
+              "label": "Full HD · 1920 × 1080",
+              "width": 1920,
+              "height": 1080,
+              "maxSensorFps": 119.88,
+              "activeWidthMm": 35.7,
+              "activeHeightMm": 20.08125
+            }
+          ]
+        }
+      ],
+      "supportedCodecIds": [
+        "xavc-si-4k",
+        "xavc-s-4k-422",
+        "xavc-s-4k-420",
+        "xavc-hs-4k-422",
+        "xavc-hs-4k-420",
+        "xavc-hs-8k",
+        "xavc-si-hd",
+        "xavc-s-hd"
+      ]
+    },
+    {
+      "id": "a7m5",
+      "name": "α7 V",
+      "manufacturer": "SONY",
+      "maxSensorFps": 119.88,
+      "sensorLabel": "4K 120 Full Frame Exmor RS",
+      "sensorWidthMm": 35.9,
+      "sensorHeightMm": 23.9,
+      "nativeWidth": 7008,
+      "nativeHeight": 3942,
+      "imageCircleMm": 43.13,
+      "modes": [
+        {
+          "id": "full-frame",
+          "label": "Full Frame / Auto Crop",
+          "note": "Internal XAVC; estimated optical area includes mandatory format/fps crops, excludes optional APS-C, stabilization and lens compensation crops",
+          "resolutions": [
+            {
+              "id": "a7m5-uhd",
+              "label": "UHD · 3840 × 2160",
+              "width": 3840,
+              "height": 2160,
+              "maxSensorFps": 119.88,
+              "activeWidthMm": 35.9,
+              "activeHeightMm": 20.193749999999998,
+              "sensorCrop": {
+                "minSensorFps": 100,
+                "factor": 1.5
+              }
+            },
+            {
+              "id": "a7m5-hd",
+              "label": "Full HD · 1920 × 1080",
+              "width": 1920,
+              "height": 1080,
+              "maxSensorFps": 119.88,
+              "activeWidthMm": 35.9,
+              "activeHeightMm": 20.193749999999998
+            }
+          ]
+        }
+      ],
+      "supportedCodecIds": [
+        "xavc-si-4k",
+        "xavc-s-4k-422",
+        "xavc-s-4k-420",
+        "xavc-hs-4k-422",
+        "xavc-hs-4k-420",
+        "xavc-si-hd",
+        "xavc-s-hd"
+      ]
+    },
+    {
       "id": "ronin4d-8k",
       "name": "RONIN 4D · X9-8K",
       "manufacturer": "DJI",
@@ -5345,9 +5677,99 @@
       "supportedManufacturers": [
         "KINEFINITY"
       ]
+    },
+    {
+      "id": "xavc-si-4k",
+      "name": "XAVC S-I 4K",
+      "family": "XAVC",
+      "rateModel": "published-table",
+      "note": "All-Intra H.264 · 4:2:2 10-bit · Sony published rates",
+      "supportedManufacturers": [
+        "SONY"
+      ]
+    },
+    {
+      "id": "xavc-s-4k-422",
+      "name": "XAVC S 4K 10-bit",
+      "family": "XAVC",
+      "rateModel": "published-table",
+      "note": "Long-GOP H.264 · 4:2:2 10-bit · highest published setting",
+      "supportedManufacturers": [
+        "SONY"
+      ]
+    },
+    {
+      "id": "xavc-s-4k-420",
+      "name": "XAVC S 4K 8-bit",
+      "family": "XAVC",
+      "rateModel": "published-table",
+      "note": "Long-GOP H.264 · 4:2:0 8-bit · highest published setting",
+      "supportedManufacturers": [
+        "SONY"
+      ]
+    },
+    {
+      "id": "xavc-hs-4k-422",
+      "name": "XAVC HS 4K 4:2:2",
+      "family": "XAVC",
+      "rateModel": "published-table",
+      "note": "Long-GOP H.265 · 10-bit · highest published setting",
+      "supportedManufacturers": [
+        "SONY"
+      ]
+    },
+    {
+      "id": "xavc-hs-4k-420",
+      "name": "XAVC HS 4K 4:2:0",
+      "family": "XAVC",
+      "rateModel": "published-table",
+      "note": "Long-GOP H.265 · 10-bit · highest published setting",
+      "supportedManufacturers": [
+        "SONY"
+      ]
+    },
+    {
+      "id": "xavc-hs-8k",
+      "name": "XAVC HS 8K",
+      "family": "XAVC",
+      "rateModel": "published-table",
+      "note": "Long-GOP H.265 · 10-bit · highest published setting",
+      "supportedManufacturers": [
+        "SONY"
+      ]
+    },
+    {
+      "id": "xavc-si-hd",
+      "name": "XAVC S-I HD",
+      "family": "XAVC",
+      "rateModel": "published-table",
+      "note": "All-Intra H.264 · 4:2:2 10-bit · Sony published rates",
+      "supportedManufacturers": [
+        "SONY"
+      ]
+    },
+    {
+      "id": "xavc-s-hd",
+      "name": "XAVC S HD",
+      "family": "XAVC",
+      "rateModel": "published-table",
+      "note": "Long-GOP H.264 · highest published setting",
+      "supportedManufacturers": [
+        "SONY"
+      ]
     }
   ],
   "mediaOptions": [
+    {
+      "id": "128gb",
+      "label": "128 GB",
+      "capacityGb": 128
+    },
+    {
+      "id": "256gb",
+      "label": "256 GB",
+      "capacityGb": 256
+    },
     {
       "id": "512gb",
       "label": "512 GB",
@@ -6479,6 +6901,329 @@
       "23.976": 7,
       "29.97": 7,
       "59.94": 11
+    },
+    "a1m2|xavc-si-4k|a1m2-uhd": {
+      "23.976": 30.0,
+      "25": 31.25,
+      "29.97": 37.5,
+      "50": 62.5,
+      "59.94": 75.0
+    },
+    "a1m2|xavc-s-4k-422|a1m2-uhd": {
+      "23.976": 12.5,
+      "25": 17.5,
+      "29.97": 17.5,
+      "50": 25.0,
+      "59.94": 25.0,
+      "100": 35.0,
+      "119.88": 35.0
+    },
+    "a1m2|xavc-s-4k-420|a1m2-uhd": {
+      "23.976": 12.5,
+      "25": 12.5,
+      "29.97": 12.5,
+      "50": 18.75,
+      "59.94": 18.75,
+      "100": 25.0,
+      "119.88": 25.0
+    },
+    "a1m2|xavc-hs-4k-422|a1m2-uhd": {
+      "23.976": 12.5,
+      "50": 25.0,
+      "59.94": 25.0,
+      "100": 35.0,
+      "119.88": 35.0
+    },
+    "a1m2|xavc-hs-4k-420|a1m2-uhd": {
+      "23.976": 12.5,
+      "50": 18.75,
+      "59.94": 18.75,
+      "100": 25.0,
+      "119.88": 25.0
+    },
+    "a1m2|xavc-hs-8k|a1m2-8k": {
+      "23.976": 65.0,
+      "25": 65.0,
+      "29.97": 65.0
+    },
+    "a1m2|xavc-si-hd|a1m2-hd": {
+      "23.976": 11.125,
+      "25": 11.625,
+      "29.97": 13.875,
+      "50": 23.125,
+      "59.94": 27.75
+    },
+    "a1m2|xavc-s-hd|a1m2-hd": {
+      "23.976": 6.25,
+      "25": 6.25,
+      "29.97": 6.25,
+      "50": 6.25,
+      "59.94": 6.25,
+      "100": 12.5,
+      "119.88": 12.5
+    },
+    "a9m3|xavc-si-4k|a9m3-uhd": {
+      "23.976": 30.0,
+      "25": 31.25,
+      "29.97": 37.5,
+      "50": 62.5,
+      "59.94": 75.0
+    },
+    "a9m3|xavc-s-4k-422|a9m3-uhd": {
+      "23.976": 12.5,
+      "25": 17.5,
+      "29.97": 17.5,
+      "50": 25.0,
+      "59.94": 25.0,
+      "100": 35.0,
+      "119.88": 35.0
+    },
+    "a9m3|xavc-s-4k-420|a9m3-uhd": {
+      "23.976": 12.5,
+      "25": 12.5,
+      "29.97": 12.5,
+      "50": 18.75,
+      "59.94": 18.75,
+      "100": 25.0,
+      "119.88": 25.0
+    },
+    "a9m3|xavc-hs-4k-422|a9m3-uhd": {
+      "23.976": 12.5,
+      "50": 25.0,
+      "59.94": 25.0,
+      "100": 35.0,
+      "119.88": 35.0
+    },
+    "a9m3|xavc-hs-4k-420|a9m3-uhd": {
+      "23.976": 12.5,
+      "50": 18.75,
+      "59.94": 18.75,
+      "100": 25.0,
+      "119.88": 25.0
+    },
+    "a9m3|xavc-si-hd|a9m3-hd": {
+      "23.976": 11.125,
+      "25": 11.625,
+      "29.97": 13.875,
+      "50": 23.125,
+      "59.94": 27.75
+    },
+    "a9m3|xavc-s-hd|a9m3-hd": {
+      "23.976": 6.25,
+      "25": 6.25,
+      "29.97": 6.25,
+      "50": 6.25,
+      "59.94": 6.25,
+      "100": 12.5,
+      "119.88": 12.5
+    },
+    "a7sm3|xavc-si-4k|a7sm3-uhd": {
+      "23.976": 30.0,
+      "25": 31.25,
+      "29.97": 37.5,
+      "50": 62.5,
+      "59.94": 75.0
+    },
+    "a7sm3|xavc-s-4k-422|a7sm3-uhd": {
+      "23.976": 12.5,
+      "25": 17.5,
+      "29.97": 17.5,
+      "50": 25.0,
+      "59.94": 25.0,
+      "100": 35.0,
+      "119.88": 35.0
+    },
+    "a7sm3|xavc-s-4k-420|a7sm3-uhd": {
+      "23.976": 12.5,
+      "25": 12.5,
+      "29.97": 12.5,
+      "50": 18.75,
+      "59.94": 18.75,
+      "100": 25.0,
+      "119.88": 25.0
+    },
+    "a7sm3|xavc-hs-4k-422|a7sm3-uhd": {
+      "23.976": 12.5,
+      "50": 25.0,
+      "59.94": 25.0,
+      "100": 35.0,
+      "119.88": 35.0
+    },
+    "a7sm3|xavc-hs-4k-420|a7sm3-uhd": {
+      "23.976": 12.5,
+      "50": 18.75,
+      "59.94": 18.75,
+      "100": 25.0,
+      "119.88": 25.0
+    },
+    "a7sm3|xavc-si-hd|a7sm3-hd": {
+      "23.976": 11.125,
+      "25": 11.625,
+      "29.97": 13.875,
+      "50": 23.125,
+      "59.94": 27.75
+    },
+    "a7sm3|xavc-s-hd|a7sm3-hd": {
+      "23.976": 6.25,
+      "25": 6.25,
+      "29.97": 6.25,
+      "50": 6.25,
+      "59.94": 6.25,
+      "100": 12.5,
+      "119.88": 12.5
+    },
+    "a7m4|xavc-si-4k|a7m4-uhd": {
+      "23.976": 30.0,
+      "25": 31.25,
+      "29.97": 37.5,
+      "50": 62.5,
+      "59.94": 75.0
+    },
+    "a7m4|xavc-s-4k-422|a7m4-uhd": {
+      "23.976": 12.5,
+      "25": 17.5,
+      "29.97": 17.5,
+      "50": 25.0,
+      "59.94": 25.0
+    },
+    "a7m4|xavc-s-4k-420|a7m4-uhd": {
+      "23.976": 12.5,
+      "25": 12.5,
+      "29.97": 12.5,
+      "50": 18.75,
+      "59.94": 18.75
+    },
+    "a7m4|xavc-hs-4k-422|a7m4-uhd": {
+      "23.976": 12.5,
+      "50": 25.0,
+      "59.94": 25.0
+    },
+    "a7m4|xavc-hs-4k-420|a7m4-uhd": {
+      "23.976": 12.5,
+      "50": 18.75,
+      "59.94": 18.75
+    },
+    "a7m4|xavc-si-hd|a7m4-hd": {
+      "23.976": 11.125,
+      "25": 11.625,
+      "29.97": 13.875,
+      "50": 23.125,
+      "59.94": 27.75
+    },
+    "a7m4|xavc-s-hd|a7m4-hd": {
+      "23.976": 6.25,
+      "25": 6.25,
+      "29.97": 6.25,
+      "50": 6.25,
+      "59.94": 6.25,
+      "100": 12.5,
+      "119.88": 12.5
+    },
+    "a7rm5|xavc-si-4k|a7rm5-uhd": {
+      "23.976": 30.0,
+      "25": 31.25,
+      "29.97": 37.5,
+      "50": 62.5,
+      "59.94": 75.0
+    },
+    "a7rm5|xavc-s-4k-422|a7rm5-uhd": {
+      "23.976": 12.5,
+      "25": 17.5,
+      "29.97": 17.5,
+      "50": 25.0,
+      "59.94": 25.0
+    },
+    "a7rm5|xavc-s-4k-420|a7rm5-uhd": {
+      "23.976": 12.5,
+      "25": 12.5,
+      "29.97": 12.5,
+      "50": 18.75,
+      "59.94": 18.75
+    },
+    "a7rm5|xavc-hs-4k-422|a7rm5-uhd": {
+      "23.976": 12.5,
+      "50": 25.0,
+      "59.94": 25.0
+    },
+    "a7rm5|xavc-hs-4k-420|a7rm5-uhd": {
+      "23.976": 12.5,
+      "50": 18.75,
+      "59.94": 18.75
+    },
+    "a7rm5|xavc-hs-8k|a7rm5-8k": {
+      "23.976": 50.0,
+      "25": 50.0
+    },
+    "a7rm5|xavc-si-hd|a7rm5-hd": {
+      "23.976": 11.125,
+      "25": 11.625,
+      "29.97": 13.875,
+      "50": 23.125,
+      "59.94": 27.75
+    },
+    "a7rm5|xavc-s-hd|a7rm5-hd": {
+      "23.976": 6.25,
+      "25": 6.25,
+      "29.97": 6.25,
+      "50": 6.25,
+      "59.94": 6.25,
+      "100": 12.5,
+      "119.88": 12.5
+    },
+    "a7m5|xavc-si-4k|a7m5-uhd": {
+      "23.976": 30.0,
+      "25": 31.25,
+      "29.97": 37.5,
+      "50": 62.5,
+      "59.94": 75.0
+    },
+    "a7m5|xavc-s-4k-422|a7m5-uhd": {
+      "23.976": 12.5,
+      "25": 17.5,
+      "29.97": 17.5,
+      "50": 25.0,
+      "59.94": 25.0,
+      "100": 35.0,
+      "119.88": 35.0
+    },
+    "a7m5|xavc-s-4k-420|a7m5-uhd": {
+      "23.976": 12.5,
+      "25": 12.5,
+      "29.97": 12.5,
+      "50": 18.75,
+      "59.94": 18.75,
+      "100": 25.0,
+      "119.88": 25.0
+    },
+    "a7m5|xavc-hs-4k-422|a7m5-uhd": {
+      "23.976": 12.5,
+      "50": 25.0,
+      "59.94": 25.0,
+      "100": 35.0,
+      "119.88": 35.0
+    },
+    "a7m5|xavc-hs-4k-420|a7m5-uhd": {
+      "23.976": 12.5,
+      "50": 18.75,
+      "59.94": 18.75,
+      "100": 25.0,
+      "119.88": 25.0
+    },
+    "a7m5|xavc-si-hd|a7m5-hd": {
+      "23.976": 11.125,
+      "25": 11.625,
+      "29.97": 13.875,
+      "50": 23.125,
+      "59.94": 27.75
+    },
+    "a7m5|xavc-s-hd|a7m5-hd": {
+      "23.976": 6.25,
+      "25": 6.25,
+      "29.97": 6.25,
+      "50": 6.25,
+      "59.94": 6.25,
+      "100": 12.5,
+      "119.88": 12.5
     }
   }
 }

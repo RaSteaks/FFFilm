@@ -65,7 +65,7 @@
               <section class="content-section" id="overview" aria-labelledby="overview-title">
                 <p class="section-label">01 / SCOPE</p>
                 <h2 id="overview-title">概览</h2>
-                <p>本隐私政策适用于 FFFilm 当前版本的 iPhone、iPad 和 Mac 应用，更新日期为 <strong>2026 年 9 月 24 日</strong>。</p>
+                <p>本隐私政策适用于 FFFilm 当前版本的 iPhone、iPad 和 Mac 应用，更新日期为 <strong>2026 年 9 月 27 日</strong>。</p>
                 <p>我们根据当前应用代码和已启用的系统能力整理本页。如果未来版本改变数据处理方式，我们会同步更新政策内容。</p>
                 <div class="callout">
                   <p class="callout-label">NOTICE / 摘要</p>
@@ -98,19 +98,25 @@
                     <dt>胶片项目与导出（仅 Mac）</dt>
                     <dd>胶片切片的 .fffilm 项目文件由你选择位置保存，内容包括扫描文件路径、只读访问书签、输入色彩空间（选择自定义 ICC 时包含其数据）、片框几何和导出设置。导出图像只写入你主动选择的文件夹。</dd>
                   </div>
+                  <!-- Negative preview only accesses user-selected images and an explicitly authorized camera. -->
+                  <div class="data-row">
+                    <dt>负片预览（iPhone / iPad）</dt>
+                    <dd>应用只读取你选择的照片或文件；点击打开相机后才请求相机权限，不请求麦克风权限。负片图像、相机帧和片基颜色仅用于设备本地处理。输入副本及导出暂存文件保存在应用临时目录，不再使用时清理，不建立云端图库。</dd>
+                  </div>
                   <div class="data-row">
                     <dt>支持邮件</dt>
                     <dd>如果你主动发送邮件，我们会收到你的邮箱地址、邮件正文和你主动附带的附件，用于回复和排查问题。</dd>
                   </div>
                 </dl>
-                <p>FFFilm 当前不以应用功能为目的收集姓名、电话、精确位置、通讯录、照片、麦克风或其他身份信息。请不要在支持邮件中附带不必要的敏感信息。</p>
+                <p>FFFilm 当前不以应用功能为目的收集姓名、电话、精确位置、通讯录、麦克风或其他身份信息，也不会向开发者上传你选择的照片或相机图像。请不要在支持邮件中附带不必要的敏感信息。</p>
               </section>
 
               <section class="content-section" id="sharing" aria-labelledby="sharing-title">
                 <p class="section-label">03 / TRANSFER</p>
                 <h2 id="sharing-title">数据是否上传或共享</h2>
                 <p>否。当前版本的核心计算和本地偏好不需要网络连接；应用不会将计算输入、计算结果或本地偏好发送给开发者，也不会出售、出租或与广告商共享这些信息。</p>
-                <p>胶片切片的导入、编辑和导出全部是本地文件操作：应用只读取你主动选择的扫描文件（Mac 版运行在沙盒中，通过系统签发的只读书签记住你的选择），导出只写入你主动选择的文件夹。扫描图像与导出结果不会离开你的设备。</p>
+                <p>胶片切片的导入、编辑和导出全部是本地文件操作：应用只读取你主动选择的扫描文件（Mac 版运行在沙盒中，通过系统签发的只读书签记住你的选择），导出只写入你主动选择的文件夹。应用不会主动上传扫描图像与导出结果。</p>
+                <p>iPhone / iPad 的负片预览可通过系统分享面板保存或分享 TIFF、PNG、JPG 副本。如果你选择云盘或其他应用作为目标，文件将按该目标服务的规则传输；这一操作由你主动发起。</p>
                 <p>当前工程没有集成账户、广告、分析统计、崩溃报告或云同步服务。你主动发出的支持邮件属于你与收件方之间的通信，会按照所使用邮箱服务的规则传输和保存。</p>
               </section>
 

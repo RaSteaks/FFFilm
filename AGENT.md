@@ -1,5 +1,65 @@
 # FFFilm
 
+## External image opening (2026-09-29)
+
+- Declare TIFF/JPEG/PNG/HEIC/HEIF as alternate Viewer document types in an iOS-only plist. Use system document-open delivery rather than a share extension or custom URL-scheme workaround.
+- ContentView owns the persistent NegativeStore and handles onOpenURL before the Film Preview tab exists, selects that tab, and dismisses the calculator camera picker. NegativePreviewView observes an external-open identity to reveal the document workspace and dismiss import/settings sheets. Existing camera fixtures remain confined to DEBUG simulator setup.
+- Retain security-scoped URL access across asynchronous import; coordinate provider reads and copy into private temporary storage. Decoding validates actual content, preserving the current asset/base on failure. A pending Photos transaction completes before the latest queued external file is imported.
+- Regression coverage includes source replacement, corrupt/non-file URLs, private-copy lifetime, queued imports during Photos writes, and system document-open UI delivery.
+- Verification: iPhone 17 Pro / iOS 26.3 passed 18 NegativeStoreTests and the NegativeTests renderer suite after coordinated reading (opt-in large-TIFF stress skipped). All five NegativeUITests passed in the initial routing run; the extended TIFF workflow subsequently verified Photos → Share → FFFilm → automatic Film Preview import (`/tmp/FFFilm-photos-share-verified.xcresult`). Cold and repeated document-open UI delivery passed. iOS-device/macOS builds, macOS NegativeTests, packaged plist inspection, localized catalog validation, strict UI static audit and diff checks passed. Physical-device and real iCloud-provider behavior remain unverified.
+
+## Save positive to Photos (2026-09-29)
+
+- Add Save positive to Photos (JPG) to the shared export menu for file review and immersive camera. Export the committed positive at source dimensions through the existing renderer, regardless of comparison/zoom, then import the encoded file with PhotoKit. Existing TIFF/PNG/JPG sharing remains available.
+- NegativePhotoLibrary requests add-only access, with English/Chinese usage descriptions scoped to iOS device and simulator builds. NegativeStore owns progress and success/permission/failure alerts, prevents duplicate saves, and retains/deletes the temporary file around the asynchronous Photos transaction. Rendering/authorization can be cancelled; submitted Photos transactions finish across backgrounding and cannot be presented as cancellable.
+- Unit coverage includes saved dimensions, duplicate taps, denied access, write failure/retry, cancellation before submission and file lifetime across a submitted transaction. The existing TIFF UI workflow now also saves through real PhotoKit in the simulator.
+- Verification: iPhone 17 Pro / iOS 26.3 passed all 16 NegativeStoreTests and 4 NegativeUITests, including first-run system permission and actual PhotoKit success (`/tmp/FFFilm-photos-tests.xcresult`). Unsigned iOS-device and macOS builds passed. Built iOS bundles contain localized add-only usage text and no read-library usage key. String-catalog validation, strict UI static audit and diff checks passed. Physical-device Photos saving was not exercised.
+
+## Preview review fixes (2026-09-28)
+
+- Publish zoom renders through NegativeImageState only when their actual long-side resolution exceeds the cached variant. Memory-capped or equal-size results retain the current original/positive bitmap; source import and film-base changes still replace their images normally.
+- Pass the owned source URL into NegativeZoomView. Preserve the viewport across tiers/comparison for one source, but reset to centered fit for every new source, including identical preview dimensions. Camera frames keep their stable nil file identity.
+- Added deterministic bitmap-publication and UIKit viewport regressions, covering both comparison variants, unchanged-resolution results, retained zoom/pan, changed aspect ratio and same-size replacement files.
+- Verification: iPhone 17 Pro / iOS 26.3 passed all 13 NegativeStoreTests and all 4 NegativeUITests (`/tmp/FFFilm-review-fixes.xcresult`). Strict UI static audit and `git diff --check` passed. Memory-capped publication was simulated with smaller bitmaps; no physical-device memory-pressure run was performed.
+
+## File preview follow-up (2026-09-28)
+
+- Keep progress/errors above the tab bar with a bottom safe-area inset. File previews start at 1800px and sharpen after a 250ms settled zoom demand, capped by source dimensions and the device memory budget; preserve the viewport when swapping bitmaps. Camera resolution, source sampling and full-size exports remain unchanged.
+- Review fixed unsigned memory-budget subtraction and added post-render cancellation/source/calibration checks. Both comparison directions now request the retained display resolution. Added regression coverage for switching back to the original after zooming the positive.
+- Removed the temporary large-TIFF diagnostic UI test and updated DESIGN.md and the workflow documentation. Verification: iPhone 17 Pro (iOS 26.3) NegativeTests and NegativeStoreTests plus all four NegativeUITests passed (`/tmp/FFFilm-negative-followup.xcresult`); after adding the comparison regression, all 11 NegativeStoreTests passed (`/tmp/FFFilm-negative-store-final.xcresult`). The opt-in large-TIFF stress case was skipped. Unsigned iOS-device build, string-catalog JSON validation and `git diff --check` passed. Physical-device memory/camera acceptance remains unverified.
+
+## Fill-screen framing removal (2026-09-28)
+
+- Removed the Full frame / Fill screen display toggle from the immersive camera at the user's request: the complete frame is always fitted outside the header/action panel, so film edges are never cropped and no display-mode entry exists.
+- Dropped `cameraFillsScreen` state, the framing button, the `fillsScreen` parameter chain through NegativeImagePanel/NegativeCanvas/NegativeZoomView and the `max()` scale branch in `layoutSubviews`; the `showsWholeFrame` overlay-inset condition collapses to the always-fit layout. Deleted the `negative.camera.fit`/`negative.camera.fill` string-catalog keys.
+- The UI test now asserts the full frame stays within screen bounds instead of toggling framing. Design/workflow docs state the fixed fit behavior.
+
+## Review cleanup after EV removal (2026-09-28)
+
+- Full-diff review (every changed file read end to end, all four UI tests executed on simulator) found no correctness bugs but two leftovers from the immersive-camera rework: `NegativeStore.cameraTapSamplesBase` had no remaining writer of `true` after the tap-mode switch removal, and five localization keys were orphaned (`negative.cameraSampleHint`, `negative.camera.tapAction/tapFocus/tapBase`, `negative.camera.autoFocus`). The workflow doc's tap-interaction sentence still described the removed segmented control.
+- Removed the dead property with its unreachable hint branch, tap-sampling conditions and no-op `onAppear` reset; camera taps are now always focus during live preview and the explicit Sample action is the only sampling entry. Deleted the five orphaned string-catalog keys and aligned the doc sentence with the explicit-sample-only flow.
+- Verification: iOS build, unit tests and the camera UI suite passed after cleanup; string catalog JSON validated and an automated scan confirmed no orphaned `negative.*` keys remain.
+
+## Exposure compensation removal (2026-09-28)
+
+- Removed manual EV exposure compensation from the negative camera: the light table is normally bright enough, and continuous auto-exposure plus film-base sampling already normalizes global brightness. This also removes the heaviest control path, where each slider commit restarted the whole capture session.
+- Dropped `NegativeCameraSettings.exposureBias`, `NegativeCameraConfiguration.exposureRange`, `NegativeStore.setExposureBias`, `setExposureTargetBias` at capture start, the settings-sheet slider/reset row, both localization keys and the UI-test slider step. Unit-test calibration invalidation now asserts through a resolution change instead of an EV change.
+- Continuous auto-exposure/white balance and the lock-on-sampling workflow are unchanged. Design and workflow docs updated to state that brightness is handled by AE plus base sampling.
+
+## White balance lock compatibility (2026-09-28)
+
+- Sampling locks the current AWB result with `AVCaptureDevice.currentWhiteBalanceGains`, rather than passing the numeric `deviceWhiteBalanceGains` back as custom gains. Devices without custom-gain locking support accept this sentinel; explicit gains can raise an Objective-C exception even when `.locked` white balance mode is supported.
+- Preserve the existing mode checks, configuration lock, completion callback, generation guard and subsequent-frame settling. This workflow freezes automatic white balance and does not need custom RGB gains.
+- Verification: unsigned iOS device build and `git diff --check` passed. Actual virtual-camera sampling still requires physical-device verification.
+
+## iPad live-camera memory investigation (2026-09-27)
+
+- Report: iPad14,3 running the negative live camera was terminated for memory pressure during an approximately 20-minute Xcode debug session. The user confirmed the camera remained in original mode without film-base sampling or positive conversion.
+- Read-only profiling of the running iPad app: a 45-second Activity Monitor trace measured 60.61–60.66 MiB physical footprint. A subsequent 180-second trace, after attaching Allocations, measured 92.99–93.06 MiB with no sustained growth. Different profiler attachment states are not a before/after code comparison.
+- The 30-second Allocations trace recorded 578 Core Image VM allocations, of which 576 were transient and two remained (14.06 MiB). Its roughly 3.97 GiB cumulative allocation total is churn, not resident memory or evidence of a leak.
+- Xcode showed its debug session had ended during this investigation. The device's available Jetsam report did not include FFFilm or match the reported termination time. These captures do not reproduce or resolve the original kill; do not claim a fix or long-duration acceptance. Next reproduce original-mode live preview under the original Xcode diagnostics and capture memory growth before changing the rendering path. View debugging was enabled in the supplied failure metadata, but no evidence yet establishes it as the cause.
+- Local trace artifacts: `/tmp/FFFilm-live-footprint.trace`, `/tmp/FFFilm-live-allocations.trace`, `/tmp/FFFilm-live-long.trace`. No production code was changed for this investigation.
+
 ## Current app icon (2026-09-21)
 
 - **Shipping integration:** user approved the grayscale time-slices PNG for Icon Composer and all project icons. `design/icon/format.icon` is the native single-raster source; `FFFilm/AppIcon.icon` is its synchronized build input. Xcode 26.3 compiles it under the existing AppIcon name. `script/update_icons.sh` refreshes the native copy, appearance previews and all 13 raster slots.
@@ -321,3 +381,109 @@ All displayed rates are video-only planning estimates. Validate camera firmware,
 - Apple WWDC26 confirms iPhone retains bottom tab navigation in iOS 27 (https://developer.apple.com/videos/play/wwdc2026/278/). Local tooling is Xcode 26.3 with iOS 26.2 SDK / iOS 26.3 simulator runtime, so iOS 27 runtime appearance remains unverified.
 - Present the camera-library sheet at the content root, outside the compact tab environment; `QuickStartView` receives its presentation binding. This preserves the native wide iPad list/detail sheet without custom widths. Compact header comparison actions use the symbol plus count, retaining a full accessible label.
 - Verification: iOS Simulator and macOS builds pass; all 59 unit tests pass. Focused iPhone 17 Pro / 17e navigation, settings-unit synchronization, valid/invalid draft preservation, core actions and camera tests pass. iPhone 17 Pro Max landscape and iPad Pro 13-inch bottom navigation plus portrait/landscape workbench and camera split checks pass. Three page screenshots from iPhone 17e were visually inspected. Strict UI audit, localization JSON validation and `git diff --check` pass. DESIGN.md lint reports zero errors and 13 pre-existing token warnings. iOS 27 runtime appearance, VoiceOver and largest Dynamic Type were not exercised.
+
+## iOS negative preview implementation (2026-09-27; not released)
+
+- Design contract: `docs/ios-negative-film-preview.md`; suggested branch `codex/ios-negative-film-preview`. Release scope is iPhone and iPad/iPadOS in the existing iOS app, with both device families required for acceptance; no macOS feature addition or deployment-target increase.
+- Add an independent iOS negative-preview workflow: camera or selected photo/file including large 8/16-bit TIFF, explicit film-base region sampling, locked capture configuration, managed-color inversion, comparison and TIFF/PNG/JPG export. No manual grading, presets, batch processing or additional editing tools.
+- Preserve current macOS import/slicing/export behavior; historical grading/sampling entries above describe removed implementations, not available reusable features.
+- Bind samples to source/capture configuration, reject invalid samples, require resampling after capture changes, and share the exact frozen frame through the same processing pipeline. First release is a viewing aid, not calibrated film reconstruction or full-resolution camera scanning.
+- File export retains oriented source dimensions; camera export uses the frozen frame dimensions. Specify 16-bit sRGB TIFF/PNG and 8-bit sRGB JPG. Large-TIFF acceptance includes approximately 85MP 16-bit RGB input through all three exports on the lowest supported real device; no silent downsampling or unverified unlimited-size claim.
+- Implemented `NegativePreviewView`, `NegativeStore`, `NegativeCamera`, and platform-neutral `NegativeRenderer`/`NegativeRaster`. Import via PhotosPicker file transfer or Files; preserve managed color and EXIF; sample the source region; invert encoded sRGB after linear base normalization. No additional editing tools.
+- Large-file rendering crops before GPU upload, renders bounded stripes into preallocated disk backing, and serializes file jobs. One shared full-resolution CPU pixel buffer prevents repeated LZW/PackBits decoding; real devices check their remaining process memory budget before decoding/export; do not claim fixed memory or unlimited scan size. Sharing retains temporary output until the system finishes reading it.
+- Camera work belongs to a serial queue with one pending main-actor frame delivery, lock completion gating, cancellation generations, background interruption handling and thermal fallback. The iOS-only permission string catalog is excluded on macOS. No microphone access or full photo-library permission.
+- Verification is recorded in `docs/ios-negative-film-preview.md`. The user requested simulator verification first; real camera timing, real-film appearance and lowest-device memory/thermal limits remain release gates. No app-store submission or production publication was performed.
+
+- Verified: iPhone Simulator full unit target plus negative UI and tab-state regression; iPad Simulator negative unit/state/UI checks; both simulators completed uncompressed and LZW 85MP 16-bit TIFF through all three full-size exports. Full macOS unit target and unsigned iOS device build pass. Strict UI audit/diff checks pass; DESIGN.md lint retains 13 pre-existing warnings. Real-device camera, thermal and memory acceptance remains outstanding at the user's request to prioritize simulator validation.
+
+## Negative preview review follow-up
+
+- Use typed workflow phases for camera-frame gating; localized busy keys are display values only. Ignore user cancellation when reporting import errors.
+- PhotosPicker transfers ownership of its temporary copy directly to the renderer; failed/cancelled loads delete it and successful assets retain cleanup responsibility.
+- Mirror image-centering insets on both axes and keep the Chinese README fully localized.
+- White-balance locking uses the completion-handler API returning Void; no Boolean-return check applies.
+
+## Negative camera failure recovery (2026-09-27)
+
+- Track requested capture independently of `AVCaptureSession.isRunning`, so startup failures and system-stopped interruptions reach the workflow; explicit stop/configuration failure clears that state.
+- Camera errors use the suspension path to freeze the last displayed source, cancel pending work, invalidate late callbacks and discard the old film base. Static resampling and export operate on that same frozen source.
+- Inject the camera capture interface for hardware-independent workflow regression tests. Targeted iPhone Simulator negative tests passed, including startup failure and interrupted-frame sampling/PNG export. Real-device notification timing remains unverified; the optional large-TIFF test was not enabled for this fix.
+- Verification: iOS Simulator build and 24 focused negative unit-test executions passed; the opt-in large TIFF stress test remained skipped. Cancel-import UI regression passed on an isolated iPhone 17 Pro simulator after shared-simulator interference. Zoom/rotation visual behavior and physical-camera behavior were not interactively verified in this follow-up.
+
+## Film preview navigation naming (2026-09-28)
+
+- Rename the shared iPhone/iPad tab, page title and empty-state heading to 胶片预览 / Film Preview through `negative.title`. Keep the existing localization key, workspace identity and behavior; update navigation test labels and user-facing documentation.
+- Verified both locale values and shared title consumers; string-catalog JSON and `git diff --check` pass.
+
+## Film-base target and session calibration (2026-09-28)
+
+- Add a visible center dot/crosshair and an accessible Return to center button to film-base selection. Before calibration, tapping live camera pixels starts the existing exposure/white-balance lock workflow at the tapped source position; the sample button defaults to center.
+- Preserve the selected point through locked-frame delivery, block sampling edits while rendering, and reuse the existing confirmed RGB base for subsequent positive frames. Calibration remains session-local; no frame history or persisted camera calibration is added.
+- Keep bilingual hints and existing cancel/re-sample behavior. The original-mode memory termination investigation remains unresolved; this interaction change is not a memory fix.
+- Verified: iPad Simulator focused negative unit/state suite passed (25 executions; opt-in large TIFF stress test skipped), iPad and iPhone sampling/comparison/three-format-export UI tests passed, center-target screenshots inspected, unsigned iOS device build passed, strict UI audit and diff checks passed. Physical-camera interaction and the earlier long-duration memory failure remain unverified for this change.
+- Follow-up: reduced the sampling marker's center-dot diameter from 3pt to 1.5pt, crosshair arms from 8pt to 3pt and stroke from 2pt to 1pt. Source sampling bounds and touch controls are unchanged.
+
+## Camera controls and focus (2026-09-28)
+
+- Discover physical rear wide/ultra-wide/telephoto devices, default to wide, and expose only selected-input supported 720p/1080p/4K video presets. Keep default 720p and full preset-sized buffers; do not silently use preview proxies. Limit 4K processing to 15fps and ordinary delivery to 30fps (10fps when seriously hot).
+- Default taps to focus, with an explicit Focus / Sample film base selector. Restore continuous autofocus at capture start and via an accessible action, support rotated source-coordinate taps, show a transient request marker and the device-reported minimum focus distance. Do not claim the marker proves focus convergence. Wait for focus as well as exposure/white balance before freezing a sample.
+- Add capability-bounded exposure compensation (up to ±3EV), commit on slider release, and provide reset. Lens, format and exposure changes restart capture, clear the session calibration and require re-sampling. Pause/export/sampling disable controls. Reject previous-generation frame acknowledgements and buffers preceding the new capture start.
+- NegativeCameraSettings owns immutable configuration/capability values and focus-coordinate mapping; NegativeCameraControls owns native controls. A simulator-only DEBUG capture fixture supports UI verification; it is excluded from device/release builds. This is not a verified fix for the earlier memory termination.
+- Verified: focused negative rendering/state suite passed (27 executions, opt-in large TIFF stress test skipped); final camera-state suite rerun passed after guarding startup against stale configuration callbacks. Camera fixture UI flow passed on iPad and iPhone, including tap intent, calibration invalidation, lens/resolution switching, EV adjustment and autofocus recovery. iPhone file sampling/comparison/all-format export regression passed. Screenshots inspected; expanded settings reserve preview space so exposure/autofocus sit above the tab bar. Final unsigned iOS device build, bilingual string checks, strict UI audit and diff checks passed. Physical lens/AF/EV behavior and prior long-duration memory termination were not validated on hardware in this change.
+
+## Sony α mirrorless support (2026-09-28)
+
+- Add α1 II, α9 III, α7S III, α7 IV, α7R V and α7 V with internal XAVC capture only: XAVC S-I 4K, XAVC S 4K (8-bit 4:2:0 and 10-bit 4:2:2), XAVC HS 4K (4:2:0/4:2:2 10-bit), XAVC HS 8K (α1 II 4:2:2, α7R V 4:2:0), XAVC S-I HD and XAVC S HD. Camera-level codec allowlists exclude generic HEVC and Apple ProRes from α bodies; `supportedManufacturers: [SONY]` plus the published-table row requirement keep the new codecs off cinema cameras.
+- Rate rows store MB/s (Mbps ÷ 8) at the published cadences only. Where Sony lists multiple quality settings inside one format, rows use the highest published setting per frame rate; lower options are not separately cataloged. HD long-GOP rows use the published XAVC S HD rates. 8K is XAVC HS only; α1 II publishes 520 Mb/s at 23.98/25/29.97p and α7R V 400 Mb/s at 24/25p.
+- Resolution and camera maxima use exact published cadences (119.88/59.94/29.97/25), not marketing labels (120/60/30p); α7 IV and α7R V cap UHD at 59.94p. Stable full-frame mode IDs per body: mandatory format/cadence crops affect optical area but not published data rates. XAVC HS 4K rows exist only at Sony's published cadences (23.98/50/59.94/100/119.88p) where those models omit 25/29.97p HS.
+- Media picker gains 128 GB and 256 GB SD-card options ahead of the existing capacities; existing media IDs and defaults are unchanged.
+- Sources: official Sony product specification pages (sony.co.id regional official site, matching sony.com) for [α1 II](https://www.sony.co.id/en/electronics/support/e-mount-body-ilce-1-series/ilce-1m2/specifications), [α9 III](https://www.sony.co.id/en/electronics/support/e-mount-body-ilce-9-series/ilce-9m3/specifications), [α7S III](https://www.sony.co.id/en/electronics/support/e-mount-body-ilce-7-series/ilce-7sm3/specifications), [α7 IV](https://www.sony.co.id/en/electronics/support/e-mount-body-ilce-7-series/ilce-7m4/specifications), [α7R V](https://www.sony.co.id/en/electronics/support/e-mount-body-ilce-7-series/ilce-7rm5/specifications), [α7 V](https://www.sony.co.id/en/electronics/support/e-mount-body-ilce-7-series/ilce-7m5/specifications).
+- `SonyMirrorlessTests` covers per-resolution codec counts and XAVC-only allowlists, exact published rate anchors (600/520/400/280/222/100 Mb/s and 270 GB/h on a 256 GB card), published frame-rate availability per body, and stale-codec normalization across resolution switches. `catalogMigration` pinned counts updated to 39 cameras / 23 codecs / 87 rate rows.
+- Verified: complete macOS `FFFilmTests` target passes and the iOS Simulator build succeeds (separate DerivedData, signing disabled). macOS UI-test failures in the full-scheme run remain the pre-existing host automation limitation; not attributable to this change.
+
+
+## Sony optical-area correction (2026-09-28)
+
+- Keep existing camera/mode/resolution IDs and published rate rows. All six α bodies declare a base optical width equal to sensor width and a 16:9 height; encoded UHD/HD downsampling no longer implies sensor cropping.
+- Optional `Resolution.sensorCrop` metadata applies at normalized SENSOR FPS, never PROJECT FPS. Mandatory crops: α7 IV UHD ≥50fps ≈1.5x; α7 V UHD ≥100fps ≈1.5x; α1 II UHD ≥100fps ≈1.1x; α7S III UHD ≥100fps uses the published 10% image crop; α7R V UHD ≥50fps and all 8K ≈1.2x. α9 III retains full width at the cataloged cadences. Existing profiles without metadata preserve their geometry.
+- Dimensions derived from sensor width and manufacturer approximate crop factors are planning estimates, not measured optical dimensions. Profiles assume full-frame-compatible lenses and exclude optional APS-C selection, digital stabilization, breathing compensation, RAW output and S&Q. Mode labels/notes state the automatic-crop scope.
+- Sources: Sony angle-of-view guides for [α1 II](https://helpguide.sony.net/ilc/2440/v1/en/contents/0404M_angle_of_view.html), [α9 III](https://helpguide.sony.net/ilc/2380/v1/en/contents/0404M_angle_of_view.html), [α7 IV](https://helpguide.sony.net/ilc/2110/v1/en/contents/TP1000655359.html), [α7R V](https://helpguide.sony.net/ilc/2230/v1/en/contents/TP0002925752.html), [α7 V](https://helpguide.sony.net/ilc/2540/v1/en/contents/0414_apsc_shooting.html), and [α7S III](https://helpguide.sony.net/ilc/2410/v1/en/contents/0404M_angle_of_view.html) with Sony's [10% crop specification](https://www.sony.co.uk/electronics/exwarranty).
+- Regression coverage checks full-width UHD/HD, mandatory crop boundaries in PAL/NTSC, 8K differences, image-circle/S35 factors, playback independence and normalization of unsupported capture rates. Existing bitrate/media tests remain unchanged.
+- Verification: complete macOS `FFFilmTests` target passed, including `SonyMirrorlessTests.opticalAreas`; opt-in large-TIFF stress test skipped. Final iOS Simulator build, catalog geometry validation and `git diff --check` passed. No physical-camera or UI interaction tests were needed for this calculation/data correction.
+
+
+## Continuous autofocus and automatic macro (2026-09-28)
+
+- User testing requests continuous focus and automatic close-focus macro. This supersedes the earlier physical-only default and autofocus-recovery action. Start and tap-to-focus both prefer continuous AF; tap changes the region only. Remove the separate action from protocol, store, UI and fixtures.
+- Discover a dual-wide virtual camera (triple fallback) only with an autofocus-capable ultra-wide constituent. Default to that automatic option, set its wide-lens switch-over zoom, and enable automatic constituent switching. Preserve explicit physical lens choices and fallback to physical wide on unsupported devices. No invented distance estimator or claimed macro support on fixed-focus ultra-wide devices.
+- Pin constituent switching only while locking/sampling. Resume automatic switching with live frames; continue autofocus throughout. Detect actual primary-constituent changes on the serial capture queue, discard transition buffers, reset AE/AWB and invalidate the sampled base. Generation guards restart a pending lock if its lens changes. A calibration generation repeated on every frame survives rejected deliveries and clears the store calibration and shows persistent re-sampling guidance; successful confirmation clears that guidance.
+- Native caption reports automatic macro readiness/active ultra-wide, and existing menus select automatic/manual lenses. Reuse the current monochrome tokens and bilingual string catalog; update DESIGN.md and the negative-preview workflow.
+- API basis: AVFoundation AVCaptureDevice.h documents automatic fallback selection based on focus/exposure limits and virtual-device switch-over zoom factors. [Apple switching behavior documentation](https://developer.apple.com/documentation/avfoundation/avcapturedevice/primaryconstituentdeviceswitchingbehavior-swift.enum). Physical near/far transitions and focus convergence require hardware acceptance; simulator fixtures only verify workflow and UI.
+- Verification: final unsigned iOS device build and all 9 NegativeStoreTests passed, including a lens-change delivery rejected during locking. NegativeTests rendering suite passed (opt-in large TIFF skipped). Camera fixture UI flow passed on iPhone 17 Pro and iPad Pro 11-inch; iPhone settings screenshot inspected. Bilingual camera-string validation, strict UI audit and diff checks passed. No physical-device macro/AF run or long-duration memory acceptance is claimed.
+
+
+## Live camera cadence and capture efficiency (2026-09-28)
+
+- User reports continuously choppy live preview. Apple references: [TN2445 frame drops](https://developer.apple.com/library/archive/technotes/tn2445/_index.html), [TN3121 pixel formats](https://developer.apple.com/documentation/technotes/tn3121-selecting-a-pixel-format-for-an-avcapturevideodataoutput), [WWDC20 Core Image video pipeline](https://developer.apple.com/videos/play/wwdc2020/10008/), and the installed Xcode 26.3 AVCaptureSession/AVCaptureVideoDataOutput headers. `startRunning`/`stopRunning` already run off the main thread; retain that ownership.
+- Replace callback-wall-clock throttling with a presentation-timestamp deadline. Sub-millisecond source timestamp rounding is tolerated, long gaps/rate changes reset the phase without catch-up bursts, and a locked sample bypasses throttling. The deterministic 30fps test includes alternating 1ms callback jitter that caused the old gate to discard normal frames; this is algorithm evidence, not a measured device fps result.
+- Prefer supported uncompressed full-range YUV 420f, then video-range 420v, with BGRA fallback. Query capabilities after committing the selected input/preset. Core Image performs color-managed conversion; retain full-resolution RGBAh snapshots, source-precision sampling, export behavior and one in-flight UI delivery. No lossy compression, preview downsampling or new frame history is introduced.
+- Match hardware acquisition to the existing 30fps/4K 15fps/serious-thermal-or-pressure 10fps delivery budgets when the active format supports it. Do not alter frame durations while exposure/calibration locks are active; delivery throttling still applies. This avoids silently changing a calibrated exposure during a thermal recovery.
+- Create/reuse the camera CIContext on its capture queue and the renderer CIContext on its actor at first use. Do not initialize the GPU context when SwiftUI constructs the store or clear reusable kernels at every camera reconfiguration.
+- DEBUG category `com.rasteaks.FFFilm / NegativeCameraPerformance` reports five-second aggregates: delivered preview fps, mean rendering ms, received/throttled/UI-busy frames and capture drops. No image data, device IDs or per-frame logs. These metrics distinguish capture/GPU/UI pressure on a future hardware run; the new runtime log has not yet been exercised on a physical camera.
+- The connected iPhone had no running FFFilm process during inspection, so no same-scene device before/after trace was captured. The earlier iPad long-duration memory termination remains unresolved; do not call this a verified memory fix.
+- Verification: 24 focused performance/state/rendering tests passed (large-TIFF stress opt-in skipped), including 300/300 PTS-delivered frames versus 150/300 in the synthetic old-gate comparison and full/video-range YUV sampling. Camera fixture UI regression also passed. Final unsigned iOS-device and macOS builds passed. Physical camera throughput and long-duration memory behavior remain unmeasured.
+
+## Checked bitmap stripe rendering (2026-09-28)
+
+- File previews and raster exports share `NegativePixels.renderBitmap`, using a bitmap-backed `CIRenderDestination` and waiting for each `CIRenderTask` to complete. Submission/completion errors map to `negative.error.render` before pixels are consumed or mapped storage is flushed/released. The previous `render(toBitmap:)` API returns Void and cannot report these errors.
+- Preserve stripe sizes, top-first row order, premultiplied alpha, color spaces and pixel formats. Keep full-resolution camera preview behavior; its performance observation is outside this fix. Camera teardown retains the session alone and stops it asynchronously on the capture queue.
+- Validation: macOS NegativeTests passed, including a new byte-for-byte comparison against legacy rendering for a non-origin stripe in RGBA8/RGBA16/RGBAh and existing orientation/export regressions. Opt-in large TIFF stress test skipped. Unsigned iOS device build passed. No real GPU exhaustion or physical-camera teardown test was performed.
+
+## Immersive camera UI (2026-09-28)
+
+- User requests full-screen camera preview. NegativePreviewView now separates immersive capture from the file/review workbench, hiding navigation/tab bars during capture. Close suspends capture; the explicit full-screen action resumes it.
+- Reuse Palette/native controls and NegativeStore state. Settings move to a scrollable sheet; frame dimensions move there too. Focus remains the ordinary tap action; the dedicated sample button starts locking.
+- Camera display defaults to fill with a full-frame toggle. NegativeZoomView computes the display scale and centered offset while preserving image-view-to-source coordinate conversion. Sampling uses fit outside the overlays; exports retain the full source. Wide layouts move controls to the right.
+- Preserve the preceding white-balance sentinel fix. Physical camera behavior remains a separate hardware acceptance task.
+
+- Verification: iPhone 17 Pro camera/file-import/sampling/TIFF-PNG-JPG export UI tests and all 9 NegativeStoreTests passed. Camera workflow passed on iPad Pro 11-inch and small iPhone 17e, including landscape sampling, freeze/resume, settings invalidation and close/reopen. Largest accessibility text sampling/cancel passed on iPhone 17e; full-screen portrait/landscape/accessibility screenshots inspected. Final iOS-device and macOS builds, bilingual camera-string validation, strict static UI audit and diff checks passed. No physical-camera run is claimed.

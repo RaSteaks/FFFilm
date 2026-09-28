@@ -142,14 +142,17 @@ struct CalculatorEngine {
         let dayTotalGb = sensorGbPerHour * settings.shootHours
         let activeWidth = selectedResolution.activeWidth ?? selectedResolution.width
         let activeHeight = selectedResolution.activeHeight ?? selectedResolution.height
+        // Apply optical cropping at normalized capture cadence, never project playback fps.
+        let crop = selectedResolution.sensorCrop
+        let cropFactor = crop.map { effectiveSensorFps >= $0.minSensorFps ? $0.factor : 1 } ?? 1
         let clipWidth = selectedCamera.isStandaloneProRes
             ? 0
-            : selectedResolution.activeWidthMm
-                ?? Double(activeWidth) / Double(selectedCamera.nativeWidth) * selectedCamera.sensorWidthMm
+            : (selectedResolution.activeWidthMm
+                ?? Double(activeWidth) / Double(selectedCamera.nativeWidth) * selectedCamera.sensorWidthMm) / cropFactor
         let clipHeight = selectedCamera.isStandaloneProRes
             ? 0
-            : selectedResolution.activeHeightMm
-                ?? Double(activeHeight) / Double(selectedCamera.nativeHeight) * selectedCamera.sensorHeightMm
+            : (selectedResolution.activeHeightMm
+                ?? Double(activeHeight) / Double(selectedCamera.nativeHeight) * selectedCamera.sensorHeightMm) / cropFactor
         let imageCircle = hypot(clipWidth, clipHeight)
         let super35Diagonal = hypot(24.89, 14.0)
 

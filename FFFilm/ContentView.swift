@@ -17,22 +17,41 @@ struct ContentView: View {
     @State private var store = CalculatorStore()
     @State private var showsCameras = false
     #if os(iOS)
+    @State private var negativeStore: NegativeStore
     @State private var selectedTab: MobileTab = .rate
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     #else
     @State private var filmStore = FilmStore()
     #endif
 
+    init() {
+        #if os(iOS)
+        // Own the workspace before its tab appears so cold-open URLs are not lost.
+        #if DEBUG && targetEnvironment(simulator)
+        if ProcessInfo.processInfo.environment["NEGATIVE_UI_CAMERA"] == "1" {
+            _negativeStore = State(initialValue: NegativeStore(camera: NegativeCameraFixture()))
+            return
+        }
+        #endif
+        _negativeStore = State(initialValue: NegativeStore())
+        #endif
+    }
+
     var body: some View {
         Group {
             #if os(iOS)
             mobileTabs
+                .onOpenURL { url in
+                    showsCameras = false
+                    selectedTab = .negative
+                    negativeStore.openExternalFile(url)
+                }
                 .sensoryFeedback(.selection, trigger: selectedTab)
                 .onChange(of: selectedTab) { _, tab in
                     switch tab {
                     case .rate: store.setActiveView(.rate)
                     case .shutter: store.setActiveView(.shutter)
-                    case .settings: store.clearTransientState()
+                    case .negative, .settings: store.clearTransientState()
                     }
                 }
             #else
@@ -63,7 +82,7 @@ struct ContentView: View {
 
     #if os(iOS)
     private enum MobileTab: Hashable {
-        case rate, shutter, settings
+        case rate, shutter, negative, settings
     }
 
     private var mobileTabs: some View {
@@ -79,6 +98,13 @@ struct ContentView: View {
                     .environment(\.horizontalSizeClass, horizontalSizeClass)
             }
             .accessibilityIdentifier("tab-shutter")
+
+            // Negative preview is a separate iOS workspace; calculator state stays untouched.
+            Tab("negative.title", systemImage: "photo", value: MobileTab.negative) {
+                NegativePreviewView(store: negativeStore)
+                    .environment(\.horizontalSizeClass, horizontalSizeClass)
+            }
+            .accessibilityIdentifier("tab-negative")
 
             Tab("nav.settings", systemImage: "gearshape", value: MobileTab.settings) {
                 // Settings has its own navigation bar and is a persistent tab, not a sheet.

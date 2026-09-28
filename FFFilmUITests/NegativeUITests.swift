@@ -15,6 +15,31 @@ final class NegativeUITests: XCTestCase {
         XCTAssertTrue(tab.waitForExistence(timeout: 5)); tab.tap()
     }
 
+    @MainActor func testExternalDocumentOpensFilmPreview() throws {
+        let context = CIContext()
+        var files: [URL] = []
+        defer { for url in files { try? FileManager.default.removeItem(at: url) } }
+        let app = XCUIApplication()
+        app.launchArguments += ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.terminate()
+        // Deliver real system document-open events, including a cold launch without visiting the tab.
+        for (width, height) in [(120, 80), (90, 130)] {
+            let url = FileManager.default.temporaryDirectory.appendingPathComponent("external-ui-\(UUID()).tiff")
+            files.append(url)
+            try context.writeTIFFRepresentation(of: CIImage(color: CIColor(red: 0.7, green: 0.5, blue: 0.3))
+                .cropped(to: CGRect(x: 0, y: 0, width: width, height: height)), to: url,
+                format: .RGBA16, colorSpace: CGColorSpace(name: CGColorSpace.sRGB)!)
+            app.open(url)
+            let dims = app.staticTexts["negative-dimensions"]
+            XCTAssertTrue(dims.waitForExistence(timeout: 15), app.debugDescription)
+            expectation(for: NSPredicate { _, _ in dims.label.filter(\.isNumber) == "\(width)\(height)" }, evaluatedWith: dims)
+            waitForExpectations(timeout: 10)
+            XCTAssertTrue(app.buttons["negative-sample"].isEnabled)
+            XCTAssertFalse(app.buttons["negative-export"].isEnabled)
+            app.tabBars.buttons["Calculate"].tap()
+        }
+    }
+
     @MainActor func testEmptyAndCancelledImport() {
         let app = XCUIApplication()
         openNegative(app)
@@ -175,9 +200,57 @@ final class NegativeUITests: XCTestCase {
             close.tap()
             XCTAssertTrue(export.waitForExistence(timeout: 5)); XCTAssertTrue(export.isEnabled)
         }
+        // Real PhotoKit integration handles first-run add-only authorization as well as prior grants.
+        export.tap()
+        app.buttons["negative-save-photos"].tap()
+        let permission = XCUIApplication(bundleIdentifier: "com.apple.springboard").alerts.firstMatch
+        if permission.waitForExistence(timeout: 3) {
+            let allow = permission.buttons.matching(NSPredicate(format:
+                "(label CONTAINS[c] 'Allow' OR label CONTAINS '允许') AND NOT label CONTAINS[c] 'Don' AND NOT label CONTAINS '不'")).firstMatch
+            if allow.exists { allow.tap() }
+        }
+        let saved = app.alerts["Save to Photos"]
+        XCTAssertTrue(saved.waitForExistence(timeout: 25))
+        XCTAssertTrue(saved.staticTexts["Positive saved to Photos."].exists)
+        saved.buttons["Done"].tap()
+        XCTAssertTrue(export.isEnabled)
         sample.tap()
         app.buttons["Cancel"].firstMatch.tap()
         XCTAssertTrue(export.isEnabled)
+        // Round-trip the generated photo through the real system share sheet into Film Preview.
+        let photos = XCUIApplication(bundleIdentifier: "com.apple.mobileslideshow")
+        photos.launch()
+        let welcome = photos.buttons.matching(NSPredicate(format: "label IN {'Continue', '继续'}")).firstMatch
+        if welcome.waitForExistence(timeout: 3) { welcome.tap() }
+        let back = photos.buttons["PUOneUpBarButtonItemIdentifierDone"]
+        if back.exists { back.tap() }
+        let libraryTab = photos.buttons["LibraryTab"]
+        if libraryTab.exists { libraryTab.tap() }
+        let thumbnails = photos.images.matching(identifier: "PXGGridLayout-Info")
+        XCTAssertTrue(thumbnails.firstMatch.waitForExistence(timeout: 10))
+        // Photos' tiled image elements may report no hit point despite a visible frame.
+        // Scroll the newest test image into view, then tap its actual center.
+        let newest = thumbnails.element(boundBy: thumbnails.count - 1)
+        for _ in 0..<8 where newest.frame.midY >= photos.frame.height - 100 {
+            photos.scrollViews["content_scroll_view"].swipeUp()
+        }
+        newest.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        let sharePhoto = photos.buttons["PUOneUpBarButtonItemIdentifierShare"]
+        XCTAssertTrue(sharePhoto.waitForExistence(timeout: 5), photos.debugDescription)
+        sharePhoto.tap()
+        let target = photos.cells.matching(NSPredicate(format:
+            "label == 'FFFilm' OR label == 'Copy to FFFilm' OR label == '拷贝到FFFilm' OR label == '拷贝到 FFFilm'")).firstMatch
+        if !target.isHittable {
+            let more = photos.cells.matching(NSPredicate(format: "label IN {'More', '更多'}")).firstMatch
+            if more.exists { more.tap() }
+        }
+        XCTAssertTrue(target.waitForExistence(timeout: 5), photos.debugDescription)
+        target.tap()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
+        let imported = app.staticTexts["negative-dimensions"]
+        XCTAssertTrue(imported.waitForExistence(timeout: 10))
+        XCTAssertEqual(imported.label.filter(\.isNumber), "600800")
+        XCTAssertFalse(app.buttons["negative-export"].isEnabled)
     }
 }
 #endif

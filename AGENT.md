@@ -1,5 +1,20 @@
 # FFFilm
 
+## External image opening (2026-09-29)
+
+- Declare TIFF/JPEG/PNG/HEIC/HEIF as alternate Viewer document types in an iOS-only plist. Use system document-open delivery rather than a share extension or custom URL-scheme workaround.
+- ContentView owns the persistent NegativeStore and handles onOpenURL before the Film Preview tab exists, selects that tab, and dismisses the calculator camera picker. NegativePreviewView observes an external-open identity to reveal the document workspace and dismiss import/settings sheets. Existing camera fixtures remain confined to DEBUG simulator setup.
+- Retain security-scoped URL access across asynchronous import; coordinate provider reads and copy into private temporary storage. Decoding validates actual content, preserving the current asset/base on failure. A pending Photos transaction completes before the latest queued external file is imported.
+- Regression coverage includes source replacement, corrupt/non-file URLs, private-copy lifetime, queued imports during Photos writes, and system document-open UI delivery.
+- Verification: iPhone 17 Pro / iOS 26.3 passed 18 NegativeStoreTests and the NegativeTests renderer suite after coordinated reading (opt-in large-TIFF stress skipped). All five NegativeUITests passed in the initial routing run; the extended TIFF workflow subsequently verified Photos → Share → FFFilm → automatic Film Preview import (`/tmp/FFFilm-photos-share-verified.xcresult`). Cold and repeated document-open UI delivery passed. iOS-device/macOS builds, macOS NegativeTests, packaged plist inspection, localized catalog validation, strict UI static audit and diff checks passed. Physical-device and real iCloud-provider behavior remain unverified.
+
+## Save positive to Photos (2026-09-29)
+
+- Add Save positive to Photos (JPG) to the shared export menu for file review and immersive camera. Export the committed positive at source dimensions through the existing renderer, regardless of comparison/zoom, then import the encoded file with PhotoKit. Existing TIFF/PNG/JPG sharing remains available.
+- NegativePhotoLibrary requests add-only access, with English/Chinese usage descriptions scoped to iOS device and simulator builds. NegativeStore owns progress and success/permission/failure alerts, prevents duplicate saves, and retains/deletes the temporary file around the asynchronous Photos transaction. Rendering/authorization can be cancelled; submitted Photos transactions finish across backgrounding and cannot be presented as cancellable.
+- Unit coverage includes saved dimensions, duplicate taps, denied access, write failure/retry, cancellation before submission and file lifetime across a submitted transaction. The existing TIFF UI workflow now also saves through real PhotoKit in the simulator.
+- Verification: iPhone 17 Pro / iOS 26.3 passed all 16 NegativeStoreTests and 4 NegativeUITests, including first-run system permission and actual PhotoKit success (`/tmp/FFFilm-photos-tests.xcresult`). Unsigned iOS-device and macOS builds passed. Built iOS bundles contain localized add-only usage text and no read-library usage key. String-catalog validation, strict UI static audit and diff checks passed. Physical-device Photos saving was not exercised.
+
 ## Preview review fixes (2026-09-28)
 
 - Publish zoom renders through NegativeImageState only when their actual long-side resolution exceeds the cached variant. Memory-capped or equal-size results retain the current original/positive bitmap; source import and film-base changes still replace their images normally.

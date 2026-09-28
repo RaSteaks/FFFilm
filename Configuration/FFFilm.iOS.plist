@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+    <!-- Advertise only the formats the negative decoder actually accepts. -->
+    <key>CFBundleDocumentTypes</key><array><dict>
+        <key>CFBundleTypeName</key><string>Film Image</string>
+        <key>CFBundleTypeRole</key><string>Viewer</string>
+        <key>LSHandlerRank</key><string>Alternate</string>
+        <key>LSItemContentTypes</key><array>
+            <string>public.tiff</string>
+            <string>public.jpeg</string>
+            <string>public.png</string>
+            <string>public.heic</string>
+            <string>public.heif</string>
+        </array>
+    </dict></array>
+    <!-- Read provider URLs with security scope, then import a private copy. -->
+    <key>LSSupportsOpeningDocumentsInPlace</key><true/>
+</dict></plist>

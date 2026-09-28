@@ -4,7 +4,7 @@ import PhotosUI
 import UniformTypeIdentifiers
 
 struct NegativePreviewView: View {
-    @State private var store: NegativeStore
+    @Bindable var store: NegativeStore
     @State private var showsFiles = false
     @State private var showsPhotos = false
     @State private var photo: PhotosPickerItem?
@@ -12,16 +12,6 @@ struct NegativePreviewView: View {
     @State private var showsCameraSettings = false
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-
-    init() {
-        #if DEBUG && targetEnvironment(simulator)
-        if ProcessInfo.processInfo.environment["NEGATIVE_UI_CAMERA"] == "1" {
-            _store = State(initialValue: NegativeStore(camera: NegativeCameraFixture()))
-            return
-        }
-        #endif
-        _store = State(initialValue: NegativeStore())
-    }
 
     private var immersive: Bool { store.isCamera && cameraImmersive }
 
@@ -68,6 +58,12 @@ struct NegativePreviewView: View {
             }
             .presentationDetents([.medium, .large])
         }
+        .onChange(of: store.externalOpenID, initial: true) { _, request in
+            guard request != nil else { return }
+            // External opens always reveal the document workspace, including failed imports.
+            cameraImmersive = false
+            showsFiles = false; showsPhotos = false; showsCameraSettings = false; photo = nil
+        }
         .onChange(of: store.isCamera) { _, camera in if camera { cameraImmersive = true } }
         .fileImporter(isPresented: $showsFiles, allowedContentTypes: [.tiff, .jpeg, .png, .heic, .heif]) { result in
             switch result {
@@ -80,6 +76,19 @@ struct NegativePreviewView: View {
             if let item { store.loadPhoto(item); photo = nil }
         }
         .sheet(item: $store.share) { share in NegativeShareSheet(share: share) }
+        .alert("negative.photos.title", isPresented: Binding(
+            get: { store.photoNotice != nil },
+            set: { if !$0 { store.photoNotice = nil } }
+        )) {
+            if store.photoAccessDenied {
+                Button("negative.openSettings") {
+                    if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
+                }
+            }
+            Button("negative.done", role: .cancel) { store.photoNotice = nil }
+        } message: {
+            Text(store.photoNotice ?? "")
+        }
         .onChange(of: scenePhase) { _, phase in if phase == .background { store.suspend() } }
         .onAppear {
             UIDevice.current.beginGeneratingDeviceOrientationNotifications()
@@ -158,7 +167,10 @@ struct NegativePreviewView: View {
                                 ProgressView()
                                 Text(LocalizedStringKey(busy))
                                 Spacer()
-                                Button("negative.cancel") { store.cancelWork() }.frame(minHeight: 44)
+                                // Photo-library commits cannot be cancelled after submission.
+                                if store.phase != .savingPhotos {
+                                    Button("negative.cancel") { store.cancelWork() }.frame(minHeight: 44)
+                                }
                             }
                             .accessibilityIdentifier("negative-progress")
                         }
@@ -211,7 +223,10 @@ struct NegativePreviewView: View {
                                         ProgressView()
                                         Text(LocalizedStringKey(busy))
                                         Spacer()
-                                        Button("negative.cancel") { store.cancelWork() }.frame(minHeight: 44)
+                                        // Photo-library commits cannot be cancelled after submission.
+                                        if store.phase != .savingPhotos {
+                                            Button("negative.cancel") { store.cancelWork() }.frame(minHeight: 44)
+                                        }
                                     }.accessibilityIdentifier("negative-progress")
                                 }
                                 if let error = store.error {
@@ -240,6 +255,7 @@ struct NegativePreviewView: View {
                 store.suspend(); cameraImmersive = false
             } label: { Label("negative.camera.close", systemImage: "xmark").labelStyle(.iconOnly).font(.system(size: 20)).frame(width: 44, height: 44) }
             .accessibilityIdentifier("negative-camera-close")
+            .disabled(store.phase == .savingPhotos)
             Picker("negative.comparison", selection: $store.showsPositive) {
                 Text("negative.original").tag(false)
                 Text("negative.positive").tag(true)
@@ -300,6 +316,9 @@ struct NegativePreviewView: View {
 
     private var exportMenu: some View {
         Menu {
+            Button("negative.photos.save", systemImage: "square.and.arrow.down") { store.saveToPhotos() }
+                .accessibilityIdentifier("negative-save-photos")
+            Divider()
             ForEach(NegativeFormat.allCases) { format in
                 Button(format.title) { store.export(format) }
                     .accessibilityIdentifier("negative-export-\(format.rawValue)")

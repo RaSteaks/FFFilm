@@ -32,6 +32,8 @@ final class NegativeImageState {
 @MainActor @Observable
 final class NegativeStore {
     private(set) var asset: NegativeAsset?
+    private(set) var externalOpenID: UUID?
+    @ObservationIgnored private var pendingExternalFile: NegativeExternalFile?
     let imageState = NegativeImageState()
     private var positive: CGImage? {
         get { imageState.positive }
@@ -50,12 +52,13 @@ final class NegativeStore {
         case locking = "negative.locking"
         case rendering = "negative.rendering"
         case exporting = "negative.exporting"
+        case savingPhotos = "negative.photos.saving"
 
         func acceptsCameraFrame(frozenForSampling: Bool) -> Bool {
             switch self {
             case .cameraStarting: return !frozenForSampling
             case .locking: return frozenForSampling
-            case .loading, .rendering, .exporting: return false
+            case .loading, .rendering, .exporting, .savingPhotos: return false
             }
         }
     }
@@ -72,6 +75,8 @@ final class NegativeStore {
     var point = CGPoint(x: 0.5, y: 0.5)
     var error: String?
     var share: NegativeShare?
+    var photoNotice: String?
+    private(set) var photoAccessDenied = false
     var cameraDenied = false
     private(set) var sampleError: String?
     private(set) var paused = false
@@ -85,6 +90,7 @@ final class NegativeStore {
     @ObservationIgnored private(set) var displayLimit: CGFloat = 1800
     @ObservationIgnored private var focusFeedback: Task<Void, Never>?
     @ObservationIgnored private let renderer = NegativeRenderer()
+    @ObservationIgnored private let photoLibrary: any NegativePhotoSaving
     @ObservationIgnored private let camera: any NegativeCameraCapture
     @ObservationIgnored private var operation: Task<Void, Never>?
     @ObservationIgnored private var displayTask: Task<Void, Never>?
@@ -95,7 +101,8 @@ final class NegativeStore {
     @ObservationIgnored private var calibrationID: UUID?
     @ObservationIgnored private var beforeSamplingLive = false
 
-    init(camera: any NegativeCameraCapture = NegativeCamera()) {
+    init(camera: any NegativeCameraCapture = NegativeCamera(), photoLibrary: (any NegativePhotoSaving)? = nil) {
+        self.photoLibrary = photoLibrary ?? NegativePhotoLibrary()
         self.camera = camera
     }
 
@@ -109,6 +116,32 @@ final class NegativeStore {
         guard !(error is CancellationError),
               !(cocoa.domain == NSCocoaErrorDomain && cocoa.code == NSUserCancelledError) else { return }
         self.error = error.localizedDescription
+    }
+
+    /// Capture security access while handling the system URL, before any asynchronous work.
+    func openExternalFile(_ url: URL) {
+        externalOpenID = UUID()
+        share = nil; photoNotice = nil
+        guard url.isFileURL else {
+            error = String(localized: "negative.error.decode")
+            return
+        }
+        let file = NegativeExternalFile(url)
+        if phase == .savingPhotos {
+            // A submitted Photos write must finish; the latest incoming file wins.
+            pendingExternalFile = file
+        } else {
+            importExternalFile(file)
+        }
+    }
+
+    private func importExternalFile(_ file: NegativeExternalFile) {
+        cancelSampling()
+        importImage { [renderer] in
+            // Retain the security scope until the renderer has made and decoded its copy.
+            defer { withExtendedLifetime(file) {} }
+            return try await renderer.load(file.url)
+        }
     }
 
     func loadFile(_ url: URL) { importImage { [renderer] in try await renderer.load(url) } }
@@ -366,7 +399,49 @@ final class NegativeStore {
         }
     }
 
+    /// Save the committed positive at source dimensions, regardless of comparison or zoom.
+    func saveToPhotos() {
+        guard canExport else { return }
+        freeze()
+        guard let asset, let base else { return }
+        let id = revision
+        phase = .exporting; error = nil; photoNotice = nil; photoAccessDenied = false
+        operation = Task {
+            defer {
+                if revision == id {
+                    phase = nil
+                    if let file = pendingExternalFile {
+                        pendingExternalFile = nil
+                        importExternalFile(file)
+                    }
+                }
+            }
+            let granted = await photoLibrary.requestAccess()
+            guard revision == id, !Task.isCancelled else { return }
+            guard granted else {
+                photoAccessDenied = true
+                photoNotice = String(localized: "negative.photos.denied")
+                return
+            }
+            do {
+                let url = try await renderer.export(asset, base: base, format: .jpg)
+                defer { try? FileManager.default.removeItem(at: url) }
+                guard revision == id, !Task.isCancelled else { return }
+                // Once handed to Photos the transaction cannot be cancelled. Keep the
+                // busy state (also across backgrounding) until completion to prevent duplicates.
+                phase = .savingPhotos
+                try await photoLibrary.save(url)
+                photoNotice = String(localized: "negative.photos.saved")
+            } catch {
+                if revision == id && !Task.isCancelled {
+                    photoNotice = String(localized: "negative.photos.failed") + "\n" + error.localizedDescription
+                }
+            }
+        }
+    }
+
     func cancelWork() {
+        guard phase != .savingPhotos else { return }
         operation?.cancel(); operation = nil
         displayTask?.cancel()
         revision = UUID(); phase = nil

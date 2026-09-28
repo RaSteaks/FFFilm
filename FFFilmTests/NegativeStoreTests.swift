@@ -6,6 +6,125 @@ import UIKit
 
 @MainActor
 struct NegativeStoreTests {
+    @Test func externalFilesReplaceSourcesAndPreserveFailedImports() async throws {
+        let first = try externalFixture(width: 100, height: 70)
+        let second = try externalFixture(width: 80, height: 120)
+        let invalid = FileManager.default.temporaryDirectory.appendingPathComponent("invalid-\(UUID()).tiff")
+        defer { for url in [first, second, invalid] { try? FileManager.default.removeItem(at: url) } }
+        try Data("not an image".utf8).write(to: invalid)
+        let store = NegativeStore()
+        store.openExternalFile(first); try await waitUntilIdle(store)
+        #expect(store.asset?.width == 100 && store.asset?.fileURL != first)
+        let request = store.externalOpenID
+        store.selectBase(); try await waitUntilIdle(store)
+        store.confirmBase(); try await waitUntilIdle(store)
+        let old = store.asset
+        store.openExternalFile(invalid); try await waitUntilIdle(store)
+        #expect(store.error != nil && store.asset === old && store.canExport)
+        store.openExternalFile(URL(string: "https://example.com/photo.tiff")!)
+        #expect(store.error != nil && store.asset === old)
+        store.openExternalFile(second); try await waitUntilIdle(store)
+        #expect(store.externalOpenID != request && store.asset?.width == 80 && store.asset?.height == 120)
+        #expect(store.error == nil && store.base == nil && !store.showsPositive)
+        try FileManager.default.removeItem(at: second)
+        // Decoding owns a private copy and remains usable after the sender removes its file.
+        store.selectBase(); try await waitUntilIdle(store)
+        #expect(store.candidate != nil)
+        store.cancelSampling(); store.suspend()
+    }
+
+    @Test func externalOpenWaitsForSubmittedPhotoSave() async throws {
+        let library = StubNegativePhotoLibrary()
+        let store = try await photoStore(library)
+        let first = try externalFixture(width: 90, height: 60)
+        let latest = try externalFixture(width: 70, height: 100)
+        defer { for url in [first, latest] { try? FileManager.default.removeItem(at: url) } }
+        library.holdSave = true
+        store.saveToPhotos()
+        try await waitFor { library.completion != nil }
+        store.openExternalFile(first)
+        store.openExternalFile(latest)
+        #expect(store.phase == .savingPhotos && store.asset?.width == 96)
+        library.completion?.resume(); library.completion = nil
+        try await waitFor { store.busy == nil && store.asset?.width == 70 }
+        #expect(store.asset?.height == 100 && store.base == nil && library.saved.count == 1)
+        #expect(library.saved.allSatisfy { !FileManager.default.fileExists(atPath: $0.path) })
+    }
+
+    private func externalFixture(width: Int, height: Int) throws -> URL {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("external-\(UUID()).tiff")
+        let image = CIImage(color: CIColor(red: 0.6, green: 0.4, blue: 0.2))
+            .cropped(to: CGRect(x: 0, y: 0, width: width, height: height))
+        try NegativePixels.context().writeTIFFRepresentation(of: image, to: url, format: .RGBA16, colorSpace: NegativePixels.display)
+        return url
+    }
+
+    @Test func savePositiveToPhotosPreservesSizeAndCleansUp() async throws {
+        let library = StubNegativePhotoLibrary()
+        let store = try await photoStore(library)
+        store.showsPositive = false
+        store.saveToPhotos()
+        store.saveToPhotos() // A duplicate tap while pending must not create another asset.
+        try await waitUntilIdle(store)
+        #expect(library.requests == 1 && library.saved.count == 1)
+        #expect(library.dimensions == CGSize(width: 96, height: 64))
+        #expect(library.saved.first?.pathExtension == "jpg")
+        #expect(store.photoNotice == String(localized: "negative.photos.saved"))
+        #expect(store.share == nil && store.canExport)
+        #expect(library.saved.allSatisfy { !FileManager.default.fileExists(atPath: $0.path) })
+    }
+
+    @Test func photoPermissionAndWriteFailuresRemainRetryable() async throws {
+        let library = StubNegativePhotoLibrary()
+        let store = try await photoStore(library)
+        library.allowed = false
+        store.saveToPhotos(); try await waitUntilIdle(store)
+        #expect(store.photoAccessDenied && library.saved.isEmpty && store.canExport)
+        library.allowed = true; library.fails = true
+        store.saveToPhotos(); try await waitUntilIdle(store)
+        #expect(!store.photoAccessDenied && store.photoNotice != nil && store.canExport)
+        #expect(library.saved.allSatisfy { !FileManager.default.fileExists(atPath: $0.path) })
+        library.fails = false
+        store.saveToPhotos(); try await waitUntilIdle(store)
+        #expect(store.photoNotice == String(localized: "negative.photos.saved"))
+    }
+
+    @Test func photoSaveCancellationStopsBeforeCommitButRetainsSubmittedFile() async throws {
+        let library = StubNegativePhotoLibrary()
+        let store = try await photoStore(library)
+        library.holdAuthorization = true
+        store.saveToPhotos()
+        try await waitFor { library.authorization != nil }
+        store.cancelWork()
+        library.authorization?.resume(returning: true); library.authorization = nil
+        try await Task.sleep(for: .milliseconds(100))
+        #expect(library.saved.isEmpty && store.photoNotice == nil)
+        library.holdAuthorization = false; library.holdSave = true
+        store.saveToPhotos()
+        try await waitFor { library.completion != nil }
+        #expect(store.phase == .savingPhotos)
+        store.cancelWork(); store.suspend(); store.saveToPhotos()
+        #expect(store.phase == .savingPhotos && library.saved.count == 1)
+        #expect(library.saved.allSatisfy { FileManager.default.fileExists(atPath: $0.path) })
+        library.completion?.resume(); library.completion = nil
+        try await waitUntilIdle(store)
+        #expect(store.photoNotice == String(localized: "negative.photos.saved"))
+        #expect(library.saved.allSatisfy { !FileManager.default.fileExists(atPath: $0.path) })
+    }
+
+    private func photoStore(_ library: StubNegativePhotoLibrary) async throws -> NegativeStore {
+        let file = FileManager.default.temporaryDirectory.appendingPathComponent("photo-test-\(UUID()).tiff")
+        defer { try? FileManager.default.removeItem(at: file) }
+        let image = CIImage(color: CIColor(red: 0.6, green: 0.4, blue: 0.2))
+            .cropped(to: CGRect(x: 0, y: 0, width: 96, height: 64))
+        try NegativePixels.context().writeTIFFRepresentation(of: image, to: file, format: .RGBA16, colorSpace: NegativePixels.display)
+        let store = NegativeStore(photoLibrary: library)
+        store.loadFile(file); try await waitUntilIdle(store)
+        store.selectBase(); try await waitUntilIdle(store)
+        store.confirmBase(); try await waitUntilIdle(store)
+        return store
+    }
+
     @Test func displayUpgradeNeverDowngradesEitherComparisonVariant() throws {
         let context = NegativePixels.context()
         func bitmap(_ side: CGFloat) throws -> CGImage {
@@ -266,7 +385,7 @@ struct NegativeStoreTests {
 
     @Test func cameraFramesRespectWorkflowPhase() {
         // Only startup and a completed lock may consume frames while busy.
-        for phase in [NegativeStore.Phase.loading, .rendering, .exporting] {
+        for phase in [NegativeStore.Phase.loading, .rendering, .exporting, .savingPhotos] {
             #expect(!phase.acceptsCameraFrame(frozenForSampling: false))
             #expect(!phase.acceptsCameraFrame(frozenForSampling: true))
         }
@@ -421,5 +540,26 @@ nonisolated private final class StubNegativeCamera: NegativeCameraCapture, @unch
     func stop() {}
     func focus(_ point: CGPoint) { lock.withLock { focusedPoint = point } }
     func rotate(_ angle: CGFloat) {}
+}
+/// Controls permission and transaction completion without touching a user's photo library.
+@MainActor private final class StubNegativePhotoLibrary: NegativePhotoSaving {
+    var allowed = true, fails = false, holdAuthorization = false, holdSave = false
+    var requests = 0
+    var saved: [URL] = []
+    var dimensions: CGSize?
+    var authorization: CheckedContinuation<Bool, Never>?
+    var completion: CheckedContinuation<Void, Never>?
+    func requestAccess() async -> Bool {
+        requests += 1
+        if holdAuthorization { return await withCheckedContinuation { authorization = $0 } }
+        return allowed
+    }
+    func save(_ file: URL) async throws {
+        saved.append(file)
+        let data = try Data(contentsOf: file)
+        if let image = UIImage(data: data)?.cgImage { dimensions = CGSize(width: image.width, height: image.height) }
+        if holdSave { await withCheckedContinuation { completion = $0 } }
+        if fails { throw CocoaError(.fileWriteOutOfSpace) }
+    }
 }
 #endif

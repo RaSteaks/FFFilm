@@ -233,8 +233,19 @@ actor NegativeRenderer {
         let target = FileManager.default.temporaryDirectory.appendingPathComponent("negative-\(UUID().uuidString).\(url.pathExtension)")
         let access = url.startAccessingSecurityScopedResource()
         defer { if access { url.stopAccessingSecurityScopedResource() } }
-        do { try FileManager.default.copyItem(at: url, to: target); return target }
-        catch { try? FileManager.default.removeItem(at: target); throw error }
+        do {
+            // File-provider URLs may need materialization and coordinated access (for
+            // example iCloud Drive). Copy under the read claim; never edit the source.
+            var coordinationError: NSError?
+            var copyError: Error?
+            NSFileCoordinator().coordinate(readingItemAt: url, options: [], error: &coordinationError) { source in
+                do { try FileManager.default.copyItem(at: source, to: target) }
+                catch { copyError = error }
+            }
+            if let coordinationError { throw coordinationError }
+            if let copyError { throw copyError }
+            return target
+        } catch { try? FileManager.default.removeItem(at: target); throw error }
     }
 
     /// Reject a known-unaffordable decode before ImageIO allocates it. Available

@@ -5,6 +5,51 @@ import CoreImage
 
 @MainActor
 struct NegativeStoreTests {
+    @Test func automaticLensSwitchRequiresNewCalibrationInBothDirections() async throws {
+        let camera = StubNegativeCamera(), store = NegativeStore(camera: camera)
+        let image = CIImage(color: CIColor(red: 0.6, green: 0.4, blue: 0.3, alpha: 1,
+                                          colorSpace: NegativePixels.linear)!).cropped(to: CGRect(x: 0, y: 0, width: 96, height: 96))
+        let asset = NegativeAsset(image: image, preview: try NegativePixels.preview(image, context: NegativePixels.context()))
+        store.startCamera()
+        try await waitFor { camera.hasStarted }
+        camera.deliver(asset)
+        try await waitFor { store.canAdjustCamera }
+        store.selectBase()
+        camera.deliver(asset, frozenForSampling: true)
+        try await waitFor { store.sampling && store.candidate != nil && store.phase == nil }
+        store.confirmBase()
+        try await waitUntilIdle(store)
+        #expect(store.canExport && store.captureLocked)
+
+        for macro in [true, false] {
+            // Entering and leaving the macro lens both invalidate optical calibration.
+            camera.deliver(asset, isMacro: macro, calibrationInvalidated: true)
+            try await waitFor { store.base == nil }
+            #expect(store.macroActive == macro && store.needsCameraResampling)
+            #expect(!store.canExport && !store.captureLocked && !store.showsPositive && store.live)
+            camera.deliver(asset, isMacro: macro)
+            await Task.yield()
+            #expect(store.needsCameraResampling)
+            store.selectBase(at: CGPoint(x: 0.3, y: 0.2))
+            camera.deliver(asset, frozenForSampling: true, isMacro: macro)
+            try await waitFor { store.sampling && store.candidate != nil && store.phase == nil }
+            store.confirmBase()
+            try await waitUntilIdle(store)
+            #expect(store.canExport && !store.needsCameraResampling && store.live)
+        }
+        // A lens switch while acquiring a new locked sample cannot retain the old base.
+        store.selectBase()
+        camera.deliver(asset, isMacro: true, calibrationInvalidated: true)
+        await Task.yield()
+        // The normal frame is rejected during locking; the generation on the subsequent
+        // frozen frame must still clear calibration even without a repeated switch event.
+        camera.deliver(asset, frozenForSampling: true, isMacro: true)
+        try await waitFor { store.sampling && store.candidate != nil && store.phase == nil }
+        store.cancelSampling()
+        #expect(store.base == nil && !store.canExport && store.needsCameraResampling)
+        store.suspend()
+    }
+
     @Test func focusCoordinatesFollowAllCaptureRotations() {
         let point = CGPoint(x: 0.2, y: 0.3)
         #expect(NegativeFocusCoordinates.sensorPoint(point, rotation: 0) == point)
@@ -28,8 +73,6 @@ struct NegativeStoreTests {
         #expect(!store.cameraTapSamplesBase)
         store.focus(CGPoint(x: 0.2, y: 0.3))
         #expect(camera.lastFocus == CGPoint(x: 0.2, y: 0.3) && !store.sampling && store.busy == nil)
-        store.continuousFocus()
-        #expect(camera.continuousFocusRequests == 1 && store.focusPoint == nil)
         store.selectBase()
         // Focus changes must not race exposure/white-balance locking.
         store.focus(CGPoint(x: 0.8, y: 0.7))
@@ -239,11 +282,10 @@ nonisolated private final class StubNegativeCamera: NegativeCameraCapture, @unch
     private var settings = NegativeCameraSettings()
     private var starts = 0
     private var focusedPoint: CGPoint?
-    private var continuousRequests = 0
+    private var calibrationID = UUID()
     var lastSettings: NegativeCameraSettings { lock.withLock { settings } }
     var startCount: Int { lock.withLock { starts } }
     var lastFocus: CGPoint? { lock.withLock { focusedPoint } }
-    var continuousFocusRequests: Int { lock.withLock { continuousRequests } }
     var storedBase: NegativeBase? { lock.withLock { base } }
     var requestedLock: Bool { lock.withLock { lockRequested } }
     var hasStarted: Bool { lock.withLock { frameHandler != nil } }
@@ -257,9 +299,13 @@ nonisolated private final class StubNegativeCamera: NegativeCameraCapture, @unch
             lenses: [NegativeLens(id: "wide", titleKey: "negative.lens.wide"), NegativeLens(id: "ultra", titleKey: "negative.lens.ultraWide")],
             resolutions: [.hd, .fullHD], exposureRange: -2...2, supportsFocus: true, minimumFocusDistance: 100))
     }
-    func deliver(_ asset: NegativeAsset, frozenForSampling: Bool = false) {
-        let handler = lock.withLock { frameHandler }
-        handler?(NegativeCameraFrame(asset: asset, positive: nil, frozenForSampling: frozenForSampling), {})
+    func deliver(_ asset: NegativeAsset, frozenForSampling: Bool = false, isMacro: Bool = false, calibrationInvalidated: Bool = false) {
+        let (handler, generation) = lock.withLock {
+            if calibrationInvalidated { calibrationID = UUID() }
+            return (frameHandler, calibrationID)
+        }
+        handler?(NegativeCameraFrame(asset: asset, positive: nil, frozenForSampling: frozenForSampling,
+            isMacro: isMacro, calibrationID: generation), {})
     }
     func fail() {
         let handler = lock.withLock { errorHandler }
@@ -270,7 +316,6 @@ nonisolated private final class StubNegativeCamera: NegativeCameraCapture, @unch
     func freeze(_ value: Bool) {}
     func stop() {}
     func focus(_ point: CGPoint) { lock.withLock { focusedPoint = point } }
-    func continuousFocus() { lock.withLock { continuousRequests += 1 } }
     func rotate(_ angle: CGFloat) {}
 }
 #endif

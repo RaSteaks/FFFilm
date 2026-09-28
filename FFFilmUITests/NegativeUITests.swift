@@ -35,6 +35,7 @@ final class NegativeUITests: XCTestCase {
         openNegative(app)
         let image = app.descendants(matching: .any).matching(identifier: "negative-image").firstMatch
         XCTAssertTrue(image.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["negative-camera-macro-status"].waitForExistence(timeout: 5))
         image.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
         // Ordinary taps focus; only explicit sampling enters the confirmation workflow.
         XCTAssertFalse(app.buttons["negative-confirm-base"].exists)
@@ -65,10 +66,10 @@ final class NegativeUITests: XCTestCase {
         let exposure = app.sliders["negative-camera-exposure"]
         if !exposure.isHittable { dimensions.swipeUp() }
         XCTAssertTrue(exposure.exists); exposure.adjust(toNormalizedSliderPosition: 0.75)
-        let autofocus = app.buttons["negative-camera-autofocus"]
-        expectation(for: NSPredicate(format: "enabled == true"), evaluatedWith: autofocus)
+        expectation(for: NSPredicate(format: "enabled == true"), evaluatedWith: exposure)
         waitForExpectations(timeout: 10)
-        autofocus.tap()
+        // Continuous AF no longer requires a separate recovery action.
+        XCTAssertFalse(app.buttons["negative-camera-autofocus"].exists)
         let screenshot = XCTAttachment(screenshot: app.screenshot())
         screenshot.name = "Camera controls"; screenshot.lifetime = .keepAlways; add(screenshot)
     }

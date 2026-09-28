@@ -151,6 +151,11 @@ struct NegativePreviewView: View {
             if store.isCamera {
                 Text(cameraHint)
                     .font(.caption).foregroundStyle(Palette.muted)
+                if store.cameraConfiguration?.automaticMacro == true {
+                    Text(store.macroActive ? "negative.camera.macroActive" : "negative.camera.macroAutomatic")
+                        .font(.caption).foregroundStyle(Palette.muted)
+                        .accessibilityIdentifier("negative-camera-macro-status")
+                }
                 NegativeCameraControls(store: store, expanded: $cameraControlsExpanded)
             }
             HStack {
@@ -175,6 +180,7 @@ struct NegativePreviewView: View {
 
     private var cameraHint: LocalizedStringKey {
         if store.paused { return "negative.paused" }
+        if store.needsCameraResampling { return "negative.camera.recalibrate" }
         if store.captureLocked { return "negative.locked" }
         if store.cameraTapSamplesBase { return "negative.cameraSampleHint" }
         // Fixed-focus lenses must not invite an unsupported tap-to-focus action.

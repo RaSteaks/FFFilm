@@ -6,6 +6,9 @@ nonisolated struct NegativeCameraFrame: @unchecked Sendable {
     let asset: NegativeAsset
     let positive: CGImage?
     let frozenForSampling: Bool
+    var isMacro = false
+    // Repeated on every frame so dropping one delivery cannot lose a lens-change event.
+    var calibrationID: UUID?
 }
 
 /// The workflow can exercise camera delivery and failure without capture hardware.
@@ -17,7 +20,6 @@ nonisolated protocol NegativeCameraCapture: Sendable {
     func freeze(_ value: Bool)
     func stop()
     func focus(_ point: CGPoint)
-    func continuousFocus()
     func rotate(_ angle: CGFloat)
 }
 
@@ -48,6 +50,9 @@ nonisolated final class NegativeCamera: NSObject, NegativeCameraCapture, AVCaptu
     private var rotation: CGFloat = 90
     private var deliveryGeneration = UUID()
     private var minimumFrameTimestamp = CMTime.invalid
+    private var primaryDeviceID: String?
+    private var lensSettlingFrames = 0
+    private var calibrationID = UUID()
 
     override init() {
         super.init()
@@ -94,6 +99,16 @@ nonisolated final class NegativeCamera: NSObject, NegativeCameraCapture, AVCaptu
                 if device.isAutoFocusRangeRestrictionSupported { device.autoFocusRangeRestriction = .none }
                 if device.isFocusModeSupported(.continuousAutoFocus) { device.focusMode = .continuousAutoFocus }
                 else if device.isFocusModeSupported(.autoFocus) { device.focusMode = .autoFocus }
+                if device.isVirtualDevice {
+                    // Match the wide camera's field of view while allowing an autofocus
+                    // ultra-wide constituent to take over at macro distances.
+                    if device.primaryConstituentDeviceSwitchingBehavior != .unsupported {
+                        device.setPrimaryConstituentDeviceSwitchingBehavior(.auto, restrictedSwitchingBehaviorConditions: [])
+                    }
+                    let wideIndex = device.constituentDevices.firstIndex { $0.deviceType == .builtInWideAngleCamera } ?? 0
+                    let zoom = wideIndex > 0 ? CGFloat(truncating: device.virtualDeviceSwitchOverVideoZoomFactors[wideIndex - 1]) : 1
+                    device.videoZoomFactor = min(device.maxAvailableVideoZoomFactor, max(device.minAvailableVideoZoomFactor, zoom))
+                }
                 device.setExposureTargetBias(configuration.settings.exposureBias, completionHandler: nil)
                 // Bound capture cadence as well as UI delivery; do not acquire 60fps only to discard it.
                 if device.activeFormat.videoSupportedFrameRateRanges.contains(where: { $0.minFrameRate <= 30 && $0.maxFrameRate >= 30 }) {
@@ -103,6 +118,7 @@ nonisolated final class NegativeCamera: NSObject, NegativeCameraCapture, AVCaptu
                 device.unlockForConfiguration()
                 base = nil; frozen = false; locking = false; waitingForLockedFrame = false; awaitingLockCompletion = false; deliveringFrame = false
                 deliveryGeneration = UUID(); lastFrameTime = 0
+                primaryDeviceID = nil; lensSettlingFrames = 0; calibrationID = UUID()
                 minimumFrameTimestamp = CMClockGetTime(CMClockGetHostTimeClock())
                 onConfiguration(configuration)
                 session.startRunning()
@@ -111,9 +127,14 @@ nonisolated final class NegativeCamera: NSObject, NegativeCameraCapture, AVCaptu
     }
 
     private func configure(_ requested: NegativeCameraSettings) throws -> NegativeCameraConfiguration {
-        let devices = AVCaptureDevice.DiscoverySession(deviceTypes: [.builtInWideAngleCamera, .builtInUltraWideCamera, .builtInTelephotoCamera], mediaType: .video, position: .back).devices
+        let physical = AVCaptureDevice.DiscoverySession(deviceTypes: [.builtInWideAngleCamera, .builtInUltraWideCamera, .builtInTelephotoCamera], mediaType: .video, position: .back).devices
+        let virtual = AVCaptureDevice.DiscoverySession(deviceTypes: [.builtInDualWideCamera, .builtInTripleCamera], mediaType: .video, position: .back).devices
+        // Fixed-focus ultra-wide hardware cannot provide automatic macro capture.
+        let macro = virtual.first { $0.deviceType == .builtInDualWideCamera && Self.supportsMacro($0) }
+            ?? virtual.first(where: Self.supportsMacro)
+        let devices = macro.map { [$0] + physical } ?? physical
         guard let camera = devices.first(where: { $0.uniqueID == requested.lensID })
-                ?? devices.first(where: { $0.deviceType == .builtInWideAngleCamera }) ?? devices.first else {
+                ?? macro ?? physical.first(where: { $0.deviceType == .builtInWideAngleCamera }) ?? physical.first else {
             throw NegativeFailure(key: "negative.error.camera")
         }
         let input = try AVCaptureDeviceInput(device: camera)
@@ -148,11 +169,18 @@ nonisolated final class NegativeCamera: NSObject, NegativeCameraCapture, AVCaptu
         let range = max(-3, camera.minExposureTargetBias)...min(3, camera.maxExposureTargetBias)
         let bias = requested.exposureBias.isFinite ? min(range.upperBound, max(range.lowerBound, requested.exposureBias)) : 0
         let lenses = devices.map { device in
-            NegativeLens(id: device.uniqueID, titleKey: device.deviceType == .builtInUltraWideCamera ? "negative.lens.ultraWide" : device.deviceType == .builtInTelephotoCamera ? "negative.lens.telephoto" : "negative.lens.wide")
+            NegativeLens(id: device.uniqueID, titleKey: device.isVirtualDevice ? "negative.lens.automatic" : device.deviceType == .builtInUltraWideCamera ? "negative.lens.ultraWide" : device.deviceType == .builtInTelephotoCamera ? "negative.lens.telephoto" : "negative.lens.wide")
         }
         return NegativeCameraConfiguration(settings: NegativeCameraSettings(lensID: camera.uniqueID, resolution: resolution, exposureBias: bias),
             lenses: lenses, resolutions: resolutions, exposureRange: range,
-            supportsFocus: camera.isFocusPointOfInterestSupported && camera.isFocusModeSupported(.autoFocus), minimumFocusDistance: camera.minimumFocusDistance)
+            supportsFocus: camera.isFocusPointOfInterestSupported && (camera.isFocusModeSupported(.continuousAutoFocus) || camera.isFocusModeSupported(.autoFocus)),
+            minimumFocusDistance: camera.minimumFocusDistance, automaticMacro: camera.uniqueID == macro?.uniqueID)
+    }
+
+    private static func supportsMacro(_ device: AVCaptureDevice) -> Bool {
+        device.primaryConstituentDeviceSwitchingBehavior != .unsupported && device.constituentDevices.contains {
+            $0.deviceType == .builtInUltraWideCamera && $0.isFocusModeSupported(.continuousAutoFocus)
+        }
     }
 
     func rotate(_ angle: CGFloat) {
@@ -172,21 +200,10 @@ nonisolated final class NegativeCamera: NSObject, NegativeCameraCapture, AVCaptu
                 defer { device.unlockForConfiguration() }
                 if device.isFocusPointOfInterestSupported {
                     device.focusPointOfInterest = sensor
-                    if device.isFocusModeSupported(.autoFocus) { device.focusMode = .autoFocus }
+                    // A tap moves the tracking region; it must not stop continuous AF.
+                    if device.isFocusModeSupported(.continuousAutoFocus) { device.focusMode = .continuousAutoFocus }
+                    else if device.isFocusModeSupported(.autoFocus) { device.focusMode = .autoFocus }
                 }
-            } catch { errorHandler?("negative.error.camera") }
-        }
-    }
-
-    func continuousFocus() {
-        queue.async { [self] in
-            guard captureRequested, !frozen, !locking, !awaitingLockCompletion, !waitingForLockedFrame, let device else { return }
-            do {
-                try device.lockForConfiguration()
-                defer { device.unlockForConfiguration() }
-                if device.isFocusPointOfInterestSupported { device.focusPointOfInterest = CGPoint(x: 0.5, y: 0.5) }
-                if device.isFocusModeSupported(.continuousAutoFocus) { device.focusMode = .continuousAutoFocus }
-                else if device.isFocusModeSupported(.autoFocus) { device.focusMode = .autoFocus }
             } catch { errorHandler?("negative.error.camera") }
         }
     }
@@ -199,7 +216,19 @@ nonisolated final class NegativeCamera: NSObject, NegativeCameraCapture, AVCaptu
         }
     }
     func setBase(_ value: NegativeBase?) { queue.async { [self] in base = value } }
-    func freeze(_ value: Bool) { queue.async { [self] in frozen = value; locking = false; waitingForLockedFrame = false; awaitingLockCompletion = false; lockGeneration = UUID() } }
+    func freeze(_ value: Bool) {
+        queue.async { [self] in
+            frozen = value; locking = false; waitingForLockedFrame = false; awaitingLockCompletion = false; lockGeneration = UUID()
+            // Sampling temporarily pins the lens. Live preview always restores automatic switching.
+            if !value, let device, device.primaryConstituentDeviceSwitchingBehavior != .unsupported {
+                do {
+                    try device.lockForConfiguration()
+                    device.setPrimaryConstituentDeviceSwitchingBehavior(.auto, restrictedSwitchingBehaviorConditions: [])
+                    device.unlockForConfiguration()
+                } catch { errorHandler?("negative.error.camera") }
+            }
+        }
+    }
     func stop() { queue.async { [self] in stopOnQueue() } }
     private func stopOnQueue() {
         captureRequested = false
@@ -210,6 +239,26 @@ nonisolated final class NegativeCamera: NSObject, NegativeCameraCapture, AVCaptu
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
         guard !frozen, let buffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
         guard CMSampleBufferGetPresentationTimeStamp(sampleBuffer) >= minimumFrameTimestamp else { return }
+        if let device, let primary = device.activePrimaryConstituent {
+            if let previous = primaryDeviceID, previous != primary.uniqueID {
+                // Never apply a physical lens's RGB calibration to another lens.
+                base = nil; calibrationID = UUID(); stableFrames = 0; lensSettlingFrames = 3
+                if locking || awaitingLockCompletion || waitingForLockedFrame {
+                    // A late constituent change invalidates the old lens's lock completion.
+                    lockGeneration = UUID(); locking = true
+                    awaitingLockCompletion = false; waitingForLockedFrame = false
+                }
+                do {
+                    try device.lockForConfiguration()
+                    defer { device.unlockForConfiguration() }
+                    if device.isExposureModeSupported(.continuousAutoExposure) { device.exposureMode = .continuousAutoExposure }
+                    if device.isWhiteBalanceModeSupported(.continuousAutoWhiteBalance) { device.whiteBalanceMode = .continuousAutoWhiteBalance }
+                } catch { errorHandler?("negative.error.camera"); return }
+            }
+            primaryDeviceID = primary.uniqueID
+        }
+        // Drop transition buffers and restart stability counting before a new sample.
+        if lensSettlingFrames > 0 { lensSettlingFrames -= 1; return }
         if (locking || awaitingLockCompletion || waitingForLockedFrame), CFAbsoluteTimeGetCurrent() > lockDeadline {
             locking = false; awaitingLockCompletion = false; waitingForLockedFrame = false; frozen = true
             lockGeneration = UUID(); errorHandler?("negative.error.lock"); return
@@ -228,6 +277,9 @@ nonisolated final class NegativeCamera: NSObject, NegativeCameraCapture, AVCaptu
             do {
                 try device.lockForConfiguration()
                 defer { device.unlockForConfiguration() }
+                if device.primaryConstituentDeviceSwitchingBehavior != .unsupported {
+                    device.setPrimaryConstituentDeviceSwitchingBehavior(.locked, restrictedSwitchingBehaviorConditions: [])
+                }
                 device.exposureMode = .locked
                 let generation = lockGeneration
                 awaitingLockCompletion = true
@@ -270,7 +322,9 @@ nonisolated final class NegativeCamera: NSObject, NegativeCameraCapture, AVCaptu
                 // One main-actor delivery at a time; a busy UI drops frames rather than retaining a queue of images.
                 deliveringFrame = true
                 let generation = deliveryGeneration
-                frameHandler?(NegativeCameraFrame(asset: asset, positive: rendered, frozenForSampling: sample)) { [weak self] in
+                let isMacro = device?.isVirtualDevice == true && device?.activePrimaryConstituent?.deviceType == .builtInUltraWideCamera
+                frameHandler?(NegativeCameraFrame(asset: asset, positive: rendered, frozenForSampling: sample,
+                    isMacro: isMacro, calibrationID: calibrationID)) { [weak self] in
                     self?.queue.async { [weak self] in
                         guard let self, self.deliveryGeneration == generation else { return }
                         self.deliveringFrame = false

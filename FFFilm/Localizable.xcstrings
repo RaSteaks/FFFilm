@@ -1,6 +1,110 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "EV" : {},
+    "cm" : {},
+    "negative.lens.automatic" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auto (Macro)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自动（含微距）"
+          }
+        }
+      }
+    },
+    "negative.camera.autoMacroHint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatically switches lenses for close focus. Lens changes require a new film-base sample."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "靠近胶片时自动切换适合近摄的镜头；切换后需重新选取片基。"
+          }
+        }
+      }
+    },
+    "negative.camera.manualLensHint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This lens stays selected. Choose Auto (Macro), when available, for automatic close focusing."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "当前固定使用所选镜头；如有“自动（含微距）”，选择后可自动切换近摄。"
+          }
+        }
+      }
+    },
+    "negative.camera.macroActive" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Macro lens active"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已切换微距镜头"
+          }
+        }
+      }
+    },
+    "negative.camera.macroAutomatic" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatic macro ready"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "微距自动切换已开启"
+          }
+        }
+      }
+    },
+    "negative.camera.recalibrate" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Camera lens changed. Sample the film base again."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "相机镜头已自动切换，请重新选取片基。"
+          }
+        }
+      }
+    },
     " (cancelled)" : {
       "comment" : "macOS film workbench",
       "localizations" : {
@@ -2518,13 +2622,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Include an unexposed film edge. Tap to focus."
+            "value" : "Continuous autofocus is on. Tap to move the focus area."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "让未曝光片边入镜，点按画面对焦。"
+            "value" : "正在持续自动对焦，点按可调整对焦区域。"
           }
         }
       }

@@ -45,13 +45,12 @@ struct NegativeCameraControls: View {
                                 onEditingChanged: { editing in if !editing { store.setExposureBias(exposureDraft) } }
                                 .accessibilityIdentifier("negative-camera-exposure")
                         }
-                        if configuration.supportsFocus {
-                            Button("negative.camera.autoFocus") { store.continuousFocus() }
-                                .frame(minHeight: 44)
-                                .accessibilityIdentifier("negative-camera-autofocus")
-                        } else {
+                        // Focus runs continuously; the user should not have to restart it.
+                        if !configuration.supportsFocus {
                             Text("negative.camera.fixedFocus").font(.caption)
                         }
+                        Text(configuration.automaticMacro ? "negative.camera.autoMacroHint" : "negative.camera.manualLensHint")
+                            .font(.caption).foregroundStyle(Palette.muted)
                         if configuration.minimumFocusDistance > 0 {
                             HStack {
                                 Text("negative.camera.minimumDistance")

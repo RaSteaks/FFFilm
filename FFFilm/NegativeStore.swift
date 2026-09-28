@@ -64,6 +64,8 @@ final class NegativeStore {
     private(set) var captureLocked = false
     private(set) var cameraSettings = NegativeCameraSettings()
     private(set) var cameraConfiguration: NegativeCameraConfiguration?
+    private(set) var macroActive = false
+    private(set) var needsCameraResampling = false
     var cameraTapSamplesBase = false
     private(set) var focusPoint: CGPoint?
     @ObservationIgnored private var focusFeedback: Task<Void, Never>?
@@ -74,6 +76,7 @@ final class NegativeStore {
     @ObservationIgnored private var revision = UUID()
     @ObservationIgnored private var sampleRevision = UUID()
     @ObservationIgnored private var cameraRevision = UUID()
+    @ObservationIgnored private var calibrationID: UUID?
     @ObservationIgnored private var beforeSamplingLive = false
 
     init(camera: any NegativeCameraCapture = NegativeCamera()) {
@@ -126,6 +129,7 @@ final class NegativeStore {
         cameraRevision = UUID()
         let requestedSettings = cameraSettings
         focusFeedback?.cancel(); focusPoint = nil
+        macroActive = false; needsCameraResampling = false; calibrationID = nil
         let id = revision
         phase = .cameraStarting
         operation = Task {
@@ -146,6 +150,13 @@ final class NegativeStore {
                     defer { acknowledge() }
                     guard let self, self.cameraRevision == generation, self.live else { return }
                     if let phase = self.phase, !phase.acceptsCameraFrame(frozenForSampling: frame.frozenForSampling) { return }
+                    self.macroActive = frame.isMacro
+                    if let previous = self.calibrationID, let current = frame.calibrationID, previous != current {
+                        // Switching into or out of macro changes the optical/color pipeline.
+                        self.needsCameraResampling = self.needsCameraResampling || self.base != nil
+                        self.base = nil; self.positive = nil; self.showsPositive = false; self.captureLocked = false
+                    }
+                    self.calibrationID = frame.calibrationID
                     self.latestCameraAsset = frame.asset
                     if self.asset?.width != frame.asset.width || self.asset?.height != frame.asset.height || self.asset?.fileURL != nil || frame.frozenForSampling {
                         self.asset = frame.asset
@@ -223,6 +234,7 @@ final class NegativeStore {
                 let result = try await renderer.render(asset, base: candidate)
                 guard revision == id, !Task.isCancelled else { return }
                 base = candidate; positive = result; sampling = false; showsPositive = true
+                needsCameraResampling = false
                 // Only the sampled RGB values persist for this capture session, not a frame history.
                 camera.setBase(candidate)
                 if isCamera && beforeSamplingLive && captureLocked && !paused { live = true; camera.freeze(false) }
@@ -260,11 +272,6 @@ final class NegativeStore {
             self?.focusPoint = nil
         }
     }
-    func continuousFocus() {
-        guard canAdjustCamera, cameraConfiguration?.supportsFocus == true else { return }
-        camera.continuousFocus(); focusFeedback?.cancel(); focusPoint = nil
-    }
-
     func setCameraLens(_ id: String) {
         guard canAdjustCamera, cameraConfiguration?.lenses.contains(where: { $0.id == id }) == true, id != cameraSettings.lensID else { return }
         cameraSettings.lensID = id

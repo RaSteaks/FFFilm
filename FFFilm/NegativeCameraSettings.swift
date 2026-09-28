@@ -2,7 +2,7 @@
 import AVFoundation
 import CoreGraphics
 
-/// Physical rear lenses avoid automatic virtual-camera switching after calibration.
+/// The automatic virtual camera is offered alongside explicit physical lens choices.
 nonisolated struct NegativeLens: Identifiable, Equatable, Sendable {
     let id: String
     let titleKey: String
@@ -33,6 +33,7 @@ nonisolated struct NegativeCameraConfiguration: Sendable {
     let exposureRange: ClosedRange<Float>
     let supportsFocus: Bool
     let minimumFocusDistance: Int
+    var automaticMacro = false
 }
 
 nonisolated enum NegativeFocusCoordinates {

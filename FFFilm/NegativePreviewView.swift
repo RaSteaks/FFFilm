@@ -8,8 +8,11 @@ struct NegativePreviewView: View {
     @State private var showsFiles = false
     @State private var showsPhotos = false
     @State private var photo: PhotosPickerItem?
-    @State private var cameraControlsExpanded = false
+    @State private var cameraImmersive = true
+    @State private var cameraFillsScreen = true
+    @State private var showsCameraSettings = false
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     init() {
         #if DEBUG && targetEnvironment(simulator)
@@ -21,84 +24,52 @@ struct NegativePreviewView: View {
         _store = State(initialValue: NegativeStore())
     }
 
+    private var immersive: Bool { store.isCamera && cameraImmersive }
+
     var body: some View {
         NavigationStack {
-            GeometryReader { geometry in
-                ScrollView {
-                    VStack(spacing: 12) {
-                        if store.asset != nil {
-                            Picker("negative.comparison", selection: $store.showsPositive) {
-                                Text("negative.original").tag(false)
-                                Text("negative.positive").tag(true)
-                            }
-                            .pickerStyle(.segmented)
-                            .disabled(store.base == nil || store.sampling)
-                            .accessibilityIdentifier("negative-comparison")
-                            NegativeImagePanel(store: store)
-                                // Reserve room for expanded camera controls above the system tab bar.
-                                .frame(height: max(220, geometry.size.height - (store.sampling ? 300 : store.isCamera ? (cameraControlsExpanded ? 560 : 310) : 210)))
-                            if let asset = store.asset {
-                                Text("\(asset.width) × \(asset.height)")
-                                    .font(.caption.monospacedDigit()).foregroundStyle(Palette.muted)
-                                    .accessibilityIdentifier("negative-dimensions")
-                                if asset.assumesSRGB { Text("negative.assumedProfile").font(.caption).foregroundStyle(Palette.muted) }
-                            }
-                            if store.sampling { samplingControls }
-                            else { viewingControls }
-                        } else {
-                            ContentUnavailableView {
-                                Label("negative.title", systemImage: "photo")
-                            } description: {
-                                Text("negative.intro")
-                            } actions: {
-                                Button("negative.files", systemImage: "folder") { showsFiles = true }
-                                    .accessibilityIdentifier("negative-import-file")
-                                Button("negative.photos", systemImage: "photo.on.rectangle") { showsPhotos = true }
-                                Button("negative.camera", systemImage: "camera") { store.startCamera() }
-                                    .accessibilityIdentifier("negative-open-camera")
-                            }
-                            .frame(minHeight: max(300, geometry.size.height - 100))
-                            .disabled(store.busy != nil)
-                        }
-                        if let busy = store.busy {
-                            HStack {
-                                ProgressView()
-                                Text(LocalizedStringKey(busy))
-                                Spacer()
-                                Button("negative.cancel") { store.cancelWork() }.frame(minHeight: 44)
-                            }
-                            .accessibilityIdentifier("negative-progress")
-                        }
-                        if let error = store.error {
-                            Text(error).font(.callout).foregroundStyle(Palette.text)
-                                .accessibilityIdentifier("negative-error")
-                            if store.cameraDenied {
-                                Button("negative.openSettings") {
-                                    if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
-                                }
-                            }
-                        }
-                    }
-                    .padding(12)
-                    .frame(maxWidth: 1180)
-                    .frame(maxWidth: .infinity)
-                }
-                .background(Palette.background)
+            Group {
+                if immersive { cameraWorkspace }
+                else { documentWorkspace }
             }
             .navigationTitle("negative.title")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarVisibility(immersive ? .hidden : .visible, for: .navigationBar)
+            .toolbarVisibility(immersive ? .hidden : .visible, for: .tabBar)
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Menu {
                         Button("negative.files", systemImage: "folder") { showsFiles = true }
                         Button("negative.photos", systemImage: "photo.on.rectangle") { showsPhotos = true }
-                        Button("negative.camera", systemImage: "camera") { store.startCamera() }
+                        Button("negative.camera", systemImage: "camera") { cameraImmersive = true; store.startCamera() }
                     } label: { Label("negative.input", systemImage: "plus") }
                     .disabled(store.busy != nil || store.sampling)
                     .accessibilityIdentifier("negative-input")
                 }
             }
         }
+        .sheet(isPresented: $showsCameraSettings) {
+            NavigationStack {
+                ScrollView {
+                    VStack(spacing: 16) {
+                        if let asset = store.asset {
+                            Text("\(asset.width) × \(asset.height)")
+                                .font(.caption.monospacedDigit())
+                                .accessibilityIdentifier("negative-dimensions")
+                        }
+                        NegativeCameraControls(store: store)
+                    }.padding()
+                }
+                .navigationTitle("negative.camera.settings")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar { ToolbarItem(placement: .confirmationAction) {
+                    Button("negative.done") { showsCameraSettings = false }
+                        .accessibilityIdentifier("negative-settings-done")
+                } }
+            }
+            .presentationDetents([.medium, .large])
+        }
+        .onChange(of: store.isCamera) { _, camera in if camera { cameraImmersive = true } }
         .fileImporter(isPresented: $showsFiles, allowedContentTypes: [.tiff, .jpeg, .png, .heic, .heif]) { result in
             switch result {
             case .success(let url): store.loadFile(url)
@@ -135,6 +106,213 @@ struct NegativePreviewView: View {
         }
     }
 
+    private var documentWorkspace: some View {
+        GeometryReader { geometry in
+            ScrollView {
+                VStack(spacing: 12) {
+                    if store.asset != nil {
+                        Picker("negative.comparison", selection: $store.showsPositive) {
+                            Text("negative.original").tag(false)
+                            Text("negative.positive").tag(true)
+                        }
+                        .pickerStyle(.segmented)
+                        .disabled(store.base == nil || store.sampling)
+                        .accessibilityIdentifier("negative-comparison")
+                        NegativeImagePanel(store: store)
+                            // File review remains a scrollable workbench; live capture has its own viewport.
+                            .frame(height: max(220, geometry.size.height - (store.sampling ? 300 : store.isCamera ? 240 : 210)))
+                        if let asset = store.asset {
+                            Text("\(asset.width) × \(asset.height)")
+                                .font(.caption.monospacedDigit()).foregroundStyle(Palette.muted)
+                                .accessibilityIdentifier("negative-dimensions")
+                            if asset.assumesSRGB { Text("negative.assumedProfile").font(.caption).foregroundStyle(Palette.muted) }
+                        }
+                        if store.sampling { samplingControls }
+                        else { viewingControls }
+                    } else {
+                        ContentUnavailableView {
+                            Label("negative.title", systemImage: "photo")
+                        } description: {
+                            Text("negative.intro")
+                        } actions: {
+                            Button("negative.files", systemImage: "folder") { showsFiles = true }
+                                .accessibilityIdentifier("negative-import-file")
+                            Button("negative.photos", systemImage: "photo.on.rectangle") { showsPhotos = true }
+                            Button("negative.camera", systemImage: "camera") { cameraImmersive = true; store.startCamera() }
+                                .accessibilityIdentifier("negative-open-camera")
+                        }
+                        .frame(minHeight: max(300, geometry.size.height - 100))
+                        .disabled(store.busy != nil)
+                    }
+                    if let busy = store.busy {
+                        HStack {
+                            ProgressView()
+                            Text(LocalizedStringKey(busy))
+                            Spacer()
+                            Button("negative.cancel") { store.cancelWork() }.frame(minHeight: 44)
+                        }
+                        .accessibilityIdentifier("negative-progress")
+                    }
+                    if let error = store.error {
+                        Text(error).font(.callout).foregroundStyle(Palette.text)
+                            .accessibilityIdentifier("negative-error")
+                        if store.cameraDenied {
+                            Button("negative.openSettings") {
+                                if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
+                            }
+                        }
+                    }
+                }
+                .padding(12)
+                .frame(maxWidth: 1180)
+                .frame(maxWidth: .infinity)
+            }
+            .background(Palette.background)
+        }
+    }
+
+    /// The camera owns the viewport; controls overlay it instead of shrinking its height.
+    private var cameraWorkspace: some View {
+        GeometryReader { geometry in
+            let wide = geometry.size.width > geometry.size.height
+            let showsWholeFrame = store.sampling || !cameraFillsScreen
+            let panelHeight = dynamicTypeSize.isAccessibilitySize
+                ? geometry.size.height * 0.55
+                : min(geometry.size.height * 0.44, store.sampling ? 260.0 : 184.0)
+            ZStack {
+                NegativeImagePanel(store: store, fillsScreen: cameraFillsScreen && !store.sampling, cornerRadius: 0)
+                    // Fit and sampling reveal every source edge outside the control overlays.
+                    .padding(.top, showsWholeFrame ? 64 : 0)
+                    .padding(.bottom, showsWholeFrame && !wide ? panelHeight + 24 : 0)
+                    .padding(.trailing, showsWholeFrame && wide ? 324 : 0)
+                    .ignoresSafeArea(edges: showsWholeFrame ? [] : .all)
+                VStack {
+                    cameraHeader
+                    Spacer(minLength: 0)
+                }
+                .padding(.horizontal, 12)
+                VStack {
+                    Spacer(minLength: 0)
+                    HStack {
+                        if wide { Spacer(minLength: 0) }
+                        ScrollView {
+                            VStack(spacing: 8) {
+                                if let busy = store.busy {
+                                    HStack {
+                                        ProgressView()
+                                        Text(LocalizedStringKey(busy))
+                                        Spacer()
+                                        Button("negative.cancel") { store.cancelWork() }.frame(minHeight: 44)
+                                    }.accessibilityIdentifier("negative-progress")
+                                }
+                                if let error = store.error {
+                                    Text(error).font(.callout).accessibilityIdentifier("negative-error")
+                                }
+                                if store.sampling { samplingControls }
+                                else { cameraActions }
+                            }.padding(12)
+                        }
+                        .accessibilityIdentifier("negative-camera-actions")
+                        .scrollBounceBehavior(.basedOnSize)
+                        .frame(maxWidth: wide ? 300 : 600)
+                        .frame(height: wide ? max(100, geometry.size.height - 80) : panelHeight)
+                        .background(Palette.background.opacity(0.94), in: RoundedRectangle(cornerRadius: 18))
+                    }
+                }.padding(12)
+            }
+        }
+        .background(.black)
+    }
+
+    private var cameraHeader: some View {
+        HStack(spacing: 12) {
+            Button {
+                // Leaving the immersive camera also stops capture; reopening resumes explicitly.
+                store.suspend(); cameraImmersive = false
+            } label: { Label("negative.camera.close", systemImage: "xmark").labelStyle(.iconOnly).font(.system(size: 20)).frame(width: 44, height: 44) }
+            .accessibilityIdentifier("negative-camera-close")
+            Picker("negative.comparison", selection: $store.showsPositive) {
+                Text("negative.original").tag(false)
+                Text("negative.positive").tag(true)
+            }
+            .pickerStyle(.segmented)
+            .disabled(store.base == nil || store.sampling || store.busy != nil)
+            .accessibilityIdentifier("negative-comparison")
+            Button { showsCameraSettings = true } label: {
+                Label("negative.camera.settings", systemImage: "slider.horizontal.3").labelStyle(.iconOnly).font(.system(size: 20)).frame(width: 44, height: 44)
+            }
+            .disabled(!store.canAdjustCamera)
+            .accessibilityIdentifier("negative-camera-settings")
+        }
+        .padding(4)
+        .frame(maxWidth: 600)
+        .background(Palette.background.opacity(0.94), in: Capsule())
+    }
+
+    private var cameraActions: some View {
+        // Stack actions vertically at accessibility sizes instead of compressing their labels.
+        let actions = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(spacing: 12)) : AnyLayout(HStackLayout(spacing: 12))
+        return VStack(spacing: 8) {
+            if !dynamicTypeSize.isAccessibilitySize { cameraStatus }
+            actions {
+                if let base = store.base { baseSwatch(base) }
+                Button { store.selectBase() } label: {
+                    Label(store.base == nil ? "negative.sample" : "negative.resample", systemImage: "scope")
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                }
+                .buttonStyle(.borderedProminent).foregroundStyle(Palette.background)
+                .disabled(store.busy != nil || store.asset == nil)
+                .accessibilityIdentifier("negative-sample")
+                Button {
+                    if store.live { store.freeze() } else { store.resume() }
+                } label: {
+                    Label(store.live ? "negative.freeze" : "negative.continue", systemImage: store.live ? "pause.fill" : "play.fill")
+                        .frame(minHeight: 44)
+                }
+                .disabled(store.busy != nil || store.asset == nil)
+                .accessibilityIdentifier("negative-camera-freeze")
+                exportMenu.labelStyle(.iconOnly)
+            }
+            if dynamicTypeSize.isAccessibilitySize { cameraStatus }
+        }
+    }
+
+    private var cameraStatus: some View {
+        let layout = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8)) : AnyLayout(HStackLayout(spacing: 8))
+        return VStack(spacing: 8) {
+            layout {
+                Text(cameraHint).font(.caption)
+                Spacer(minLength: 8)
+                Button { cameraFillsScreen.toggle() } label: {
+                    Label(cameraFillsScreen ? "negative.camera.fit" : "negative.camera.fill",
+                          systemImage: cameraFillsScreen ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
+                        .font(.caption).frame(minHeight: 44)
+                }
+                .accessibilityIdentifier("negative-camera-framing")
+            }
+            if store.cameraConfiguration?.automaticMacro == true {
+                Text(store.macroActive ? "negative.camera.macroActive" : "negative.camera.macroAutomatic")
+                    .font(.caption).foregroundStyle(Palette.muted)
+                    .accessibilityIdentifier("negative-camera-macro-status")
+            }
+        }
+    }
+
+    private var exportMenu: some View {
+        Menu {
+            ForEach(NegativeFormat.allCases) { format in
+                Button(format.title) { store.export(format) }
+                    .accessibilityIdentifier("negative-export-\(format.rawValue)")
+            }
+        } label: {
+            Label("negative.export", systemImage: "square.and.arrow.up").frame(minWidth: 44, minHeight: 44)
+        }
+        .disabled(!store.canExport)
+        .accessibilityIdentifier("negative-export")
+    }
+
     private var viewingControls: some View {
         VStack(spacing: 8) {
             HStack {
@@ -156,24 +334,20 @@ struct NegativePreviewView: View {
                         .font(.caption).foregroundStyle(Palette.muted)
                         .accessibilityIdentifier("negative-camera-macro-status")
                 }
-                NegativeCameraControls(store: store, expanded: $cameraControlsExpanded)
             }
             HStack {
                 if store.isCamera {
                     Button {
-                        if store.live { store.freeze() } else { store.resume() }
-                    } label: { Text(store.live ? "negative.freeze" : "negative.continue").frame(minHeight: 44).contentShape(Rectangle()) }
+                        cameraImmersive = true
+                        if store.paused { store.resume() }
+                    } label: {
+                        Label("negative.camera.fullscreen", systemImage: "viewfinder").frame(minHeight: 44)
+                    }
+                    .accessibilityIdentifier("negative-camera-fullscreen")
                     .disabled(store.busy != nil)
                 }
                 Spacer()
-                Menu {
-                    ForEach(NegativeFormat.allCases) { format in
-                        Button(format.title) { store.export(format) }
-                            .accessibilityIdentifier("negative-export-\(format.rawValue)")
-                    }
-                } label: { Label("negative.export", systemImage: "square.and.arrow.up").frame(minHeight: 44).contentShape(Rectangle()) }
-                .disabled(!store.canExport)
-                .accessibilityIdentifier("negative-export")
+                exportMenu
             }
         }
     }
@@ -181,16 +355,18 @@ struct NegativePreviewView: View {
     private var cameraHint: LocalizedStringKey {
         if store.paused { return "negative.paused" }
         if store.needsCameraResampling { return "negative.camera.recalibrate" }
+        if !store.live { return "negative.camera.frozen" }
         if store.captureLocked { return "negative.locked" }
-        if store.cameraTapSamplesBase { return "negative.cameraSampleHint" }
         // Fixed-focus lenses must not invite an unsupported tap-to-focus action.
         if store.cameraConfiguration?.supportsFocus == false { return "negative.camera.fixedFocus" }
         return "negative.cameraHint"
     }
 
     private var samplingControls: some View {
-        VStack(spacing: 8) {
-            Text("negative.sampleHint").font(.callout)
+        let actions = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(spacing: 8)) : AnyLayout(HStackLayout(spacing: 8))
+        return VStack(spacing: 8) {
+            if !dynamicTypeSize.isAccessibilitySize { Text("negative.sampleHint").font(.callout) }
             HStack {
                 if let candidate = store.candidate { baseSwatch(candidate) }
                 if store.candidateBusy { ProgressView() }
@@ -202,14 +378,14 @@ struct NegativePreviewView: View {
                 moveButton("negative.left", symbol: "arrow.left", x: -0.01, y: 0)
                 moveButton("negative.right", symbol: "arrow.right", x: 0.01, y: 0)
                 Button { store.selectSamplePoint(CGPoint(x: 0.5, y: 0.5)) } label: {
-                    Label("negative.centerSample", systemImage: "scope").labelStyle(.iconOnly).frame(width: 44, height: 44)
+                    Label("negative.centerSample", systemImage: "scope").labelStyle(.iconOnly).font(.system(size: 20)).frame(width: 44, height: 44)
                 }
                 .disabled(store.busy != nil)
                 .accessibilityIdentifier("negative-center-sample")
                 moveButton("negative.up", symbol: "arrow.up", x: 0, y: -0.01)
                 moveButton("negative.down", symbol: "arrow.down", x: 0, y: 0.01)
             }
-            HStack {
+            actions {
                 Button { store.cancelSampling() } label: { Text("negative.cancel").frame(minHeight: 44).contentShape(Rectangle()) }
                 Spacer()
                 Button("negative.useBase") { store.confirmBase() }
@@ -218,11 +394,12 @@ struct NegativePreviewView: View {
                     .controlSize(.large).buttonStyle(.borderedProminent).disabled(store.candidate == nil || store.busy != nil)
                     .accessibilityIdentifier("negative-confirm-base")
             }.disabled(store.busy != nil)
+            if dynamicTypeSize.isAccessibilitySize { Text("negative.sampleHint").font(.callout) }
         }
     }
 
     private func moveButton(_ label: LocalizedStringKey, symbol: String, x: CGFloat, y: CGFloat) -> some View {
-        Button { store.moveSample(x: x, y: y) } label: { Label(label, systemImage: symbol).labelStyle(.iconOnly).frame(width: 44, height: 44) }
+        Button { store.moveSample(x: x, y: y) } label: { Label(label, systemImage: symbol).labelStyle(.iconOnly).font(.system(size: 20)).frame(width: 44, height: 44) }
             .disabled(store.busy != nil)
     }
 
@@ -238,16 +415,17 @@ struct NegativePreviewView: View {
 /// Frame observation stays inside the image panel; the zoom surface is reused at video cadence.
 private struct NegativeImagePanel: View {
     let store: NegativeStore
+    var fillsScreen = false
+    var cornerRadius: CGFloat = 12
     var body: some View {
         ZStack(alignment: .topTrailing) {
             if let image = store.displayed {
                 // Tap intent is explicit: focusing must never unexpectedly enter film-base sampling.
-                NegativeCanvas(image: image,
-                               sampling: store.sampling || (store.isCamera && store.live && store.cameraTapSamplesBase) || store.focusPoint != nil,
+                NegativeCanvas(image: image, fillsScreen: fillsScreen,
+                               sampling: store.sampling || store.focusPoint != nil,
                                point: store.sampling || store.phase == .locking ? store.point : store.focusPoint ?? CGPoint(x: 0.5, y: 0.5)) { point in
                     guard store.busy == nil else { return }
                     if store.sampling { store.selectSamplePoint(point) }
-                    else if store.isCamera && store.live && store.cameraTapSamplesBase { store.selectBase(at: point) }
                     else { store.focus(point) }
                 }
                 .accessibilityIdentifier("negative-image")
@@ -266,7 +444,7 @@ private struct NegativeImagePanel: View {
             }
         }
         .background(.black)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
     }
 }
 
@@ -283,13 +461,14 @@ private struct NegativeShareSheet: UIViewControllerRepresentable {
 
 private struct NegativeCanvas: UIViewRepresentable {
     let image: CGImage
+    let fillsScreen: Bool
     let sampling: Bool
     let point: CGPoint
     let selected: (CGPoint) -> Void
     func makeUIView(context: Context) -> NegativeZoomView { NegativeZoomView() }
     func updateUIView(_ view: NegativeZoomView, context: Context) {
         view.selected = selected
-        view.setImage(image, sampling: sampling, point: point)
+        view.setImage(image, fillsScreen: fillsScreen, sampling: sampling, point: point)
     }
 }
 
@@ -303,11 +482,14 @@ private final class NegativeZoomView: UIScrollView, UIScrollViewDelegate {
     private var lastBounds = CGSize.zero
     private var point = CGPoint.zero
     private var sampling = false
+    private var fillsScreen = false
     private weak var previousImage: CGImage?
 
     init() {
         super.init(frame: .zero)
         delegate = self; minimumZoomScale = 1; maximumZoomScale = 8
+        // SwiftUI owns safe areas; UIKit must not add another inset to source coordinates.
+        contentInsetAdjustmentBehavior = .never
         showsVerticalScrollIndicator = false; showsHorizontalScrollIndicator = false
         addSubview(imageView)
         imageView.layer.addSublayer(marker)
@@ -321,10 +503,12 @@ private final class NegativeZoomView: UIScrollView, UIScrollViewDelegate {
         accessibilityLabel = NSLocalizedString("negative.image", comment: "Preview image")
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
-    func setImage(_ image: CGImage, sampling: Bool, point: CGPoint) {
+    func setImage(_ image: CGImage, fillsScreen: Bool, sampling: Bool, point: CGPoint) {
         if previousImage !== image { imageView.image = UIImage(cgImage: image); previousImage = image }
         let size = CGSize(width: image.width, height: image.height)
-        if imageSize != size { imageSize = size; lastBounds = .zero; setNeedsLayout() }
+        if imageSize != size || self.fillsScreen != fillsScreen {
+            imageSize = size; self.fillsScreen = fillsScreen; lastBounds = .zero; setNeedsLayout()
+        }
         self.sampling = sampling; self.point = point
         updateMarker()
     }
@@ -333,9 +517,14 @@ private final class NegativeZoomView: UIScrollView, UIScrollViewDelegate {
         if lastBounds != bounds.size, imageSize.width > 0, bounds.width > 0 {
             lastBounds = bounds.size
             setZoomScale(1, animated: false)
-            let factor = min(bounds.width / imageSize.width, bounds.height / imageSize.height)
+            // Fill changes only the display transform; taps still convert through imageView.
+            let ratios = (bounds.width / imageSize.width, bounds.height / imageSize.height)
+            let factor = fillsScreen ? max(ratios.0, ratios.1) : min(ratios.0, ratios.1)
             imageView.frame = CGRect(origin: .zero, size: CGSize(width: imageSize.width * factor, height: imageSize.height * factor))
             contentSize = imageView.frame.size
+            centerImage()
+            contentOffset = CGPoint(x: (contentSize.width - bounds.width) / 2,
+                                    y: (contentSize.height - bounds.height) / 2)
         }
         centerImage(); updateMarker()
     }

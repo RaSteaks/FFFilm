@@ -23,14 +23,12 @@ nonisolated enum NegativeResolution: String, CaseIterable, Identifiable, Sendabl
 nonisolated struct NegativeCameraSettings: Equatable, Sendable {
     var lensID: String?
     var resolution: NegativeResolution = .hd
-    var exposureBias: Float = 0
 }
 
 nonisolated struct NegativeCameraConfiguration: Sendable {
     let settings: NegativeCameraSettings
     let lenses: [NegativeLens]
     let resolutions: [NegativeResolution]
-    let exposureRange: ClosedRange<Float>
     let supportsFocus: Bool
     let minimumFocusDistance: Int
     var automaticMacro = false

@@ -70,7 +70,6 @@ struct NegativeStoreTests {
         try await waitFor { camera.hasStarted }
         camera.deliver(asset)
         try await waitFor { store.canAdjustCamera }
-        #expect(!store.cameraTapSamplesBase)
         store.focus(CGPoint(x: 0.2, y: 0.3))
         #expect(camera.lastFocus == CGPoint(x: 0.2, y: 0.3) && !store.sampling && store.busy == nil)
         store.selectBase()
@@ -82,26 +81,21 @@ struct NegativeStoreTests {
         store.confirmBase()
         try await waitUntilIdle(store)
         #expect(store.base != nil && store.canExport)
-        store.setExposureBias(9)
-        try await waitFor { camera.lastSettings.exposureBias == 2 }
-        #expect(store.base == nil && !store.canExport && !store.captureLocked)
-        camera.deliver(asset)
-        try await waitFor { store.canAdjustCamera }
         let starts = camera.startCount
-        store.setExposureBias(.nan)
         store.setCameraLens("missing")
         store.setCameraResolution(.ultraHD)
         #expect(camera.startCount == starts)
         store.setCameraResolution(.fullHD)
         try await waitFor { camera.lastSettings.resolution == .fullHD }
+        // A committed settings change invalidates calibration and requires re-sampling.
+        #expect(store.base == nil && !store.canExport && !store.captureLocked)
         camera.deliver(asset)
         try await waitFor { store.canAdjustCamera }
         store.setCameraLens("ultra")
         try await waitFor { camera.lastSettings.lensID == "ultra" }
-        #expect(store.cameraSettings.exposureBias == 2)
         store.suspend()
         let stoppedSettings = store.cameraSettings
-        store.setExposureBias(0)
+        store.setCameraResolution(.hd)
         #expect(store.cameraSettings == stoppedSettings)
     }
 
@@ -297,7 +291,7 @@ nonisolated private final class StubNegativeCamera: NegativeCameraCapture, @unch
         lock.withLock { frameHandler = onFrame; errorHandler = onError; base = nil; lockRequested = false; self.settings = effective; starts += 1 }
         onConfiguration(NegativeCameraConfiguration(settings: effective,
             lenses: [NegativeLens(id: "wide", titleKey: "negative.lens.wide"), NegativeLens(id: "ultra", titleKey: "negative.lens.ultraWide")],
-            resolutions: [.hd, .fullHD], exposureRange: -2...2, supportsFocus: true, minimumFocusDistance: 100))
+            resolutions: [.hd, .fullHD], supportsFocus: true, minimumFocusDistance: 100))
     }
     func deliver(_ asset: NegativeAsset, frozenForSampling: Bool = false, isMacro: Bool = false, calibrationInvalidated: Bool = false) {
         let (handler, generation) = lock.withLock {

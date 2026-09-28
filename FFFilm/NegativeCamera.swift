@@ -133,7 +133,6 @@ nonisolated final class NegativeCamera: NSObject, NegativeCameraCapture, AVCaptu
                     let zoom = wideIndex > 0 ? CGFloat(truncating: device.virtualDeviceSwitchOverVideoZoomFactors[wideIndex - 1]) : 1
                     device.videoZoomFactor = min(device.maxAvailableVideoZoomFactor, max(device.minAvailableVideoZoomFactor, zoom))
                 }
-                device.setExposureTargetBias(configuration.settings.exposureBias, completionHandler: nil)
                 device.unlockForConfiguration()
                 highResolution = configuration.settings.resolution == .ultraHD
                 requestedCaptureFPS = 0
@@ -198,13 +197,11 @@ nonisolated final class NegativeCamera: NSObject, NegativeCameraCapture, AVCaptu
         video.setSampleBufferDelegate(self, queue: queue)
         if let connection = video.connection(with: .video), connection.isVideoRotationAngleSupported(rotation) { connection.videoRotationAngle = rotation }
         device = camera; output = video
-        let range = max(-3, camera.minExposureTargetBias)...min(3, camera.maxExposureTargetBias)
-        let bias = requested.exposureBias.isFinite ? min(range.upperBound, max(range.lowerBound, requested.exposureBias)) : 0
         let lenses = devices.map { device in
             NegativeLens(id: device.uniqueID, titleKey: device.isVirtualDevice ? "negative.lens.automatic" : device.deviceType == .builtInUltraWideCamera ? "negative.lens.ultraWide" : device.deviceType == .builtInTelephotoCamera ? "negative.lens.telephoto" : "negative.lens.wide")
         }
-        return NegativeCameraConfiguration(settings: NegativeCameraSettings(lensID: camera.uniqueID, resolution: resolution, exposureBias: bias),
-            lenses: lenses, resolutions: resolutions, exposureRange: range,
+        return NegativeCameraConfiguration(settings: NegativeCameraSettings(lensID: camera.uniqueID, resolution: resolution),
+            lenses: lenses, resolutions: resolutions,
             supportsFocus: camera.isFocusPointOfInterestSupported && (camera.isFocusModeSupported(.continuousAutoFocus) || camera.isFocusModeSupported(.autoFocus)),
             minimumFocusDistance: camera.minimumFocusDistance, automaticMacro: camera.uniqueID == macro?.uniqueID)
     }
@@ -351,7 +348,9 @@ nonisolated final class NegativeCamera: NSObject, NegativeCameraCapture, AVCaptu
                 device.exposureMode = .locked
                 let generation = lockGeneration
                 awaitingLockCompletion = true
-                device.setWhiteBalanceModeLocked(with: device.deviceWhiteBalanceGains) { [weak self] timestamp in
+                // Freeze the current AWB result using the sentinel: reading gains back and
+                // supplying them explicitly requires custom-gain support, which virtual cameras may lack.
+                device.setWhiteBalanceModeLocked(with: AVCaptureDevice.currentWhiteBalanceGains) { [weak self] timestamp in
                     self?.queue.async { [weak self] in
                         guard let self, self.lockGeneration == generation else { return }
                         self.awaitingLockCompletion = false; self.lockedTimestamp = timestamp

@@ -1,5 +1,23 @@
 # FFFilm
 
+## Review cleanup after EV removal (2026-09-28)
+
+- Full-diff review (every changed file read end to end, all four UI tests executed on simulator) found no correctness bugs but two leftovers from the immersive-camera rework: `NegativeStore.cameraTapSamplesBase` had no remaining writer of `true` after the tap-mode switch removal, and five localization keys were orphaned (`negative.cameraSampleHint`, `negative.camera.tapAction/tapFocus/tapBase`, `negative.camera.autoFocus`). The workflow doc's tap-interaction sentence still described the removed segmented control.
+- Removed the dead property with its unreachable hint branch, tap-sampling conditions and no-op `onAppear` reset; camera taps are now always focus during live preview and the explicit Sample action is the only sampling entry. Deleted the five orphaned string-catalog keys and aligned the doc sentence with the explicit-sample-only flow.
+- Verification: iOS build, unit tests and the camera UI suite passed after cleanup; string catalog JSON validated and an automated scan confirmed no orphaned `negative.*` keys remain.
+
+## Exposure compensation removal (2026-09-28)
+
+- Removed manual EV exposure compensation from the negative camera: the light table is normally bright enough, and continuous auto-exposure plus film-base sampling already normalizes global brightness. This also removes the heaviest control path, where each slider commit restarted the whole capture session.
+- Dropped `NegativeCameraSettings.exposureBias`, `NegativeCameraConfiguration.exposureRange`, `NegativeStore.setExposureBias`, `setExposureTargetBias` at capture start, the settings-sheet slider/reset row, both localization keys and the UI-test slider step. Unit-test calibration invalidation now asserts through a resolution change instead of an EV change.
+- Continuous auto-exposure/white balance and the lock-on-sampling workflow are unchanged. Design and workflow docs updated to state that brightness is handled by AE plus base sampling.
+
+## White balance lock compatibility (2026-09-28)
+
+- Sampling locks the current AWB result with `AVCaptureDevice.currentWhiteBalanceGains`, rather than passing the numeric `deviceWhiteBalanceGains` back as custom gains. Devices without custom-gain locking support accept this sentinel; explicit gains can raise an Objective-C exception even when `.locked` white balance mode is supported.
+- Preserve the existing mode checks, configuration lock, completion callback, generation guard and subsequent-frame settling. This workflow freezes automatic white balance and does not need custom RGB gains.
+- Verification: unsigned iOS device build and `git diff --check` passed. Actual virtual-camera sampling still requires physical-device verification.
+
 ## iPad live-camera memory investigation (2026-09-27)
 
 - Report: iPad14,3 running the negative live camera was terminated for memory pressure during an approximately 20-minute Xcode debug session. The user confirmed the camera remained in original mode without film-base sampling or positive conversion.
@@ -426,3 +444,12 @@ All displayed rates are video-only planning estimates. Validate camera firmware,
 - File previews and raster exports share `NegativePixels.renderBitmap`, using a bitmap-backed `CIRenderDestination` and waiting for each `CIRenderTask` to complete. Submission/completion errors map to `negative.error.render` before pixels are consumed or mapped storage is flushed/released. The previous `render(toBitmap:)` API returns Void and cannot report these errors.
 - Preserve stripe sizes, top-first row order, premultiplied alpha, color spaces and pixel formats. Keep full-resolution camera preview behavior; its performance observation is outside this fix. Camera teardown retains the session alone and stops it asynchronously on the capture queue.
 - Validation: macOS NegativeTests passed, including a new byte-for-byte comparison against legacy rendering for a non-origin stripe in RGBA8/RGBA16/RGBAh and existing orientation/export regressions. Opt-in large TIFF stress test skipped. Unsigned iOS device build passed. No real GPU exhaustion or physical-camera teardown test was performed.
+
+## Immersive camera UI (2026-09-28)
+
+- User requests full-screen camera preview. NegativePreviewView now separates immersive capture from the file/review workbench, hiding navigation/tab bars during capture. Close suspends capture; the explicit full-screen action resumes it.
+- Reuse Palette/native controls and NegativeStore state. Settings move to a scrollable sheet; frame dimensions move there too. Focus remains the ordinary tap action; the dedicated sample button starts locking.
+- Camera display defaults to fill with a full-frame toggle. NegativeZoomView computes the display scale and centered offset while preserving image-view-to-source coordinate conversion. Sampling uses fit outside the overlays; exports retain the full source. Wide layouts move controls to the right.
+- Preserve the preceding white-balance sentinel fix. Physical camera behavior remains a separate hardware acceptance task.
+
+- Verification: iPhone 17 Pro camera/file-import/sampling/TIFF-PNG-JPG export UI tests and all 9 NegativeStoreTests passed. Camera workflow passed on iPad Pro 11-inch and small iPhone 17e, including landscape sampling, freeze/resume, settings invalidation and close/reopen. Largest accessibility text sampling/cancel passed on iPhone 17e; full-screen portrait/landscape/accessibility screenshots inspected. Final iOS-device and macOS builds, bilingual camera-string validation, strict static UI audit and diff checks passed. No physical-camera run is claimed.

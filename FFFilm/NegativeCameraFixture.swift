@@ -21,7 +21,7 @@ nonisolated final class NegativeCameraFixture: NegativeCameraCapture, @unchecked
                 asset = frame; handler = onFrame
                 onConfiguration(NegativeCameraConfiguration(settings: effective,
                     lenses: [NegativeLens(id: "automatic", titleKey: "negative.lens.automatic"), NegativeLens(id: "wide", titleKey: "negative.lens.wide"), NegativeLens(id: "ultra", titleKey: "negative.lens.ultraWide")],
-                    resolutions: [.hd, .fullHD], exposureRange: -2...2, supportsFocus: true, minimumFocusDistance: 20,
+                    resolutions: [.hd, .fullHD], supportsFocus: true, minimumFocusDistance: 20,
                     automaticMacro: effective.lensID == "automatic"))
                 onFrame(NegativeCameraFrame(asset: frame, positive: nil, frozenForSampling: false), {})
             } catch { onError("negative.error.camera") }

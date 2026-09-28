@@ -66,7 +66,6 @@ final class NegativeStore {
     private(set) var cameraConfiguration: NegativeCameraConfiguration?
     private(set) var macroActive = false
     private(set) var needsCameraResampling = false
-    var cameraTapSamplesBase = false
     private(set) var focusPoint: CGPoint?
     @ObservationIgnored private var focusFeedback: Task<Void, Never>?
     @ObservationIgnored private let renderer = NegativeRenderer()
@@ -280,14 +279,6 @@ final class NegativeStore {
     func setCameraResolution(_ resolution: NegativeResolution) {
         guard canAdjustCamera, cameraConfiguration?.resolutions.contains(resolution) == true, resolution != cameraSettings.resolution else { return }
         cameraSettings.resolution = resolution
-        startCamera()
-    }
-    func setExposureBias(_ bias: Float) {
-        guard canAdjustCamera, bias.isFinite, let range = cameraConfiguration?.exposureRange else { return }
-        let clamped = min(range.upperBound, max(range.lowerBound, bias))
-        guard abs(clamped - cameraSettings.exposureBias) > 0.001 else { return }
-        // Commit once at slider release. Any exposure change invalidates the sampled film base.
-        cameraSettings.exposureBias = clamped
         startCamera()
     }
     func rotate(_ orientation: UIDeviceOrientation) {

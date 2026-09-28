@@ -66,8 +66,25 @@ nonisolated final class NegativeFilePixels: @unchecked Sendable {
             .transformed(by: CGAffineTransform(translationX: rawRect.minX, y: rawRect.minY))
             .transformed(by: transform).cropped(to: rect)
     }
-    func preview(base: NegativeBase? = nil, context: CIContext) throws -> CGImage {
-        let scale = min(1, 1800 / max(image.extent.width, image.extent.height))
+    /// Display bitmaps stay inside the remaining process memory budget; when a zoom
+    /// demands more than the budget affords, the limit drops to what fits instead of
+    /// failing the preview. Preview downsampling is a display optimization only.
+    static func affordableLimit(wanted: CGFloat, extent: CGRect) -> CGFloat {
+        #if os(iOS) && !targetEnvironment(simulator)
+        // Convert before subtracting: the OS reports an unsigned byte count.
+        let budget = max(0, CGFloat(os_proc_available_memory()) - 96 * 1024 * 1024)
+        guard budget > 0, extent.width > 0, extent.height > 0 else { return 1800 }
+        // RGBAh output costs eight bytes per pixel; solve for the affordable long side.
+        return min(wanted, max(1800, sqrt(budget / 8 / (extent.width * extent.height))
+            * max(extent.width, extent.height)))
+        #else
+        return wanted
+        #endif
+    }
+
+    func preview(base: NegativeBase? = nil, context: CIContext, limit: CGFloat = 1800) throws -> CGImage {
+        let scale = min(1, Self.affordableLimit(wanted: limit, extent: image.extent)
+            / max(image.extent.width, image.extent.height))
         let width = max(1, Int((image.extent.width * scale).rounded()))
         let height = max(1, Int((image.extent.height * scale).rounded()))
         let sx = CGFloat(width) / image.extent.width, sy = CGFloat(height) / image.extent.height
@@ -306,9 +323,16 @@ actor NegativeRenderer {
         return try NegativePixels.sample(crop, point: CGPoint(x: 0.5, y: 0.5), context: context, entireRegion: true)
     }
 
-    func render(_ asset: NegativeAsset, base: NegativeBase) throws -> CGImage {
+    /// The original file preview at a zoom-demanded display tier; camera assets have no file pixels.
+    func filePreview(_ asset: NegativeAsset, limit: CGFloat) throws -> CGImage {
         try Task.checkCancellation()
-        if let pixels = asset.filePixels { return try pixels.preview(base: base, context: context) }
+        guard let pixels = asset.filePixels else { throw NegativeFailure(key: "negative.error.render") }
+        return try pixels.preview(context: context, limit: limit)
+    }
+
+    func render(_ asset: NegativeAsset, base: NegativeBase, limit: CGFloat = 1800) throws -> CGImage {
+        try Task.checkCancellation()
+        if let pixels = asset.filePixels { return try pixels.preview(base: base, context: context, limit: limit) }
         // Camera snapshots follow the selected capture resolution in both comparison modes.
         return try NegativePixels.preview(asset.image, base: base, context: context, limit: CGFloat(max(asset.width, asset.height)))
     }

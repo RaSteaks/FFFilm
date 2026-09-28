@@ -1,212 +1,6 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "negative.camera.frozen" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Frame frozen. Continue to resume the camera."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "画面已定格，点按继续恢复取景。"
-          }
-        }
-      }
-    },
-    "negative.done" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Done"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "完成"
-          }
-        }
-      }
-    },
-    "negative.camera.close" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Close camera"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "退出相机"
-          }
-        }
-      }
-    },
-    "negative.camera.fit" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Full frame"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "完整画面"
-          }
-        }
-      }
-    },
-    "negative.camera.fill" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fill screen"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "铺满屏幕"
-          }
-        }
-      }
-    },
-    "negative.camera.fullscreen" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Full-screen camera"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "全屏取景"
-          }
-        }
-      }
-    },
-    "EV" : {},
-    "cm" : {},
-    "negative.lens.automatic" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Auto (Macro)"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "自动（含微距）"
-          }
-        }
-      }
-    },
-    "negative.camera.autoMacroHint" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automatically switches lenses for close focus. Lens changes require a new film-base sample."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "靠近胶片时自动切换适合近摄的镜头；切换后需重新选取片基。"
-          }
-        }
-      }
-    },
-    "negative.camera.manualLensHint" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This lens stays selected. Choose Auto (Macro), when available, for automatic close focusing."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "当前固定使用所选镜头；如有“自动（含微距）”，选择后可自动切换近摄。"
-          }
-        }
-      }
-    },
-    "negative.camera.macroActive" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Macro lens active"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已切换微距镜头"
-          }
-        }
-      }
-    },
-    "negative.camera.macroAutomatic" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automatic macro ready"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "微距自动切换已开启"
-          }
-        }
-      }
-    },
-    "negative.camera.recalibrate" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Camera lens changed. Sample the film base again."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "相机镜头已自动切换，请重新选取片基。"
-          }
-        }
-      }
-    },
     " (cancelled)" : {
       "comment" : "macOS film workbench",
       "localizations" : {
@@ -1082,6 +876,9 @@
           }
         }
       }
+    },
+    "cm" : {
+
     },
     "Comparison is full (4/4). Remove a setup before adding another." : {
 
@@ -2456,6 +2253,24 @@
         }
       }
     },
+    "nav.calculate" : {
+      "comment" : "iOS bottom navigation tab label",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Calculate"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "计算"
+          }
+        }
+      }
+    },
     "nav.cameras" : {
       "localizations" : {
         "en" : {
@@ -2484,24 +2299,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已复制"
-          }
-        }
-      }
-    },
-    "nav.calculate" : {
-      "comment" : "iOS bottom navigation tab label",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Calculate"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "计算"
           }
         }
       }
@@ -2650,6 +2447,70 @@
         }
       }
     },
+    "nav.shutter" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shutter"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "快门"
+          }
+        }
+      }
+    },
+    "nav.undo" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Undo"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "撤销"
+          }
+        }
+      }
+    },
+    "nav.viewComparison" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "View comparison"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "查看对比"
+          }
+        }
+      }
+    },
+    "nav.workbench" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Workbench"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "工作台"
+          }
+        }
+      }
+    },
     "negative.assumedProfile" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2718,6 +2579,244 @@
         }
       }
     },
+    "negative.camera.autoMacroHint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatically switches lenses for close focus. Lens changes require a new film-base sample."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "靠近胶片时自动切换适合近摄的镜头；切换后需重新选取片基。"
+          }
+        }
+      }
+    },
+    "negative.camera.close" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Close camera"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "退出相机"
+          }
+        }
+      }
+    },
+    "negative.camera.fixedFocus" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This lens has fixed focus. Adjust the distance to the film."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此镜头不支持自动对焦，请调整与胶片的距离。"
+          }
+        }
+      }
+    },
+    "negative.camera.frozen" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Frame frozen. Continue to resume the camera."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "画面已定格，点按继续恢复取景。"
+          }
+        }
+      }
+    },
+    "negative.camera.fullscreen" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Full-screen camera"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "全屏取景"
+          }
+        }
+      }
+    },
+    "negative.camera.lens" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lens"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "镜头"
+          }
+        }
+      }
+    },
+    "negative.camera.macroActive" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Macro lens active"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已切换微距镜头"
+          }
+        }
+      }
+    },
+    "negative.camera.macroAutomatic" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatic macro ready"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "微距自动切换已开启"
+          }
+        }
+      }
+    },
+    "negative.camera.manualLensHint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This lens stays selected. Choose Auto (Macro), when available, for automatic close focusing."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "当前固定使用所选镜头；如有“自动（含微距）”，选择后可自动切换近摄。"
+          }
+        }
+      }
+    },
+    "negative.camera.minimumDistance" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Minimum focus distance"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近对焦距离"
+          }
+        }
+      }
+    },
+    "negative.camera.recalibrate" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Camera lens changed. Sample the film base again."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "相机镜头已自动切换，请重新选取片基。"
+          }
+        }
+      }
+    },
+    "negative.camera.resolution" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Capture resolution"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "采集分辨率"
+          }
+        }
+      }
+    },
+    "negative.camera.settings" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Camera settings"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "相机设置"
+          }
+        }
+      }
+    },
+    "negative.camera.settingsHint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Changing lens, resolution or exposure clears the film base. Adjust first, then sample again. 4K uses more memory and power."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更换镜头、分辨率或曝光后需重取片基。请先调整再取样；4K 会增加内存和耗电。"
+          }
+        }
+      }
+    },
     "negative.cameraHint" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2769,6 +2868,23 @@
         }
       }
     },
+    "negative.centerSample" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Return to center"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "回到中心"
+          }
+        }
+      }
+    },
     "negative.comparison" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2799,6 +2915,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "继续"
+          }
+        }
+      }
+    },
+    "negative.done" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Done"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "完成"
           }
         }
       }
@@ -2939,6 +3072,23 @@
         }
       }
     },
+    "negative.error.memory" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This image needs more memory than is currently available. Close other work or use a smaller source; no image has been resized."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "当前可用内存不足。请关闭其他任务或使用较小的源图，应用未缩小图像。"
+          }
+        }
+      }
+    },
     "negative.error.pages" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3024,20 +3174,6 @@
         }
       }
     },
-    "negative.error.thermal" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Camera paused while the device cools down. Resume and resample later." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "设备过热，相机已暂停。降温后请继续并重新取色。" } }
-      }
-    },
-    "negative.error.memory" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "This image needs more memory than is currently available. Close other work or use a smaller source; no image has been resized." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "当前可用内存不足。请关闭其他任务或使用较小的源图，应用未缩小图像。" } }
-      }
-    },
     "negative.error.size" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3051,6 +3187,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "无法处理此图像尺寸。"
+          }
+        }
+      }
+    },
+    "negative.error.thermal" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Camera paused while the device cools down. Resume and resample later."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "设备过热，相机已暂停。降温后请继续并重新取色。"
           }
         }
       }
@@ -3187,6 +3340,74 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "取色框向左"
+          }
+        }
+      }
+    },
+    "negative.lens.automatic" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auto (Macro)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自动（含微距）"
+          }
+        }
+      }
+    },
+    "negative.lens.telephoto" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Telephoto"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "长焦"
+          }
+        }
+      }
+    },
+    "negative.lens.ultraWide" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ultra Wide"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "超广角"
+          }
+        }
+      }
+    },
+    "negative.lens.wide" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Main camera"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "主摄"
           }
         }
       }
@@ -3493,70 +3714,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "使用此片基"
-          }
-        }
-      }
-    },
-    "nav.shutter" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Shutter"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "快门"
-          }
-        }
-      }
-    },
-    "nav.undo" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Undo"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "撤销"
-          }
-        }
-      }
-    },
-    "nav.viewComparison" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "View comparison"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "查看对比"
-          }
-        }
-      }
-    },
-    "nav.workbench" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Workbench"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "工作台"
           }
         }
       }
@@ -5696,176 +5853,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "缩小"
-          }
-        }
-      }
-    },
-    "negative.centerSample" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Return to center"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "回到中心"
-          }
-        }
-      }
-    },
-    "negative.lens.wide" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Main camera"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "主摄"
-          }
-        }
-      }
-    },
-    "negative.lens.ultraWide" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ultra Wide"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "超广角"
-          }
-        }
-      }
-    },
-    "negative.lens.telephoto" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Telephoto"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "长焦"
-          }
-        }
-      }
-    },
-    "negative.camera.settings" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Camera settings"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "相机设置"
-          }
-        }
-      }
-    },
-    "negative.camera.lens" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lens"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "镜头"
-          }
-        }
-      }
-    },
-    "negative.camera.resolution" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Capture resolution"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "采集分辨率"
-          }
-        }
-      }
-    },
-    "negative.camera.fixedFocus" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This lens has fixed focus. Adjust the distance to the film."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "此镜头不支持自动对焦，请调整与胶片的距离。"
-          }
-        }
-      }
-    },
-    "negative.camera.minimumDistance" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Minimum focus distance"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "最近对焦距离"
-          }
-        }
-      }
-    },
-    "negative.camera.settingsHint" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Changing lens, resolution or exposure clears the film base. Adjust first, then sample again. 4K uses more memory and power."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "更换镜头、分辨率或曝光后需重取片基。请先调整再取样；4K 会增加内存和耗电。"
           }
         }
       }

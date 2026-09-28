@@ -138,6 +138,29 @@ struct NegativeTests {
         }
     }
 
+    @Test func displayLimitSharpensFilePreviewTiers() async throws {
+        let url = temporary(), context = NegativePixels.context()
+        defer { try? FileManager.default.removeItem(at: url) }
+        try context.writeTIFFRepresentation(of: fixture(width: 2200, height: 1400), to: url,
+            format: .RGBA16, colorSpace: NegativePixels.display)
+        let renderer = NegativeRenderer(), asset = try await renderer.load(url)
+        #expect(asset.width == 2200 && asset.height == 1400)
+        // Import keeps the bounded preview; explicit display tiers resize exactly and never upsample.
+        #expect(asset.preview.width == 1800 && asset.preview.height == 1145)
+        let base = try await renderer.sample(asset, point: CGPoint(x: 0.5, y: 0.1))
+        let original = try await renderer.filePreview(asset, limit: 2000)
+        #expect(original.width == 2000 && original.height == 1273)
+        let positive = try await renderer.render(asset, base: base, limit: 2200)
+        #expect(positive.width == 2200 && positive.height == 1400)
+        let beyond = try await renderer.render(asset, base: base, limit: 9000)
+        #expect(beyond.width == 2200 && beyond.height == 1400)
+        // A full-resolution tier matches the single-shot render of the same extent.
+        let reference = try NegativePixels.preview(asset.image, base: base, context: context, limit: 2200)
+        #expect(reference.width == positive.width && reference.height == positive.height)
+        let a = pixels(positive), b = pixels(reference)
+        #expect(zip(a, b).allSatisfy { abs(Int($0) - Int($1)) <= 1 })
+    }
+
     @Test func rejectsMultipageTIFF() async throws {
         let url = temporary(), context = NegativePixels.context()
         defer { try? FileManager.default.removeItem(at: url) }

@@ -39,13 +39,12 @@ final class NegativeUITests: XCTestCase {
         image.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
         // Ordinary taps focus; only explicit sampling enters the confirmation workflow.
         XCTAssertFalse(app.buttons["negative-confirm-base"].exists)
-        // Immersive capture fills the viewport and uses one explicit sampling action.
+        // Immersive capture keeps the complete frame visible; one explicit sampling action.
         XCTAssertFalse(app.tabBars.firstMatch.isHittable)
-        XCTAssertGreaterThan(image.frame.height, app.frame.height * 0.8)
+        XCTAssertLessThanOrEqual(image.frame.maxY, app.frame.maxY)
+        XCTAssertGreaterThan(image.frame.height, app.frame.height * 0.4)
         let liveScreenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         liveScreenshot.name = "Immersive camera portrait"; liveScreenshot.lifetime = .keepAlways; add(liveScreenshot)
-        app.buttons["negative-camera-framing"].tap()
-        app.buttons["negative-camera-framing"].tap()
         app.buttons["negative-sample"].tap()
         let confirm = app.buttons["negative-confirm-base"]
         XCTAssertTrue(confirm.waitForExistence(timeout: 10))

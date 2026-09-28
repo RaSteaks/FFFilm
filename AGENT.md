@@ -1,5 +1,24 @@
 # FFFilm
 
+## Preview review fixes (2026-09-28)
+
+- Publish zoom renders through NegativeImageState only when their actual long-side resolution exceeds the cached variant. Memory-capped or equal-size results retain the current original/positive bitmap; source import and film-base changes still replace their images normally.
+- Pass the owned source URL into NegativeZoomView. Preserve the viewport across tiers/comparison for one source, but reset to centered fit for every new source, including identical preview dimensions. Camera frames keep their stable nil file identity.
+- Added deterministic bitmap-publication and UIKit viewport regressions, covering both comparison variants, unchanged-resolution results, retained zoom/pan, changed aspect ratio and same-size replacement files.
+- Verification: iPhone 17 Pro / iOS 26.3 passed all 13 NegativeStoreTests and all 4 NegativeUITests (`/tmp/FFFilm-review-fixes.xcresult`). Strict UI static audit and `git diff --check` passed. Memory-capped publication was simulated with smaller bitmaps; no physical-device memory-pressure run was performed.
+
+## File preview follow-up (2026-09-28)
+
+- Keep progress/errors above the tab bar with a bottom safe-area inset. File previews start at 1800px and sharpen after a 250ms settled zoom demand, capped by source dimensions and the device memory budget; preserve the viewport when swapping bitmaps. Camera resolution, source sampling and full-size exports remain unchanged.
+- Review fixed unsigned memory-budget subtraction and added post-render cancellation/source/calibration checks. Both comparison directions now request the retained display resolution. Added regression coverage for switching back to the original after zooming the positive.
+- Removed the temporary large-TIFF diagnostic UI test and updated DESIGN.md and the workflow documentation. Verification: iPhone 17 Pro (iOS 26.3) NegativeTests and NegativeStoreTests plus all four NegativeUITests passed (`/tmp/FFFilm-negative-followup.xcresult`); after adding the comparison regression, all 11 NegativeStoreTests passed (`/tmp/FFFilm-negative-store-final.xcresult`). The opt-in large-TIFF stress case was skipped. Unsigned iOS-device build, string-catalog JSON validation and `git diff --check` passed. Physical-device memory/camera acceptance remains unverified.
+
+## Fill-screen framing removal (2026-09-28)
+
+- Removed the Full frame / Fill screen display toggle from the immersive camera at the user's request: the complete frame is always fitted outside the header/action panel, so film edges are never cropped and no display-mode entry exists.
+- Dropped `cameraFillsScreen` state, the framing button, the `fillsScreen` parameter chain through NegativeImagePanel/NegativeCanvas/NegativeZoomView and the `max()` scale branch in `layoutSubviews`; the `showsWholeFrame` overlay-inset condition collapses to the always-fit layout. Deleted the `negative.camera.fit`/`negative.camera.fill` string-catalog keys.
+- The UI test now asserts the full frame stays within screen bounds instead of toggling framing. Design/workflow docs state the fixed fit behavior.
+
 ## Review cleanup after EV removal (2026-09-28)
 
 - Full-diff review (every changed file read end to end, all four UI tests executed on simulator) found no correctness bugs but two leftovers from the immersive-camera rework: `NegativeStore.cameraTapSamplesBase` had no remaining writer of `true` after the tap-mode switch removal, and five localization keys were orphaned (`negative.cameraSampleHint`, `negative.camera.tapAction/tapFocus/tapBase`, `negative.camera.autoFocus`). The workflow doc's tap-interaction sentence still described the removed segmented control.

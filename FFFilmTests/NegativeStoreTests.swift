@@ -1,10 +1,62 @@
 #if os(iOS)
 import Testing
 import CoreImage
+import UIKit
 @testable import FFFilm
 
 @MainActor
 struct NegativeStoreTests {
+    @Test func displayUpgradeNeverDowngradesEitherComparisonVariant() throws {
+        let context = NegativePixels.context()
+        func bitmap(_ side: CGFloat) throws -> CGImage {
+            try NegativePixels.preview(CIImage(color: .white).cropped(to:
+                CGRect(x: 0, y: 0, width: side, height: side)), context: context)
+        }
+        let small = try bitmap(64), current = try bitmap(128), equal = try bitmap(128), sharper = try bitmap(256)
+        let state = NegativeImageState()
+        for isPositive in [false, true] {
+            state.publishSharper(current, positive: isPositive)
+            // Simulate the result of a memory-capped render, independent of device RAM.
+            state.publishSharper(small, positive: isPositive)
+            state.publishSharper(equal, positive: isPositive)
+            #expect((isPositive ? state.positive : state.original) === current)
+            state.publishSharper(sharper, positive: isPositive)
+            #expect((isPositive ? state.positive : state.original) === sharper)
+        }
+    }
+
+    @Test func sourceChangesResetViewportButDisplayTiersPreserveIt() throws {
+        let context = NegativePixels.context()
+        func bitmap(_ width: CGFloat, _ height: CGFloat) throws -> CGImage {
+            try NegativePixels.preview(CIImage(color: .white).cropped(to:
+                CGRect(x: 0, y: 0, width: width, height: height)), context: context)
+        }
+        let initial = try bitmap(300, 300), sharper = try bitmap(600, 600)
+        let view = NegativeZoomView()
+        view.frame = CGRect(x: 0, y: 0, width: 300, height: 300)
+        let first = URL(fileURLWithPath: "/tmp/first-negative.tiff")
+        func show(_ image: CGImage, source: URL) {
+            view.setImage(image, sourceURL: source, sampling: false, point: CGPoint(x: 0.5, y: 0.5))
+            view.layoutIfNeeded()
+        }
+        show(initial, source: first)
+        view.setZoomScale(2, animated: false)
+        view.contentOffset = CGPoint(x: 80, y: 100)
+        show(sharper, source: first)
+        #expect(abs(view.zoomScale - 2) < 0.001)
+        #expect(abs(view.contentOffset.x - 80) < 1 && abs(view.contentOffset.y - 100) < 1)
+        // Both a different aspect ratio and identical bitmap dimensions are new sources.
+        for (index, image) in [try bitmap(300, 150), try bitmap(300, 150)].enumerated() {
+            view.setZoomScale(3, animated: false)
+            view.contentOffset = CGPoint(x: 70, y: 30)
+            show(image, source: URL(fileURLWithPath: "/tmp/replacement-\(index).tiff"))
+            #expect(view.zoomScale == 1)
+            #expect(abs(view.contentOffset.x + view.contentInset.left) < 1)
+            #expect(abs(view.contentOffset.y + view.contentInset.top) < 1)
+            #expect(view.contentSize.width <= view.bounds.width && view.contentSize.height <= view.bounds.height)
+        }
+    }
+
     @Test func automaticLensSwitchRequiresNewCalibrationInBothDirections() async throws {
         let camera = StubNegativeCamera(), store = NegativeStore(camera: camera)
         let image = CIImage(color: CIColor(red: 0.6, green: 0.4, blue: 0.3, alpha: 1,
@@ -142,6 +194,64 @@ struct NegativeStoreTests {
         store.startCamera()
         try await waitFor { store.base == nil }
         #expect(camera.storedBase == nil && !store.showsPositive)
+        store.suspend()
+    }
+
+    @Test func zoomDemandSharpensFilePreviewTiersOnly() async throws {
+        let file = FileManager.default.temporaryDirectory.appendingPathComponent("store-negative-\(UUID()).tiff")
+        defer { try? FileManager.default.removeItem(at: file) }
+        let context = NegativePixels.context()
+        let image = CIImage(color: CIColor(red: 0.6, green: 0.4, blue: 0.2))
+            .cropped(to: CGRect(x: 0, y: 0, width: 2200, height: 1400))
+        try context.writeTIFFRepresentation(of: image, to: file, format: .RGBA16, colorSpace: NegativePixels.display)
+        let store = NegativeStore()
+        store.loadFile(file); try await waitUntilIdle(store)
+        let initial = store.imageState.original
+        #expect(initial?.width == 1800)
+        store.displayNeeds(100)
+        store.displayNeeds(4000)
+        // The demand is clamped to the source long side and debounced past the settled pinch.
+        for _ in 0..<600 where !(store.imageState.original !== initial) {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        #expect(store.imageState.original?.width == 2200 && store.imageState.original?.height == 1400)
+        #expect(store.displayLimit == 2200)
+        // Sampling stays at source precision; the confirmed positive renders at the demanded tier.
+        store.selectBase(); try await waitUntilIdle(store)
+        store.confirmBase(); try await waitUntilIdle(store)
+        #expect(store.showsPositive && store.imageState.positive?.width == 2200)
+        // Camera frames arrive at capture resolution; zoom demands never re-render them.
+        let camera = StubNegativeCamera(), cameraStore = NegativeStore(camera: camera)
+        let frame = CIImage(color: CIColor(red: 0.5, green: 0.5, blue: 0.5)).cropped(to: CGRect(x: 0, y: 0, width: 96, height: 96))
+        let cameraAsset = NegativeAsset(image: frame, preview: try NegativePixels.preview(frame, context: context))
+        cameraStore.startCamera()
+        try await waitFor { camera.hasStarted }
+        camera.deliver(cameraAsset)
+        try await waitFor { cameraStore.imageState.original === cameraAsset.preview }
+        cameraStore.displayNeeds(4000)
+        try await Task.sleep(for: .milliseconds(500))
+        #expect(cameraStore.imageState.original === cameraAsset.preview && cameraStore.displayLimit == 1800)
+        cameraStore.suspend()
+    }
+
+    @Test func comparisonSwitchSharpensOriginalAfterPositiveZoom() async throws {
+        let file = FileManager.default.temporaryDirectory.appendingPathComponent("comparison-\(UUID()).tiff")
+        defer { try? FileManager.default.removeItem(at: file) }
+        let context = NegativePixels.context()
+        let image = CIImage(color: CIColor(red: 0.6, green: 0.4, blue: 0.2))
+            .cropped(to: CGRect(x: 0, y: 0, width: 2200, height: 1400))
+        try context.writeTIFFRepresentation(of: image, to: file, format: .RGBA16, colorSpace: NegativePixels.display)
+        let store = NegativeStore()
+        store.loadFile(file); try await waitUntilIdle(store)
+        store.selectBase(); try await waitUntilIdle(store)
+        store.confirmBase(); try await waitUntilIdle(store)
+        store.displayNeeds(2200)
+        try await waitFor { store.imageState.positive?.width == 2200 }
+        #expect(store.imageState.original?.width == 1800)
+        // Switching comparison must satisfy the retained zoom without another pinch gesture.
+        store.showsPositive = false
+        try await waitFor { store.imageState.original?.width == 2200 }
+        #expect(store.displayLimit == 2200)
         store.suspend()
     }
 

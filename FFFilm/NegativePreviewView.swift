@@ -9,7 +9,6 @@ struct NegativePreviewView: View {
     @State private var showsPhotos = false
     @State private var photo: PhotosPickerItem?
     @State private var cameraImmersive = true
-    @State private var cameraFillsScreen = true
     @State private var showsCameraSettings = false
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -144,28 +143,40 @@ struct NegativePreviewView: View {
                         .frame(minHeight: max(300, geometry.size.height - 100))
                         .disabled(store.busy != nil)
                     }
-                    if let busy = store.busy {
-                        HStack {
-                            ProgressView()
-                            Text(LocalizedStringKey(busy))
-                            Spacer()
-                            Button("negative.cancel") { store.cancelWork() }.frame(minHeight: 44)
-                        }
-                        .accessibilityIdentifier("negative-progress")
-                    }
-                    if let error = store.error {
-                        Text(error).font(.callout).foregroundStyle(Palette.text)
-                            .accessibilityIdentifier("negative-error")
-                        if store.cameraDenied {
-                            Button("negative.openSettings") {
-                                if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
-                            }
-                        }
-                    }
                 }
                 .padding(12)
                 .frame(maxWidth: 1180)
                 .frame(maxWidth: .infinity)
+            }
+            // Progress and errors own a stable region above the tab bar; inside the
+            // scroll content they hid behind the floating tab bar during imports.
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                if store.busy != nil || store.error != nil {
+                    VStack(spacing: 8) {
+                        if let busy = store.busy {
+                            HStack {
+                                ProgressView()
+                                Text(LocalizedStringKey(busy))
+                                Spacer()
+                                Button("negative.cancel") { store.cancelWork() }.frame(minHeight: 44)
+                            }
+                            .accessibilityIdentifier("negative-progress")
+                        }
+                        if let error = store.error {
+                            Text(error).font(.callout).foregroundStyle(Palette.text)
+                                .accessibilityIdentifier("negative-error")
+                            if store.cameraDenied {
+                                Button("negative.openSettings") {
+                                    if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
+                                }
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 12).padding(.vertical, 10)
+                    .frame(maxWidth: 1180)
+                    .frame(maxWidth: .infinity)
+                    .background(Palette.background)
+                }
             }
             .background(Palette.background)
         }
@@ -175,17 +186,15 @@ struct NegativePreviewView: View {
     private var cameraWorkspace: some View {
         GeometryReader { geometry in
             let wide = geometry.size.width > geometry.size.height
-            let showsWholeFrame = store.sampling || !cameraFillsScreen
             let panelHeight = dynamicTypeSize.isAccessibilitySize
                 ? geometry.size.height * 0.55
                 : min(geometry.size.height * 0.44, store.sampling ? 260.0 : 184.0)
             ZStack {
-                NegativeImagePanel(store: store, fillsScreen: cameraFillsScreen && !store.sampling, cornerRadius: 0)
-                    // Fit and sampling reveal every source edge outside the control overlays.
-                    .padding(.top, showsWholeFrame ? 64 : 0)
-                    .padding(.bottom, showsWholeFrame && !wide ? panelHeight + 24 : 0)
-                    .padding(.trailing, showsWholeFrame && wide ? 324 : 0)
-                    .ignoresSafeArea(edges: showsWholeFrame ? [] : .all)
+                // The complete frame always stays visible outside the overlays; film edges are never cropped.
+                NegativeImagePanel(store: store, cornerRadius: 0)
+                    .padding(.top, 64)
+                    .padding(.bottom, !wide ? panelHeight + 24 : 0)
+                    .padding(.trailing, wide ? 324 : 0)
                 VStack {
                     cameraHeader
                     Spacer(minLength: 0)
@@ -279,19 +288,8 @@ struct NegativePreviewView: View {
     }
 
     private var cameraStatus: some View {
-        let layout = dynamicTypeSize.isAccessibilitySize
-            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8)) : AnyLayout(HStackLayout(spacing: 8))
-        return VStack(spacing: 8) {
-            layout {
-                Text(cameraHint).font(.caption)
-                Spacer(minLength: 8)
-                Button { cameraFillsScreen.toggle() } label: {
-                    Label(cameraFillsScreen ? "negative.camera.fit" : "negative.camera.fill",
-                          systemImage: cameraFillsScreen ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
-                        .font(.caption).frame(minHeight: 44)
-                }
-                .accessibilityIdentifier("negative-camera-framing")
-            }
+        VStack(spacing: 8) {
+            Text(cameraHint).font(.caption)
             if store.cameraConfiguration?.automaticMacro == true {
                 Text(store.macroActive ? "negative.camera.macroActive" : "negative.camera.macroAutomatic")
                     .font(.caption).foregroundStyle(Palette.muted)
@@ -415,15 +413,15 @@ struct NegativePreviewView: View {
 /// Frame observation stays inside the image panel; the zoom surface is reused at video cadence.
 private struct NegativeImagePanel: View {
     let store: NegativeStore
-    var fillsScreen = false
     var cornerRadius: CGFloat = 12
     var body: some View {
         ZStack(alignment: .topTrailing) {
             if let image = store.displayed {
                 // Tap intent is explicit: focusing must never unexpectedly enter film-base sampling.
-                NegativeCanvas(image: image, fillsScreen: fillsScreen,
+                NegativeCanvas(image: image, sourceURL: store.asset?.fileURL,
                                sampling: store.sampling || store.focusPoint != nil,
-                               point: store.sampling || store.phase == .locking ? store.point : store.focusPoint ?? CGPoint(x: 0.5, y: 0.5)) { point in
+                               point: store.sampling || store.phase == .locking ? store.point : store.focusPoint ?? CGPoint(x: 0.5, y: 0.5),
+                               displayNeed: { store.displayNeeds($0) }) { point in
                     guard store.busy == nil else { return }
                     if store.sampling { store.selectSamplePoint(point) }
                     else { store.focus(point) }
@@ -461,28 +459,34 @@ private struct NegativeShareSheet: UIViewControllerRepresentable {
 
 private struct NegativeCanvas: UIViewRepresentable {
     let image: CGImage
-    let fillsScreen: Bool
+    let sourceURL: URL?
     let sampling: Bool
     let point: CGPoint
+    var displayNeed: ((CGFloat) -> Void)? = nil
     let selected: (CGPoint) -> Void
     func makeUIView(context: Context) -> NegativeZoomView { NegativeZoomView() }
     func updateUIView(_ view: NegativeZoomView, context: Context) {
         view.selected = selected
-        view.setImage(image, fillsScreen: fillsScreen, sampling: sampling, point: point)
+        view.displayNeed = displayNeed
+        view.setImage(image, sourceURL: sourceURL, sampling: sampling, point: point)
     }
 }
 
 /// UIKit owns pinch/pan transforms so touch-to-source mapping stays exact on iPad resizing.
-private final class NegativeZoomView: UIScrollView, UIScrollViewDelegate {
+final class NegativeZoomView: UIScrollView, UIScrollViewDelegate {
     let imageView = UIImageView()
     let marker = CAShapeLayer()
     let centerDot = CAShapeLayer()
     var selected: ((CGPoint) -> Void)?
+    /// Reports the bitmap long side the current zoom needs so file previews can re-render sharper.
+    var displayNeed: ((CGFloat) -> Void)?
+    private var sourceURL: URL?
     private var imageSize = CGSize.zero
     private var lastBounds = CGSize.zero
     private var point = CGPoint.zero
     private var sampling = false
-    private var fillsScreen = false
+    private var fitLongPoints: CGFloat = 0
+    private var pendingViewport: (zoom: CGFloat, center: CGPoint)?
     private weak var previousImage: CGImage?
 
     init() {
@@ -503,11 +507,16 @@ private final class NegativeZoomView: UIScrollView, UIScrollViewDelegate {
         accessibilityLabel = NSLocalizedString("negative.image", comment: "Preview image")
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
-    func setImage(_ image: CGImage, fillsScreen: Bool, sampling: Bool, point: CGPoint) {
+    func setImage(_ image: CGImage, sourceURL: URL?, sampling: Bool, point: CGPoint) {
         if previousImage !== image { imageView.image = UIImage(cgImage: image); previousImage = image }
         let size = CGSize(width: image.width, height: image.height)
-        if imageSize != size || self.fillsScreen != fillsScreen {
-            imageSize = size; self.fillsScreen = fillsScreen; lastBounds = .zero; setNeedsLayout()
+        let sourceChanged = self.sourceURL != sourceURL
+        self.sourceURL = sourceURL
+        if sourceChanged || imageSize != size {
+            // The owned file URL stays stable across tiers/comparison. A new file must
+            // reset even when its preview dimensions match the previous source.
+            pendingViewport = !sourceChanged && imageSize.width > 0 && bounds.width > 0 ? viewport() : nil
+            imageSize = size; lastBounds = .zero; setNeedsLayout()
         }
         self.sampling = sampling; self.point = point
         updateMarker()
@@ -516,20 +525,42 @@ private final class NegativeZoomView: UIScrollView, UIScrollViewDelegate {
         super.layoutSubviews()
         if lastBounds != bounds.size, imageSize.width > 0, bounds.width > 0 {
             lastBounds = bounds.size
+            let restore = pendingViewport
+            pendingViewport = nil
             setZoomScale(1, animated: false)
-            // Fill changes only the display transform; taps still convert through imageView.
-            let ratios = (bounds.width / imageSize.width, bounds.height / imageSize.height)
-            let factor = fillsScreen ? max(ratios.0, ratios.1) : min(ratios.0, ratios.1)
+            let factor = min(bounds.width / imageSize.width, bounds.height / imageSize.height)
             imageView.frame = CGRect(origin: .zero, size: CGSize(width: imageSize.width * factor, height: imageSize.height * factor))
             contentSize = imageView.frame.size
+            fitLongPoints = max(imageSize.width, imageSize.height) * factor
             centerImage()
-            contentOffset = CGPoint(x: (contentSize.width - bounds.width) / 2,
-                                    y: (contentSize.height - bounds.height) / 2)
+            if let restore {
+                setZoomScale(min(max(restore.zoom, minimumZoomScale), maximumZoomScale), animated: false)
+                let target = CGPoint(x: restore.center.x * contentSize.width - bounds.width / 2,
+                                     y: restore.center.y * contentSize.height - bounds.height / 2)
+                contentOffset = CGPoint(
+                    x: min(max(target.x, -contentInset.left), contentSize.width - bounds.width + contentInset.right),
+                    y: min(max(target.y, -contentInset.top), contentSize.height - bounds.height + contentInset.bottom))
+            } else {
+                // A new source starts fully fitted and centered, without the old pan offset.
+                contentOffset = CGPoint(x: -contentInset.left, y: -contentInset.top)
+            }
         }
         centerImage(); updateMarker()
     }
     func viewForZooming(in scrollView: UIScrollView) -> UIView? { imageView }
-    func scrollViewDidZoom(_ scrollView: UIScrollView) { centerImage(); updateMarker() }
+    func scrollViewDidZoom(_ scrollView: UIScrollView) {
+        centerImage(); updateMarker()
+        guard let displayNeed, fitLongPoints > 0, zoomScale > 1.01 else { return }
+        // Screen pixels covering the fitted long side at this zoom; more than the current
+        // bitmap resolution means the preview is being stretched on screen.
+        displayNeed((fitLongPoints * zoomScale * max(1, traitCollection.displayScale)).rounded(.up))
+    }
+    /// The visible content center in normalized coordinates plus the current visual zoom.
+    private func viewport() -> (zoom: CGFloat, center: CGPoint) {
+        let x = (contentOffset.x + bounds.width / 2 - contentInset.left) / max(contentSize.width, 1)
+        let y = (contentOffset.y + bounds.height / 2 - contentInset.top) / max(contentSize.height, 1)
+        return (zoomScale, CGPoint(x: min(1, max(0, x)), y: min(1, max(0, y))))
+    }
     private func centerImage() {
         // Symmetric slack preserves centered scroll boundaries after zoom and rotation.
         let vertical = max(0, (bounds.height - contentSize.height) / 2)

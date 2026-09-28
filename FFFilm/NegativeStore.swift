@@ -19,6 +19,14 @@ nonisolated struct NegativePhoto: Transferable, Sendable {
 final class NegativeImageState {
     var original: CGImage?
     var positive: CGImage?
+
+    /// Memory pressure can cap a requested upgrade below the already displayed tier.
+    /// Keep each comparison variant's best bitmap; equal tiers also avoid needless swaps.
+    func publishSharper(_ image: CGImage, positive isPositive: Bool) {
+        let current = isPositive ? positive : original
+        if let current, max(image.width, image.height) <= max(current.width, current.height) { return }
+        if isPositive { positive = image } else { original = image }
+    }
 }
 
 @MainActor @Observable
@@ -54,7 +62,13 @@ final class NegativeStore {
     private(set) var phase: Phase?
     var busy: String? { phase?.rawValue }
     private(set) var candidateBusy = false
-    var showsPositive = false
+    var showsPositive = false {
+        didSet {
+            // A comparison switch can land on a variant rendered before zoom demanded more resolution.
+            guard showsPositive != oldValue else { return }
+            sharpenDisplay(target: displayLimit)
+        }
+    }
     var point = CGPoint(x: 0.5, y: 0.5)
     var error: String?
     var share: NegativeShare?
@@ -67,10 +81,13 @@ final class NegativeStore {
     private(set) var macroActive = false
     private(set) var needsCameraResampling = false
     private(set) var focusPoint: CGPoint?
+    /// Long-side pixels the current zoom demands of the displayed file bitmap.
+    @ObservationIgnored private(set) var displayLimit: CGFloat = 1800
     @ObservationIgnored private var focusFeedback: Task<Void, Never>?
     @ObservationIgnored private let renderer = NegativeRenderer()
     @ObservationIgnored private let camera: any NegativeCameraCapture
     @ObservationIgnored private var operation: Task<Void, Never>?
+    @ObservationIgnored private var displayTask: Task<Void, Never>?
     @ObservationIgnored private var sampleTask: Task<Void, Never>?
     @ObservationIgnored private var revision = UUID()
     @ObservationIgnored private var sampleRevision = UUID()
@@ -114,7 +131,7 @@ final class NegativeStore {
                 guard !Task.isCancelled, revision == id else { return }
                 camera.stop(); cameraRevision = UUID()
                 asset = result; imageState.original = result.preview; latestCameraAsset = nil; positive = nil; base = nil; candidate = nil
-                isCamera = false; live = false; paused = false; sampling = false; showsPositive = false
+                isCamera = false; live = false; paused = false; sampling = false; displayLimit = 1800; showsPositive = false
             } catch {
                 if revision == id && !Task.isCancelled { reportImportError(error) }
             }
@@ -230,7 +247,7 @@ final class NegativeStore {
         phase = .rendering
         operation = Task {
             do {
-                let result = try await renderer.render(asset, base: candidate)
+                let result = try await renderer.render(asset, base: candidate, limit: displayLimit)
                 guard revision == id, !Task.isCancelled else { return }
                 base = candidate; positive = result; sampling = false; showsPositive = true
                 needsCameraResampling = false
@@ -239,6 +256,46 @@ final class NegativeStore {
                 if isCamera && beforeSamplingLive && captureLocked && !paused { live = true; camera.freeze(false) }
             } catch { if revision == id && !Task.isCancelled { self.error = error.localizedDescription } }
             if revision == id { phase = nil }
+        }
+    }
+
+    /// The zoom view reports the bitmap long side the current zoom needs. File previews
+    /// re-render at that tier (bounded by the source size and the memory budget); camera
+    /// frames already arrive at capture resolution and ignore the demand.
+    func displayNeeds(_ limit: CGFloat) {
+        guard limit.isFinite, limit > 0, let asset else { return }
+        sharpenDisplay(target: min(limit, CGFloat(max(asset.width, asset.height))))
+    }
+
+    /// Debounced so one render follows a settled pinch instead of every intermediate zoom step.
+    private func sharpenDisplay(target: CGFloat) {
+        guard !sampling, busy == nil, asset?.filePixels != nil, target > 0,
+              let shown = displayed,
+              target > CGFloat(max(shown.width, shown.height)) * 1.15 else { return }
+        displayLimit = max(displayLimit, target)
+        displayTask?.cancel()
+        let id = revision, wanted = target
+        displayTask = Task { [weak self] in
+            do { try await Task.sleep(for: .milliseconds(250)) } catch { return }
+            guard let self, self.revision == id, !Task.isCancelled,
+                  let asset = self.asset, asset.filePixels != nil,
+                  !self.sampling, self.busy == nil,
+                  let shown = self.displayed,
+                  wanted > CGFloat(max(shown.width, shown.height)) else { return }
+            do {
+                if self.showsPositive, let base = self.base {
+                    let result = try await self.renderer.render(asset, base: base, limit: wanted)
+                    // Actor work can finish after cancellation or a new source/calibration.
+                    guard !Task.isCancelled, self.revision == id, self.base == base else { return }
+                    self.imageState.publishSharper(result, positive: true)
+                } else {
+                    let result = try await self.renderer.filePreview(asset, limit: wanted)
+                    guard !Task.isCancelled, self.revision == id else { return }
+                    self.imageState.publishSharper(result, positive: false)
+                }
+            } catch {
+                // Keep the current tier; the next zoom demand retries with a fresh budget.
+            }
         }
     }
 
@@ -311,6 +368,7 @@ final class NegativeStore {
 
     func cancelWork() {
         operation?.cancel(); operation = nil
+        displayTask?.cancel()
         revision = UUID(); phase = nil
         if isCamera { freeze() }
     }

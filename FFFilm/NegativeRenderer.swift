@@ -185,7 +185,14 @@ nonisolated enum NegativePixels {
 
 /// Serial file work prevents concurrent full-resolution decoding and export jobs.
 actor NegativeRenderer {
-    private let context = NegativePixels.context()
+    // Actor-isolated first use avoids GPU initialization on the caller's UI thread.
+    private var renderContext: CIContext?
+    private var context: CIContext {
+        if let renderContext { return renderContext }
+        let created = NegativePixels.context()
+        renderContext = created
+        return created
+    }
 
     nonisolated static func copiedFile(_ url: URL) throws -> URL {
         let target = FileManager.default.temporaryDirectory.appendingPathComponent("negative-\(UUID().uuidString).\(url.pathExtension)")

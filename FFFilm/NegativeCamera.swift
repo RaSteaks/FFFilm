@@ -1,6 +1,7 @@
 #if os(iOS)
 @preconcurrency import AVFoundation
 import CoreImage
+import OSLog
 
 nonisolated struct NegativeCameraFrame: @unchecked Sendable {
     let asset: NegativeAsset
@@ -30,7 +31,14 @@ nonisolated final class NegativeCamera: NSObject, NegativeCameraCapture, AVCaptu
     private let session = AVCaptureSession()
     // A failed/interrupted session can stop before its notification reaches our queue.
     private var captureRequested = false
-    private let context = NegativePixels.context()
+    // Initialize the GPU context only on the capture queue, not during SwiftUI view creation.
+    private var renderContext: CIContext?
+    private var context: CIContext {
+        if let renderContext { return renderContext }
+        let created = NegativePixels.context()
+        renderContext = created
+        return created
+    }
     private var device: AVCaptureDevice?
     private var output: AVCaptureVideoDataOutput?
     private var frameHandler: (@Sendable (NegativeCameraFrame, @escaping @Sendable () -> Void) -> Void)?
@@ -46,13 +54,21 @@ nonisolated final class NegativeCamera: NSObject, NegativeCameraCapture, AVCaptu
     private var lockDeadline: CFAbsoluteTime = 0
     private var lockGeneration = UUID()
     private var stableFrames = 0
-    private var lastFrameTime: CFAbsoluteTime = 0
+    private var cadence = NegativeFrameCadence()
+    private var requestedCaptureFPS: Double = 0
+    private var highResolution = false
     private var rotation: CGFloat = 90
     private var deliveryGeneration = UUID()
     private var minimumFrameTimestamp = CMTime.invalid
     private var primaryDeviceID: String?
     private var lensSettlingFrames = 0
     private var calibrationID = UUID()
+    #if DEBUG
+    private let performanceLog = Logger(subsystem: "com.rasteaks.FFFilm", category: "NegativeCameraPerformance")
+    private var performanceStart: CFAbsoluteTime = 0
+    private var receivedFrames = 0, deliveredFrames = 0, throttledFrames = 0, busyFrames = 0, droppedFrames = 0
+    private var renderSeconds: Double = 0
+    #endif
 
     override init() {
         super.init()
@@ -67,8 +83,10 @@ nonisolated final class NegativeCamera: NSObject, NegativeCameraCapture, AVCaptu
         }
         observers.append(NotificationCenter.default.addObserver(forName: ProcessInfo.thermalStateDidChangeNotification, object: nil, queue: nil) { [weak self] _ in
             self?.queue.async { [weak self] in
-                guard let self, self.captureRequested, ProcessInfo.processInfo.thermalState == .critical else { return }
-                self.stopOnQueue(); self.errorHandler?("negative.error.thermal")
+                guard let self, self.captureRequested else { return }
+                if ProcessInfo.processInfo.thermalState == .critical {
+                    self.stopOnQueue(); self.errorHandler?("negative.error.thermal")
+                } else { self.updateCaptureCadence() }
             }
         })
     }
@@ -89,7 +107,7 @@ nonisolated final class NegativeCamera: NSObject, NegativeCameraCapture, AVCaptu
             do {
                 // Stop before changing inputs/formats so old frames cannot enter the new calibration.
                 session.stopRunning()
-                context.clearCaches()
+                // Reuse the context and compiled kernels across lens/format changes.
                 let configuration = try configure(settings)
                 guard let device else { throw NegativeFailure(key: "negative.error.camera") }
                 try device.lockForConfiguration()
@@ -110,16 +128,18 @@ nonisolated final class NegativeCamera: NSObject, NegativeCameraCapture, AVCaptu
                     device.videoZoomFactor = min(device.maxAvailableVideoZoomFactor, max(device.minAvailableVideoZoomFactor, zoom))
                 }
                 device.setExposureTargetBias(configuration.settings.exposureBias, completionHandler: nil)
-                // Bound capture cadence as well as UI delivery; do not acquire 60fps only to discard it.
-                if device.activeFormat.videoSupportedFrameRateRanges.contains(where: { $0.minFrameRate <= 30 && $0.maxFrameRate >= 30 }) {
-                    device.activeVideoMinFrameDuration = CMTime(value: 1, timescale: 30)
-                    device.activeVideoMaxFrameDuration = CMTime(value: 1, timescale: 30)
-                }
                 device.unlockForConfiguration()
+                highResolution = configuration.settings.resolution == .ultraHD
+                requestedCaptureFPS = 0
                 base = nil; frozen = false; locking = false; waitingForLockedFrame = false; awaitingLockCompletion = false; deliveringFrame = false
-                deliveryGeneration = UUID(); lastFrameTime = 0
+                updateCaptureCadence()
+                deliveryGeneration = UUID(); cadence = NegativeFrameCadence()
                 primaryDeviceID = nil; lensSettlingFrames = 0; calibrationID = UUID()
                 minimumFrameTimestamp = CMClockGetTime(CMClockGetHostTimeClock())
+                #if DEBUG
+                performanceStart = CFAbsoluteTimeGetCurrent()
+                receivedFrames = 0; deliveredFrames = 0; throttledFrames = 0; busyFrames = 0; droppedFrames = 0; renderSeconds = 0
+                #endif
                 onConfiguration(configuration)
                 session.startRunning()
             } catch { stopOnQueue(); onError("negative.error.camera") }
@@ -143,9 +163,9 @@ nonisolated final class NegativeCamera: NSObject, NegativeCameraCapture, AVCaptu
         // Match the selected video preset instead of allowing a lower-resolution preview proxy.
         video.automaticallyConfiguresOutputBufferDimensions = false
         video.deliversPreviewSizedOutputBuffers = false
-        video.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
         session.beginConfiguration()
-        defer { session.commitConfiguration() }
+        var committed = false
+        defer { if !committed { session.commitConfiguration() } }
         // Capability checks depend on the selected input, not on the previous lens.
         // Drop a previous lens's 4K requirement before adding a lower-capability input.
         if session.canSetSessionPreset(.high) { session.sessionPreset = .high }
@@ -163,6 +183,12 @@ nonisolated final class NegativeCamera: NSObject, NegativeCameraCapture, AVCaptu
             throw NegativeFailure(key: "negative.error.camera")
         }
         session.sessionPreset = resolution.preset
+        session.commitConfiguration(); committed = true
+        // Availability depends on the selected input/format; query only after selecting them.
+        guard let pixelFormat = NegativeCapturePixelFormat.preferred(in: video.availableVideoPixelFormatTypes) else {
+            throw NegativeFailure(key: "negative.error.camera")
+        }
+        video.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: pixelFormat]
         video.setSampleBufferDelegate(self, queue: queue)
         if let connection = video.connection(with: .video), connection.isVideoRotationAngleSupported(rotation) { connection.videoRotationAngle = rotation }
         device = camera; output = video
@@ -180,6 +206,37 @@ nonisolated final class NegativeCamera: NSObject, NegativeCameraCapture, AVCaptu
     private static func supportsMacro(_ device: AVCaptureDevice) -> Bool {
         device.primaryConstituentDeviceSwitchingBehavior != .unsupported && device.constituentDevices.contains {
             $0.deviceType == .builtInUltraWideCamera && $0.isFocusModeSupported(.continuousAutoFocus)
+        }
+    }
+
+    private var targetFPS: Double {
+        let pressure = device?.systemPressureState.level
+        if ProcessInfo.processInfo.thermalState == .serious || pressure == .serious || pressure == .critical || pressure == .shutdown { return 10 }
+        return highResolution ? 15 : 30
+    }
+
+    private func updateCaptureCadence() {
+        guard let device else { return }
+        // Shortening a calibrated exposure's frame duration can alter its brightness.
+        // Preserve locks; the software delivery cap still responds to heat/pressure.
+        guard !locking, !awaitingLockCompletion, !waitingForLockedFrame,
+              base == nil, device.exposureMode != .locked else { return }
+        let fps = targetFPS
+        guard requestedCaptureFPS != fps else { return }
+        // Remember unsupported requests too; never lock/reconfigure the device every frame.
+        requestedCaptureFPS = fps
+        guard device.activeFormat.videoSupportedFrameRateRanges.contains(where: { $0.minFrameRate <= fps && $0.maxFrameRate >= fps }) else { return }
+        do {
+            try device.lockForConfiguration()
+            defer { device.unlockForConfiguration() }
+            let duration = CMTime(value: 1, timescale: Int32(fps))
+            device.activeVideoMinFrameDuration = duration
+            device.activeVideoMaxFrameDuration = duration
+        } catch {
+            // Frame delivery remains bounded even when a hardware rate change is unavailable.
+            #if DEBUG
+            performanceLog.debug("Capture frame-rate adjustment unavailable")
+            #endif
         }
     }
 
@@ -238,6 +295,11 @@ nonisolated final class NegativeCamera: NSObject, NegativeCameraCapture, AVCaptu
 
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
         guard !frozen, let buffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
+        #if DEBUG
+        receivedFrames += 1
+        defer { reportPerformanceIfNeeded() }
+        #endif
+        updateCaptureCadence()
         guard CMSampleBufferGetPresentationTimeStamp(sampleBuffer) >= minimumFrameTimestamp else { return }
         if let device, let primary = device.activePrimaryConstituent {
             if let previous = primaryDeviceID, previous != primary.uniqueID {
@@ -300,12 +362,22 @@ nonisolated final class NegativeCamera: NSObject, NegativeCameraCapture, AVCaptu
             if lockedTimestamp.isValid && timestamp < lockedTimestamp { return }
             stableFrames += 1; if stableFrames < 3 { return }
         }
-        guard !deliveringFrame else { return }
-        let now = CFAbsoluteTimeGetCurrent()
-        let highResolution = CVPixelBufferGetWidth(buffer) * CVPixelBufferGetHeight(buffer) > 1920 * 1080
-        let fps: Double = ProcessInfo.processInfo.thermalState == .serious ? 10 : highResolution ? 15 : 30
-        guard waitingForLockedFrame || now - lastFrameTime >= 1 / fps else { return }
-        lastFrameTime = now
+        guard !deliveringFrame else {
+            #if DEBUG
+            busyFrames += 1
+            #endif
+            return
+        }
+        guard cadence.shouldDeliver(CMSampleBufferGetPresentationTimeStamp(sampleBuffer), fps: targetFPS, force: waitingForLockedFrame) else {
+            #if DEBUG
+            throttledFrames += 1
+            #endif
+            return
+        }
+        #if DEBUG
+        let renderStart = CFAbsoluteTimeGetCurrent()
+        defer { renderSeconds += CFAbsoluteTimeGetCurrent() - renderStart }
+        #endif
         autoreleasepool {
             do {
                 let image = CIImage(cvPixelBuffer: buffer)
@@ -322,6 +394,9 @@ nonisolated final class NegativeCamera: NSObject, NegativeCameraCapture, AVCaptu
                 // One main-actor delivery at a time; a busy UI drops frames rather than retaining a queue of images.
                 deliveringFrame = true
                 let generation = deliveryGeneration
+                #if DEBUG
+                deliveredFrames += 1
+                #endif
                 let isMacro = device?.isVirtualDevice == true && device?.activePrimaryConstituent?.deviceType == .builtInUltraWideCamera
                 frameHandler?(NegativeCameraFrame(asset: asset, positive: rendered, frozenForSampling: sample,
                     isMacro: isMacro, calibrationID: calibrationID)) { [weak self] in
@@ -333,5 +408,25 @@ nonisolated final class NegativeCamera: NSObject, NegativeCameraCapture, AVCaptu
             } catch { errorHandler?("negative.error.render") }
         }
     }
+
+    func captureOutput(_ output: AVCaptureOutput, didDrop sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
+        #if DEBUG
+        droppedFrames += 1
+        reportPerformanceIfNeeded()
+        #endif
+    }
+
+    #if DEBUG
+    private func reportPerformanceIfNeeded() {
+        let now = CFAbsoluteTimeGetCurrent(), elapsed = now - performanceStart
+        guard performanceStart > 0, elapsed >= 5 else { return }
+        // One aggregate every five seconds; never log images, device identifiers or per-frame payloads.
+        let fps = Double(deliveredFrames) / elapsed
+        let milliseconds = deliveredFrames > 0 ? renderSeconds * 1000 / Double(deliveredFrames) : 0
+        performanceLog.debug("Preview fps=\(fps, privacy: .public) render_ms=\(milliseconds, privacy: .public) received=\(self.receivedFrames) throttled=\(self.throttledFrames) ui_busy=\(self.busyFrames) capture_dropped=\(self.droppedFrames)")
+        performanceStart = now
+        receivedFrames = 0; deliveredFrames = 0; throttledFrames = 0; busyFrames = 0; droppedFrames = 0; renderSeconds = 0
+    }
+    #endif
 }
 #endif

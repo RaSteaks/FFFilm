@@ -5,6 +5,109 @@ import CoreImage
 
 @MainActor
 struct NegativeStoreTests {
+    @Test func focusCoordinatesFollowAllCaptureRotations() {
+        let point = CGPoint(x: 0.2, y: 0.3)
+        #expect(NegativeFocusCoordinates.sensorPoint(point, rotation: 0) == point)
+        #expect(NegativeFocusCoordinates.sensorPoint(point, rotation: 90) == CGPoint(x: 0.3, y: 0.8))
+        #expect(NegativeFocusCoordinates.sensorPoint(point, rotation: 180) == CGPoint(x: 0.8, y: 0.7))
+        #expect(NegativeFocusCoordinates.sensorPoint(point, rotation: 270) == CGPoint(x: 0.7, y: 0.2))
+        #expect(NegativeFocusCoordinates.sensorPoint(CGPoint(x: -1, y: 0.5), rotation: 90) == nil)
+        #expect(NegativeFocusCoordinates.sensorPoint(CGPoint(x: CGFloat.nan, y: 0.5), rotation: 90) == nil)
+    }
+
+    @Test func cameraControlsRespectCapabilitiesAndInvalidateCalibration() async throws {
+        let camera = StubNegativeCamera(), store = NegativeStore(camera: camera)
+        let context = NegativePixels.context()
+        let image = CIImage(color: CIColor(red: 0.6, green: 0.4, blue: 0.3, alpha: 1,
+                                          colorSpace: NegativePixels.linear)!).cropped(to: CGRect(x: 0, y: 0, width: 96, height: 96))
+        let asset = NegativeAsset(image: image, preview: try NegativePixels.preview(image, context: context))
+        store.startCamera()
+        try await waitFor { camera.hasStarted }
+        camera.deliver(asset)
+        try await waitFor { store.canAdjustCamera }
+        #expect(!store.cameraTapSamplesBase)
+        store.focus(CGPoint(x: 0.2, y: 0.3))
+        #expect(camera.lastFocus == CGPoint(x: 0.2, y: 0.3) && !store.sampling && store.busy == nil)
+        store.continuousFocus()
+        #expect(camera.continuousFocusRequests == 1 && store.focusPoint == nil)
+        store.selectBase()
+        // Focus changes must not race exposure/white-balance locking.
+        store.focus(CGPoint(x: 0.8, y: 0.7))
+        #expect(camera.lastFocus == CGPoint(x: 0.2, y: 0.3))
+        camera.deliver(asset, frozenForSampling: true)
+        try await waitFor { store.candidate != nil }
+        store.confirmBase()
+        try await waitUntilIdle(store)
+        #expect(store.base != nil && store.canExport)
+        store.setExposureBias(9)
+        try await waitFor { camera.lastSettings.exposureBias == 2 }
+        #expect(store.base == nil && !store.canExport && !store.captureLocked)
+        camera.deliver(asset)
+        try await waitFor { store.canAdjustCamera }
+        let starts = camera.startCount
+        store.setExposureBias(.nan)
+        store.setCameraLens("missing")
+        store.setCameraResolution(.ultraHD)
+        #expect(camera.startCount == starts)
+        store.setCameraResolution(.fullHD)
+        try await waitFor { camera.lastSettings.resolution == .fullHD }
+        camera.deliver(asset)
+        try await waitFor { store.canAdjustCamera }
+        store.setCameraLens("ultra")
+        try await waitFor { camera.lastSettings.lensID == "ultra" }
+        #expect(store.cameraSettings.exposureBias == 2)
+        store.suspend()
+        let stoppedSettings = store.cameraSettings
+        store.setExposureBias(0)
+        #expect(store.cameraSettings == stoppedSettings)
+    }
+
+    @Test func tappedCameraBaseSurvivesLockAndDrivesSessionPreview() async throws {
+        let camera = StubNegativeCamera(), store = NegativeStore(camera: camera)
+        let context = NegativePixels.context()
+        let extent = CGRect(x: 0, y: 0, width: 200, height: 200)
+        let background = CIImage(color: CIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1,
+                                               colorSpace: NegativePixels.linear)!).cropped(to: extent)
+        let edge = CIImage(color: CIColor(red: 0.6, green: 0.4, blue: 0.3, alpha: 1,
+                                         colorSpace: NegativePixels.linear)!)
+            .cropped(to: CGRect(x: 0, y: 150, width: 200, height: 50))
+        let image = edge.composited(over: background)
+        let asset = NegativeAsset(image: image, preview: try NegativePixels.preview(image, context: context))
+        store.startCamera()
+        try await waitFor { camera.hasStarted }
+        camera.deliver(asset)
+        try await waitFor { store.asset != nil }
+        let tapped = CGPoint(x: 0.3, y: 0.1)
+        store.selectBase(at: tapped)
+        #expect(camera.requestedLock && store.phase == .locking)
+        // The lock callback must sample the tapped edge, not silently reset to image center.
+        camera.deliver(asset, frozenForSampling: true)
+        try await waitFor { store.candidate != nil }
+        #expect(store.point == tapped && store.captureLocked && !store.live)
+        #expect(abs(try #require(store.candidate).red - 0.6) < 0.001)
+        store.selectSamplePoint(CGPoint(x: 0.5, y: 0.5))
+        try await waitUntilIdle(store)
+        #expect(abs(try #require(store.candidate).red - 0.2) < 0.001)
+        store.selectSamplePoint(tapped)
+        try await waitUntilIdle(store)
+        store.confirmBase()
+        try await waitUntilIdle(store)
+        #expect(store.showsPositive && store.live && !store.sampling)
+        #expect(camera.storedBase == store.base && store.base != nil)
+        #expect(store.imageState.positive != nil)
+        // Re-sampling is provisional, and camera restart clears the temporary calibration.
+        let committed = store.base
+        store.selectBase()
+        camera.deliver(asset, frozenForSampling: true)
+        try await waitFor { store.sampling }
+        store.cancelSampling()
+        #expect(store.base == committed && camera.storedBase == committed && store.live)
+        store.startCamera()
+        try await waitFor { store.base == nil }
+        #expect(camera.storedBase == nil && !store.showsPositive)
+        store.suspend()
+    }
+
     @Test func importCancellationDoesNotBecomeAnError() {
         let store = NegativeStore()
         store.reportImportError(CocoaError(.userCancelled))
@@ -131,25 +234,43 @@ nonisolated private final class StubNegativeCamera: NegativeCameraCapture, @unch
     private let lock = NSLock()
     private var frameHandler: (@Sendable (NegativeCameraFrame, @escaping @Sendable () -> Void) -> Void)?
     private var errorHandler: (@Sendable (String) -> Void)?
+    private var base: NegativeBase?
+    private var lockRequested = false
+    private var settings = NegativeCameraSettings()
+    private var starts = 0
+    private var focusedPoint: CGPoint?
+    private var continuousRequests = 0
+    var lastSettings: NegativeCameraSettings { lock.withLock { settings } }
+    var startCount: Int { lock.withLock { starts } }
+    var lastFocus: CGPoint? { lock.withLock { focusedPoint } }
+    var continuousFocusRequests: Int { lock.withLock { continuousRequests } }
+    var storedBase: NegativeBase? { lock.withLock { base } }
+    var requestedLock: Bool { lock.withLock { lockRequested } }
     var hasStarted: Bool { lock.withLock { frameHandler != nil } }
     func requestAccess() async -> Bool { true }
-    func start(onFrame: @escaping @Sendable (NegativeCameraFrame, @escaping @Sendable () -> Void) -> Void,
+    func start(settings: NegativeCameraSettings, onConfiguration: @escaping @Sendable (NegativeCameraConfiguration) -> Void, onFrame: @escaping @Sendable (NegativeCameraFrame, @escaping @Sendable () -> Void) -> Void,
                onError: @escaping @Sendable (String) -> Void) {
-        lock.withLock { frameHandler = onFrame; errorHandler = onError }
+        var effective = settings
+        effective.lensID = settings.lensID ?? "wide"
+        lock.withLock { frameHandler = onFrame; errorHandler = onError; base = nil; lockRequested = false; self.settings = effective; starts += 1 }
+        onConfiguration(NegativeCameraConfiguration(settings: effective,
+            lenses: [NegativeLens(id: "wide", titleKey: "negative.lens.wide"), NegativeLens(id: "ultra", titleKey: "negative.lens.ultraWide")],
+            resolutions: [.hd, .fullHD], exposureRange: -2...2, supportsFocus: true, minimumFocusDistance: 100))
     }
-    func deliver(_ asset: NegativeAsset) {
+    func deliver(_ asset: NegativeAsset, frozenForSampling: Bool = false) {
         let handler = lock.withLock { frameHandler }
-        handler?(NegativeCameraFrame(asset: asset, positive: nil, frozenForSampling: false), {})
+        handler?(NegativeCameraFrame(asset: asset, positive: nil, frozenForSampling: frozenForSampling), {})
     }
     func fail() {
         let handler = lock.withLock { errorHandler }
         handler?("negative.error.interrupted")
     }
-    func sampleWhenLocked() {}
-    func setBase(_ value: NegativeBase?) {}
+    func sampleWhenLocked() { lock.withLock { lockRequested = true } }
+    func setBase(_ value: NegativeBase?) { lock.withLock { base = value } }
     func freeze(_ value: Bool) {}
     func stop() {}
-    func focus(_ point: CGPoint) {}
+    func focus(_ point: CGPoint) { lock.withLock { focusedPoint = point } }
+    func continuousFocus() { lock.withLock { continuousRequests += 1 } }
     func rotate(_ angle: CGFloat) {}
 }
 #endif

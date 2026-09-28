@@ -2484,13 +2484,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Film base set"
+            "value" : "Film base stored for this session"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "片基已设置"
+            "value" : "片基颜色已暂存"
           }
         }
       }
@@ -3212,13 +3212,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tap an unexposed film edge, avoiding holes and lettering. Pinch to inspect."
+            "value" : "The center dot marks the sample. Tap an unexposed film edge or return to center; avoid holes and lettering. Confirm to preview the positive."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "点按未曝光片边，避开齿孔和文字。可双指缩放检查。"
+            "value" : "中心点为取样位置。点按未曝光片边或回到中心，避开齿孔和文字；确认后查看正片。"
           }
         }
       }
@@ -3229,13 +3229,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Negative"
+            "value" : "Film Preview"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "负片"
+            "value" : "胶片预览"
           }
         }
       }
@@ -5490,6 +5490,295 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "缩小"
+          }
+        }
+      }
+    },
+    "negative.centerSample" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Return to center"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "回到中心"
+          }
+        }
+      }
+    },
+    "negative.cameraSampleHint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Align the center target with an unexposed film edge and select Sample film base, or tap the edge to sample there."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将中心点对准未曝光片边后选取片基，也可直接点按片边取样。"
+          }
+        }
+      }
+    },
+    "negative.lens.wide" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Main camera"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "主摄"
+          }
+        }
+      }
+    },
+    "negative.lens.ultraWide" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ultra Wide"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "超广角"
+          }
+        }
+      }
+    },
+    "negative.lens.telephoto" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Telephoto"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "长焦"
+          }
+        }
+      }
+    },
+    "negative.camera.tapAction" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tap action"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "点按操作"
+          }
+        }
+      }
+    },
+    "negative.camera.tapFocus" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "对焦"
+          }
+        }
+      }
+    },
+    "negative.camera.tapBase" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sample film base"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "取片基"
+          }
+        }
+      }
+    },
+    "negative.camera.settings" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Camera settings"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "相机设置"
+          }
+        }
+      }
+    },
+    "negative.camera.lens" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lens"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "镜头"
+          }
+        }
+      }
+    },
+    "negative.camera.resolution" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Capture resolution"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "采集分辨率"
+          }
+        }
+      }
+    },
+    "negative.camera.exposure" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exposure compensation"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "曝光补偿"
+          }
+        }
+      }
+    },
+    "negative.camera.resetExposure" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reset EV"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重置曝光"
+          }
+        }
+      }
+    },
+    "negative.camera.autoFocus" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continuous autofocus"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "恢复自动对焦"
+          }
+        }
+      }
+    },
+    "negative.camera.fixedFocus" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This lens has fixed focus. Adjust the distance to the film."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此镜头不支持自动对焦，请调整与胶片的距离。"
+          }
+        }
+      }
+    },
+    "negative.camera.minimumDistance" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Minimum focus distance"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近对焦距离"
+          }
+        }
+      }
+    },
+    "negative.camera.settingsHint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Changing lens, resolution or exposure clears the film base. Adjust first, then sample again. 4K uses more memory and power."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更换镜头、分辨率或曝光后需重取片基。请先调整再取样；4K 会增加内存和耗电。"
           }
         }
       }

@@ -11,12 +11,13 @@ nonisolated struct NegativeCameraFrame: @unchecked Sendable {
 /// The workflow can exercise camera delivery and failure without capture hardware.
 nonisolated protocol NegativeCameraCapture: Sendable {
     func requestAccess() async -> Bool
-    func start(onFrame: @escaping @Sendable (NegativeCameraFrame, @escaping @Sendable () -> Void) -> Void, onError: @escaping @Sendable (String) -> Void)
+    func start(settings: NegativeCameraSettings, onConfiguration: @escaping @Sendable (NegativeCameraConfiguration) -> Void, onFrame: @escaping @Sendable (NegativeCameraFrame, @escaping @Sendable () -> Void) -> Void, onError: @escaping @Sendable (String) -> Void)
     func sampleWhenLocked()
     func setBase(_ value: NegativeBase?)
     func freeze(_ value: Bool)
     func stop()
     func focus(_ point: CGPoint)
+    func continuousFocus()
     func rotate(_ angle: CGFloat)
 }
 
@@ -45,6 +46,8 @@ nonisolated final class NegativeCamera: NSObject, NegativeCameraCapture, AVCaptu
     private var stableFrames = 0
     private var lastFrameTime: CFAbsoluteTime = 0
     private var rotation: CGFloat = 90
+    private var deliveryGeneration = UUID()
+    private var minimumFrameTimestamp = CMTime.invalid
 
     override init() {
         super.init()
@@ -74,39 +77,82 @@ nonisolated final class NegativeCamera: NSObject, NegativeCameraCapture, AVCaptu
         }
     }
 
-    func start(onFrame: @escaping @Sendable (NegativeCameraFrame, @escaping @Sendable () -> Void) -> Void, onError: @escaping @Sendable (String) -> Void) {
+    func start(settings: NegativeCameraSettings, onConfiguration: @escaping @Sendable (NegativeCameraConfiguration) -> Void, onFrame: @escaping @Sendable (NegativeCameraFrame, @escaping @Sendable () -> Void) -> Void, onError: @escaping @Sendable (String) -> Void) {
         queue.async { [self] in
             frameHandler = onFrame; errorHandler = onError
             captureRequested = true
             do {
-                if device == nil { try configure() }
+                // Stop before changing inputs/formats so old frames cannot enter the new calibration.
+                session.stopRunning()
+                context.clearCaches()
+                let configuration = try configure(settings)
                 guard let device else { throw NegativeFailure(key: "negative.error.camera") }
                 try device.lockForConfiguration()
                 if device.isExposureModeSupported(.continuousAutoExposure) { device.exposureMode = .continuousAutoExposure }
                 if device.isWhiteBalanceModeSupported(.continuousAutoWhiteBalance) { device.whiteBalanceMode = .continuousAutoWhiteBalance }
+                if device.isFocusPointOfInterestSupported { device.focusPointOfInterest = CGPoint(x: 0.5, y: 0.5) }
+                if device.isAutoFocusRangeRestrictionSupported { device.autoFocusRangeRestriction = .none }
+                if device.isFocusModeSupported(.continuousAutoFocus) { device.focusMode = .continuousAutoFocus }
+                else if device.isFocusModeSupported(.autoFocus) { device.focusMode = .autoFocus }
+                device.setExposureTargetBias(configuration.settings.exposureBias, completionHandler: nil)
+                // Bound capture cadence as well as UI delivery; do not acquire 60fps only to discard it.
+                if device.activeFormat.videoSupportedFrameRateRanges.contains(where: { $0.minFrameRate <= 30 && $0.maxFrameRate >= 30 }) {
+                    device.activeVideoMinFrameDuration = CMTime(value: 1, timescale: 30)
+                    device.activeVideoMaxFrameDuration = CMTime(value: 1, timescale: 30)
+                }
                 device.unlockForConfiguration()
                 base = nil; frozen = false; locking = false; waitingForLockedFrame = false; awaitingLockCompletion = false; deliveringFrame = false
+                deliveryGeneration = UUID(); lastFrameTime = 0
+                minimumFrameTimestamp = CMClockGetTime(CMClockGetHostTimeClock())
+                onConfiguration(configuration)
                 session.startRunning()
             } catch { stopOnQueue(); onError("negative.error.camera") }
         }
     }
 
-    private func configure() throws {
-        guard let camera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back) else {
+    private func configure(_ requested: NegativeCameraSettings) throws -> NegativeCameraConfiguration {
+        let devices = AVCaptureDevice.DiscoverySession(deviceTypes: [.builtInWideAngleCamera, .builtInUltraWideCamera, .builtInTelephotoCamera], mediaType: .video, position: .back).devices
+        guard let camera = devices.first(where: { $0.uniqueID == requested.lensID })
+                ?? devices.first(where: { $0.deviceType == .builtInWideAngleCamera }) ?? devices.first else {
             throw NegativeFailure(key: "negative.error.camera")
         }
         let input = try AVCaptureDeviceInput(device: camera)
-        let video = AVCaptureVideoDataOutput()
+        let video = output ?? AVCaptureVideoDataOutput()
         video.alwaysDiscardsLateVideoFrames = true
+        // Match the selected video preset instead of allowing a lower-resolution preview proxy.
+        video.automaticallyConfiguresOutputBufferDimensions = false
+        video.deliversPreviewSizedOutputBuffers = false
         video.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
         session.beginConfiguration()
         defer { session.commitConfiguration() }
-        session.sessionPreset = .hd1280x720
-        guard session.canAddInput(input), session.canAddOutput(video) else { throw NegativeFailure(key: "negative.error.camera") }
-        session.addInput(input); session.addOutput(video)
+        // Capability checks depend on the selected input, not on the previous lens.
+        // Drop a previous lens's 4K requirement before adding a lower-capability input.
+        if session.canSetSessionPreset(.high) { session.sessionPreset = .high }
+        for old in session.inputs { session.removeInput(old) }
+        guard session.canAddInput(input) else { throw NegativeFailure(key: "negative.error.camera") }
+        session.addInput(input)
+        if output == nil {
+            guard session.canAddOutput(video) else { throw NegativeFailure(key: "negative.error.camera") }
+            session.addOutput(video)
+            // Retain an added output even if a later capability check fails, so retry reuses it.
+            output = video
+        }
+        let resolutions = NegativeResolution.allCases.filter { session.canSetSessionPreset($0.preset) }
+        guard let resolution = resolutions.contains(requested.resolution) ? requested.resolution : resolutions.first else {
+            throw NegativeFailure(key: "negative.error.camera")
+        }
+        session.sessionPreset = resolution.preset
         video.setSampleBufferDelegate(self, queue: queue)
         if let connection = video.connection(with: .video), connection.isVideoRotationAngleSupported(rotation) { connection.videoRotationAngle = rotation }
         device = camera; output = video
+        let range = max(-3, camera.minExposureTargetBias)...min(3, camera.maxExposureTargetBias)
+        let bias = requested.exposureBias.isFinite ? min(range.upperBound, max(range.lowerBound, requested.exposureBias)) : 0
+        let lenses = devices.map { device in
+            NegativeLens(id: device.uniqueID, titleKey: device.deviceType == .builtInUltraWideCamera ? "negative.lens.ultraWide" : device.deviceType == .builtInTelephotoCamera ? "negative.lens.telephoto" : "negative.lens.wide")
+        }
+        return NegativeCameraConfiguration(settings: NegativeCameraSettings(lensID: camera.uniqueID, resolution: resolution, exposureBias: bias),
+            lenses: lenses, resolutions: resolutions, exposureRange: range,
+            supportsFocus: camera.isFocusPointOfInterestSupported && camera.isFocusModeSupported(.autoFocus), minimumFocusDistance: camera.minimumFocusDistance)
     }
 
     func rotate(_ angle: CGFloat) {
@@ -119,23 +165,28 @@ nonisolated final class NegativeCamera: NSObject, NegativeCameraCapture, AVCaptu
 
     func focus(_ point: CGPoint) {
         queue.async { [self] in
-            guard let device, !locking else { return }
+            guard captureRequested, !frozen, let device, !locking, !awaitingLockCompletion, !waitingForLockedFrame,
+                  let sensor = NegativeFocusCoordinates.sensorPoint(point, rotation: output?.connection(with: .video)?.videoRotationAngle ?? rotation) else { return }
             do {
                 try device.lockForConfiguration()
                 defer { device.unlockForConfiguration() }
                 if device.isFocusPointOfInterestSupported {
-                    // Convert the oriented preview point to the sensor's landscape coordinates.
-                    let angle = output?.connection(with: .video)?.videoRotationAngle ?? 90
-                    let sensor: CGPoint
-                    switch Int(angle) {
-                    case 90: sensor = CGPoint(x: point.y, y: 1 - point.x)
-                    case 180: sensor = CGPoint(x: 1 - point.x, y: 1 - point.y)
-                    case 270: sensor = CGPoint(x: 1 - point.y, y: point.x)
-                    default: sensor = point
-                    }
                     device.focusPointOfInterest = sensor
                     if device.isFocusModeSupported(.autoFocus) { device.focusMode = .autoFocus }
                 }
+            } catch { errorHandler?("negative.error.camera") }
+        }
+    }
+
+    func continuousFocus() {
+        queue.async { [self] in
+            guard captureRequested, !frozen, !locking, !awaitingLockCompletion, !waitingForLockedFrame, let device else { return }
+            do {
+                try device.lockForConfiguration()
+                defer { device.unlockForConfiguration() }
+                if device.isFocusPointOfInterestSupported { device.focusPointOfInterest = CGPoint(x: 0.5, y: 0.5) }
+                if device.isFocusModeSupported(.continuousAutoFocus) { device.focusMode = .continuousAutoFocus }
+                else if device.isFocusModeSupported(.autoFocus) { device.focusMode = .autoFocus }
             } catch { errorHandler?("negative.error.camera") }
         }
     }
@@ -158,6 +209,7 @@ nonisolated final class NegativeCamera: NSObject, NegativeCameraCapture, AVCaptu
 
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
         guard !frozen, let buffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
+        guard CMSampleBufferGetPresentationTimeStamp(sampleBuffer) >= minimumFrameTimestamp else { return }
         if (locking || awaitingLockCompletion || waitingForLockedFrame), CFAbsoluteTimeGetCurrent() > lockDeadline {
             locking = false; awaitingLockCompletion = false; waitingForLockedFrame = false; frozen = true
             lockGeneration = UUID(); errorHandler?("negative.error.lock"); return
@@ -170,7 +222,7 @@ nonisolated final class NegativeCamera: NSObject, NegativeCameraCapture, AVCaptu
             if CFAbsoluteTimeGetCurrent() > lockDeadline {
                 locking = false; frozen = true; errorHandler?("negative.error.lock"); return
             }
-            if device.isAdjustingExposure || device.isAdjustingWhiteBalance { stableFrames = 0; return }
+            if device.isAdjustingFocus || device.isAdjustingExposure || device.isAdjustingWhiteBalance { stableFrames = 0; return }
             stableFrames += 1
             guard stableFrames >= 3 else { return }
             do {
@@ -198,7 +250,9 @@ nonisolated final class NegativeCamera: NSObject, NegativeCameraCapture, AVCaptu
         }
         guard !deliveringFrame else { return }
         let now = CFAbsoluteTimeGetCurrent()
-        guard waitingForLockedFrame || now - lastFrameTime >= (ProcessInfo.processInfo.thermalState == .serious ? 1.0 / 10 : 1.0 / 30) else { return }
+        let highResolution = CVPixelBufferGetWidth(buffer) * CVPixelBufferGetHeight(buffer) > 1920 * 1080
+        let fps: Double = ProcessInfo.processInfo.thermalState == .serious ? 10 : highResolution ? 15 : 30
+        guard waitingForLockedFrame || now - lastFrameTime >= 1 / fps else { return }
         lastFrameTime = now
         autoreleasepool {
             do {
@@ -209,13 +263,18 @@ nonisolated final class NegativeCamera: NSObject, NegativeCameraCapture, AVCaptu
                 }
                 let retained = CIImage(cgImage: cg)
                 let asset = NegativeAsset(image: retained, preview: cg)
-                let rendered = try base.map { try NegativePixels.preview(retained, base: $0, context: context) }
+                let rendered = try base.map { try NegativePixels.preview(retained, base: $0, context: context,
+                    limit: max(retained.extent.width, retained.extent.height)) }
                 let sample = waitingForLockedFrame
                 if sample { frozen = true; waitingForLockedFrame = false }
                 // One main-actor delivery at a time; a busy UI drops frames rather than retaining a queue of images.
                 deliveringFrame = true
+                let generation = deliveryGeneration
                 frameHandler?(NegativeCameraFrame(asset: asset, positive: rendered, frozenForSampling: sample)) { [weak self] in
-                    self?.queue.async { [weak self] in self?.deliveringFrame = false }
+                    self?.queue.async { [weak self] in
+                        guard let self, self.deliveryGeneration == generation else { return }
+                        self.deliveringFrame = false
+                    }
                 }
             } catch { errorHandler?("negative.error.render") }
         }

@@ -4,11 +4,22 @@ import PhotosUI
 import UniformTypeIdentifiers
 
 struct NegativePreviewView: View {
-    @State private var store = NegativeStore()
+    @State private var store: NegativeStore
     @State private var showsFiles = false
     @State private var showsPhotos = false
     @State private var photo: PhotosPickerItem?
+    @State private var cameraControlsExpanded = false
     @Environment(\.scenePhase) private var scenePhase
+
+    init() {
+        #if DEBUG && targetEnvironment(simulator)
+        if ProcessInfo.processInfo.environment["NEGATIVE_UI_CAMERA"] == "1" {
+            _store = State(initialValue: NegativeStore(camera: NegativeCameraFixture()))
+            return
+        }
+        #endif
+        _store = State(initialValue: NegativeStore())
+    }
 
     var body: some View {
         NavigationStack {
@@ -24,7 +35,8 @@ struct NegativePreviewView: View {
                             .disabled(store.base == nil || store.sampling)
                             .accessibilityIdentifier("negative-comparison")
                             NegativeImagePanel(store: store)
-                                .frame(height: max(220, geometry.size.height - (store.sampling ? 300 : 210)))
+                                // Reserve room for expanded camera controls above the system tab bar.
+                                .frame(height: max(220, geometry.size.height - (store.sampling ? 300 : store.isCamera ? (cameraControlsExpanded ? 560 : 310) : 210)))
                             if let asset = store.asset {
                                 Text("\(asset.width) × \(asset.height)")
                                     .font(.caption.monospacedDigit()).foregroundStyle(Palette.muted)
@@ -110,6 +122,9 @@ struct NegativePreviewView: View {
         #if DEBUG
         // UI tests inject a local fixture through the production file-loading path.
         .task {
+            #if targetEnvironment(simulator)
+            if ProcessInfo.processInfo.environment["NEGATIVE_UI_CAMERA"] == "1" { store.startCamera(); return }
+            #endif
             if let path = ProcessInfo.processInfo.environment["NEGATIVE_UI_FIXTURE"], store.asset == nil {
                 store.loadFile(URL(fileURLWithPath: path))
             }
@@ -134,8 +149,9 @@ struct NegativePreviewView: View {
                     .disabled(store.busy != nil)
             }
             if store.isCamera {
-                Text(store.paused ? "negative.paused" : store.captureLocked ? "negative.locked" : "negative.cameraHint")
+                Text(cameraHint)
                     .font(.caption).foregroundStyle(Palette.muted)
+                NegativeCameraControls(store: store, expanded: $cameraControlsExpanded)
             }
             HStack {
                 if store.isCamera {
@@ -157,6 +173,15 @@ struct NegativePreviewView: View {
         }
     }
 
+    private var cameraHint: LocalizedStringKey {
+        if store.paused { return "negative.paused" }
+        if store.captureLocked { return "negative.locked" }
+        if store.cameraTapSamplesBase { return "negative.cameraSampleHint" }
+        // Fixed-focus lenses must not invite an unsupported tap-to-focus action.
+        if store.cameraConfiguration?.supportsFocus == false { return "negative.camera.fixedFocus" }
+        return "negative.cameraHint"
+    }
+
     private var samplingControls: some View {
         VStack(spacing: 8) {
             Text("negative.sampleHint").font(.callout)
@@ -170,6 +195,11 @@ struct NegativePreviewView: View {
             HStack {
                 moveButton("negative.left", symbol: "arrow.left", x: -0.01, y: 0)
                 moveButton("negative.right", symbol: "arrow.right", x: 0.01, y: 0)
+                Button { store.selectSamplePoint(CGPoint(x: 0.5, y: 0.5)) } label: {
+                    Label("negative.centerSample", systemImage: "scope").labelStyle(.iconOnly).frame(width: 44, height: 44)
+                }
+                .disabled(store.busy != nil)
+                .accessibilityIdentifier("negative-center-sample")
                 moveButton("negative.up", symbol: "arrow.up", x: 0, y: -0.01)
                 moveButton("negative.down", symbol: "arrow.down", x: 0, y: 0.01)
             }
@@ -177,6 +207,8 @@ struct NegativePreviewView: View {
                 Button { store.cancelSampling() } label: { Text("negative.cancel").frame(minHeight: 44).contentShape(Rectangle()) }
                 Spacer()
                 Button("negative.useBase") { store.confirmBase() }
+                    // The app's light monochrome tint needs a dark label on this filled action.
+                    .foregroundStyle(Palette.background)
                     .controlSize(.large).buttonStyle(.borderedProminent).disabled(store.candidate == nil || store.busy != nil)
                     .accessibilityIdentifier("negative-confirm-base")
             }.disabled(store.busy != nil)
@@ -203,8 +235,13 @@ private struct NegativeImagePanel: View {
     var body: some View {
         ZStack(alignment: .topTrailing) {
             if let image = store.displayed {
-                NegativeCanvas(image: image, sampling: store.sampling, point: store.point) { point in
-                    if store.sampling { store.point = point; store.sampleAtPoint() }
+                // Tap intent is explicit: focusing must never unexpectedly enter film-base sampling.
+                NegativeCanvas(image: image,
+                               sampling: store.sampling || (store.isCamera && store.live && store.cameraTapSamplesBase) || store.focusPoint != nil,
+                               point: store.sampling || store.phase == .locking ? store.point : store.focusPoint ?? CGPoint(x: 0.5, y: 0.5)) { point in
+                    guard store.busy == nil else { return }
+                    if store.sampling { store.selectSamplePoint(point) }
+                    else if store.isCamera && store.live && store.cameraTapSamplesBase { store.selectBase(at: point) }
                     else { store.focus(point) }
                 }
                 .accessibilityIdentifier("negative-image")
@@ -254,6 +291,7 @@ private struct NegativeCanvas: UIViewRepresentable {
 private final class NegativeZoomView: UIScrollView, UIScrollViewDelegate {
     let imageView = UIImageView()
     let marker = CAShapeLayer()
+    let centerDot = CAShapeLayer()
     var selected: ((CGPoint) -> Void)?
     private var imageSize = CGSize.zero
     private var lastBounds = CGSize.zero
@@ -267,8 +305,11 @@ private final class NegativeZoomView: UIScrollView, UIScrollViewDelegate {
         showsVerticalScrollIndicator = false; showsHorizontalScrollIndicator = false
         addSubview(imageView)
         imageView.layer.addSublayer(marker)
+        imageView.layer.addSublayer(centerDot)
         marker.fillColor = UIColor.clear.cgColor; marker.strokeColor = UIColor.white.cgColor
         marker.shadowColor = UIColor.black.cgColor; marker.shadowOpacity = 1; marker.shadowRadius = 1
+        centerDot.fillColor = UIColor.white.cgColor
+        centerDot.shadowColor = UIColor.black.cgColor; centerDot.shadowOpacity = 1; centerDot.shadowRadius = 1
         addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(tapped(_:))))
         isAccessibilityElement = true
         accessibilityLabel = NSLocalizedString("negative.image", comment: "Preview image")
@@ -303,10 +344,21 @@ private final class NegativeZoomView: UIScrollView, UIScrollViewDelegate {
     private func updateMarker() {
         CATransaction.begin(); CATransaction.setDisableActions(true)
         marker.isHidden = !sampling
+        centerDot.isHidden = !sampling
         let side = max(8 / max(imageSize.width, 1), min(imageSize.width, imageSize.height) * 0.01 / max(imageSize.width, 1)) * imageView.bounds.width
-        marker.path = UIBezierPath(rect: CGRect(x: point.x * imageView.bounds.width - side / 2,
-                                               y: point.y * imageView.bounds.height - side / 2, width: side, height: side)).cgPath
-        marker.lineWidth = 2 / zoomScale
+        let center = CGPoint(x: point.x * imageView.bounds.width, y: point.y * imageView.bounds.height)
+        let path = UIBezierPath(rect: CGRect(x: center.x - side / 2, y: center.y - side / 2, width: side, height: side))
+        // Keep the exact sample box; a compact, thin crosshair avoids obscuring film detail.
+        let inner = max(side / 2 + 1 / zoomScale, 3 / zoomScale)
+        let outer = inner + 3 / zoomScale
+        for direction in [CGPoint(x: -1, y: 0), CGPoint(x: 1, y: 0), CGPoint(x: 0, y: -1), CGPoint(x: 0, y: 1)] {
+            path.move(to: CGPoint(x: center.x + direction.x * inner, y: center.y + direction.y * inner))
+            path.addLine(to: CGPoint(x: center.x + direction.x * outer, y: center.y + direction.y * outer))
+        }
+        marker.path = path.cgPath
+        let radius = 0.75 / zoomScale
+        centerDot.path = UIBezierPath(ovalIn: CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2)).cgPath
+        marker.lineWidth = 1 / zoomScale
         CATransaction.commit()
     }
     @objc private func tapped(_ gesture: UITapGestureRecognizer) {

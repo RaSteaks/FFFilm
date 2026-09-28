@@ -31,7 +31,7 @@ Preset frame rates carry their exact rational values; typed decimals stay litera
 
 ## Negative preview (iPhone / iPad)
 
-Open **Negative**, import a photo or file (including large 8/16-bit RGB or grayscale TIFF), and sample an unexposed film edge to view the positive. Compare the original, zoom to inspect, and export at source dimensions as TIFF / PNG (16-bit sRGB) or JPG (8-bit sRGB). Multi-page and floating-point TIFF are not supported.
+Open **Film Preview**, import a photo or file (including large 8/16-bit RGB or grayscale TIFF), and sample an unexposed film edge to view the positive. Compare the original, zoom to inspect, and export at source dimensions as TIFF / PNG (16-bit sRGB) or JPG (8-bit sRGB). Multi-page and floating-point TIFF are not supported.
 
 The camera path locks exposure and white balance for live preview; frozen exports use the video frame dimensions. This is a preview tool without grading, cropping, presets or batch processing, and does not promise calibrated scan color. Processing stays on-device and never overwrites the input.
 

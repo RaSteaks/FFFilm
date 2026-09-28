@@ -24,6 +24,12 @@ enum RateModel: String, Codable, Hashable {
     case publishedTable = "published-table"
 }
 
+/// Optical crop relative to the resolution's base area, independent of encoded pixels.
+struct SensorCrop: Codable, Hashable {
+    let minSensorFps: Double
+    let factor: Double
+}
+
 struct Resolution: Codable, Identifiable, Hashable {
     let id: String
     let label: String
@@ -35,6 +41,8 @@ struct Resolution: Codable, Identifiable, Hashable {
     // Published optical dimensions preserve the field of view of oversampled modes.
     let activeWidthMm: Double?
     let activeHeightMm: Double?
+    // Some internal recording formats crop only at high capture cadences.
+    let sensorCrop: SensorCrop?
     let minSensorFps: Double?
     let supportedCodecIds: [String]?
 }

@@ -62,6 +62,11 @@ final class NegativeStore {
     private(set) var sampleError: String?
     private(set) var paused = false
     private(set) var captureLocked = false
+    private(set) var cameraSettings = NegativeCameraSettings()
+    private(set) var cameraConfiguration: NegativeCameraConfiguration?
+    var cameraTapSamplesBase = false
+    private(set) var focusPoint: CGPoint?
+    @ObservationIgnored private var focusFeedback: Task<Void, Never>?
     @ObservationIgnored private let renderer = NegativeRenderer()
     @ObservationIgnored private let camera: any NegativeCameraCapture
     @ObservationIgnored private var operation: Task<Void, Never>?
@@ -77,6 +82,7 @@ final class NegativeStore {
 
     var displayed: CGImage? { !sampling && showsPositive ? positive ?? imageState.original : imageState.original }
     var canExport: Bool { base != nil && asset != nil && !sampling && busy == nil }
+    var canAdjustCamera: Bool { isCamera && live && busy == nil && !sampling && cameraConfiguration != nil }
 
     func reportImportError(_ error: Error) {
         // Picker cancellation is not an import failure, including provider cancellation.
@@ -116,6 +122,10 @@ final class NegativeStore {
 
     func startCamera() {
         cancelWork(); error = nil; cameraDenied = false
+        // Invalidate old configuration callbacks before the permission await can yield.
+        cameraRevision = UUID()
+        let requestedSettings = cameraSettings
+        focusFeedback?.cancel(); focusPoint = nil
         let id = revision
         phase = .cameraStarting
         operation = Task {
@@ -125,7 +135,13 @@ final class NegativeStore {
             let generation = UUID(); cameraRevision = generation
             base = nil; positive = nil; sampling = false; candidate = nil; showsPositive = false
             isCamera = true; live = true; paused = false; captureLocked = false
-            camera.start { [weak self] frame, acknowledge in
+            camera.start(settings: requestedSettings, onConfiguration: { [weak self] configuration in
+                Task { @MainActor [weak self] in
+                    guard let self, self.cameraRevision == generation else { return }
+                    self.cameraConfiguration = configuration
+                    self.cameraSettings = configuration.settings
+                }
+            }) { [weak self] frame, acknowledge in
                 Task { @MainActor [weak self] in
                     defer { acknowledge() }
                     guard let self, self.cameraRevision == generation, self.live else { return }
@@ -152,8 +168,12 @@ final class NegativeStore {
         }
     }
 
-    func selectBase() {
-        guard asset != nil, busy == nil else { return }
+    func selectBase(at selected: CGPoint = CGPoint(x: 0.5, y: 0.5)) {
+        guard asset != nil, busy == nil, !sampling,
+              selected.x.isFinite, selected.y.isFinite,
+              (0...1).contains(selected.x), (0...1).contains(selected.y) else { return }
+        // Preserve a tap in source coordinates while exposure and white balance lock.
+        point = selected
         beforeSamplingLive = live
         if isCamera && live {
             phase = .locking
@@ -163,12 +183,17 @@ final class NegativeStore {
 
     private func beginSampling() {
         sampling = true; candidate = nil; sampleError = nil
-        point = CGPoint(x: 0.5, y: 0.5)
+        sampleAtPoint()
+    }
+
+    func selectSamplePoint(_ selected: CGPoint) {
+        guard sampling, busy == nil else { return }
+        point = selected
         sampleAtPoint()
     }
 
     func sampleAtPoint() {
-        guard sampling, let asset else { return }
+        guard sampling, busy == nil, let asset else { return }
         sampleTask?.cancel()
         let id = UUID(); sampleRevision = id
         let selected = point
@@ -186,8 +211,7 @@ final class NegativeStore {
     }
 
     func moveSample(x: CGFloat, y: CGFloat) {
-        point = CGPoint(x: min(0.98, max(0.02, point.x + x)), y: min(0.98, max(0.02, point.y + y)))
-        sampleAtPoint()
+        selectSamplePoint(CGPoint(x: min(0.98, max(0.02, point.x + x)), y: min(0.98, max(0.02, point.y + y))))
     }
 
     func confirmBase() {
@@ -199,6 +223,7 @@ final class NegativeStore {
                 let result = try await renderer.render(asset, base: candidate)
                 guard revision == id, !Task.isCancelled else { return }
                 base = candidate; positive = result; sampling = false; showsPositive = true
+                // Only the sampled RGB values persist for this capture session, not a frame history.
                 camera.setBase(candidate)
                 if isCamera && beforeSamplingLive && captureLocked && !paused { live = true; camera.freeze(false) }
             } catch { if revision == id && !Task.isCancelled { self.error = error.localizedDescription } }
@@ -224,7 +249,40 @@ final class NegativeStore {
             live = true; camera.freeze(false)
         }
     }
-    func focus(_ point: CGPoint) { if isCamera && live { camera.focus(point) } }
+    func focus(_ point: CGPoint) {
+        guard canAdjustCamera, cameraConfiguration?.supportsFocus == true,
+              NegativeFocusCoordinates.sensorPoint(point, rotation: 0) != nil else { return }
+        camera.focus(point)
+        // This reticle acknowledges the requested point, not a claim that focus has completed.
+        focusPoint = point; focusFeedback?.cancel()
+        focusFeedback = Task { [weak self] in
+            do { try await Task.sleep(for: .seconds(1.5)) } catch { return }
+            self?.focusPoint = nil
+        }
+    }
+    func continuousFocus() {
+        guard canAdjustCamera, cameraConfiguration?.supportsFocus == true else { return }
+        camera.continuousFocus(); focusFeedback?.cancel(); focusPoint = nil
+    }
+
+    func setCameraLens(_ id: String) {
+        guard canAdjustCamera, cameraConfiguration?.lenses.contains(where: { $0.id == id }) == true, id != cameraSettings.lensID else { return }
+        cameraSettings.lensID = id
+        startCamera()
+    }
+    func setCameraResolution(_ resolution: NegativeResolution) {
+        guard canAdjustCamera, cameraConfiguration?.resolutions.contains(resolution) == true, resolution != cameraSettings.resolution else { return }
+        cameraSettings.resolution = resolution
+        startCamera()
+    }
+    func setExposureBias(_ bias: Float) {
+        guard canAdjustCamera, bias.isFinite, let range = cameraConfiguration?.exposureRange else { return }
+        let clamped = min(range.upperBound, max(range.lowerBound, bias))
+        guard abs(clamped - cameraSettings.exposureBias) > 0.001 else { return }
+        // Commit once at slider release. Any exposure change invalidates the sampled film base.
+        cameraSettings.exposureBias = clamped
+        startCamera()
+    }
     func rotate(_ orientation: UIDeviceOrientation) {
         let angle: CGFloat
         switch orientation {
@@ -259,6 +317,7 @@ final class NegativeStore {
         if isCamera { freeze() }
     }
     func suspend() {
+        focusFeedback?.cancel(); focusPoint = nil
         // Mark paused first so cancelling a sampling sheet cannot resume capture during suspension.
         if isCamera { paused = true }
         cancelWork(); cancelSampling()

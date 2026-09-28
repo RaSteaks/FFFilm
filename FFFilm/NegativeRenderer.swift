@@ -284,7 +284,8 @@ actor NegativeRenderer {
     func render(_ asset: NegativeAsset, base: NegativeBase) throws -> CGImage {
         try Task.checkCancellation()
         if let pixels = asset.filePixels { return try pixels.preview(base: base, context: context) }
-        return try NegativePixels.preview(asset.image, base: base, context: context)
+        // Camera snapshots follow the selected capture resolution in both comparison modes.
+        return try NegativePixels.preview(asset.image, base: base, context: context, limit: CGFloat(max(asset.width, asset.height)))
     }
 
     func export(_ asset: NegativeAsset, base: NegativeBase, format: NegativeFormat) throws -> URL {

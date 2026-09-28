@@ -403,20 +403,16 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
-				/* The film workbench writes user-selected projects and exports on macOS. */
 				"ENABLE_USER_SELECTED_FILES[sdk=macosx*]" = readwrite;
-				/* Camera purpose strings belong to the iPhone/iPad preview only. */
 				"EXCLUDED_SOURCE_FILE_NAMES[sdk=macosx*]" = InfoPlist.xcstrings;
 				GENERATE_INFOPLIST_FILE = YES;
 				"INFOPLIST_FILE[sdk=macosx*]" = Configuration/FFFilm.macOS.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = FFFilm;
-				/* Xcode writes this attribution into each platform's built Info.plist. */
-				INFOPLIST_KEY_NSHumanReadableCopyright = "© 2026 朱煜天";
-				/* Declare exempt/no encryption in the generated iOS Info.plist. */
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.video";
 				"INFOPLIST_KEY_NSCameraUsageDescription[sdk=iphoneos*]" = "Use the camera to preview negatives as positives after sampling the film base.";
 				"INFOPLIST_KEY_NSCameraUsageDescription[sdk=iphonesimulator*]" = "Use the camera to preview negatives as positives after sampling the film base.";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "© 2026 朱煜天";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -461,20 +457,16 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
-				/* The film workbench writes user-selected projects and exports on macOS. */
 				"ENABLE_USER_SELECTED_FILES[sdk=macosx*]" = readwrite;
-				/* Camera purpose strings belong to the iPhone/iPad preview only. */
 				"EXCLUDED_SOURCE_FILE_NAMES[sdk=macosx*]" = InfoPlist.xcstrings;
 				GENERATE_INFOPLIST_FILE = YES;
 				"INFOPLIST_FILE[sdk=macosx*]" = Configuration/FFFilm.macOS.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = FFFilm;
-				/* Xcode writes this attribution into each platform's built Info.plist. */
-				INFOPLIST_KEY_NSHumanReadableCopyright = "© 2026 朱煜天";
-				/* Declare exempt/no encryption in the generated iOS Info.plist. */
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.video";
 				"INFOPLIST_KEY_NSCameraUsageDescription[sdk=iphoneos*]" = "Use the camera to preview negatives as positives after sampling the film base.";
 				"INFOPLIST_KEY_NSCameraUsageDescription[sdk=iphonesimulator*]" = "Use the camera to preview negatives as positives after sampling the film base.";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "© 2026 朱煜天";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;

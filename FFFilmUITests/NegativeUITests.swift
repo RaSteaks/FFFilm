@@ -10,7 +10,8 @@ final class NegativeUITests: XCTestCase {
     @MainActor private func openNegative(_ app: XCUIApplication) {
         app.launchArguments += ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()
-        let tab = app.tabBars.buttons.matching(NSPredicate(format: "identifier == 'tab-negative' OR label == 'Negative'")).firstMatch
+        // The visible name is Film Preview; keep the stable workspace identifier.
+        let tab = app.tabBars.buttons.matching(NSPredicate(format: "identifier == 'tab-negative' OR label == 'Film Preview'")).firstMatch
         XCTAssertTrue(tab.waitForExistence(timeout: 5)); tab.tap()
     }
 
@@ -26,6 +27,50 @@ final class NegativeUITests: XCTestCase {
         XCTAssertFalse(app.staticTexts["negative-error"].exists)
         let screenshot = XCTAttachment(screenshot: app.screenshot())
         screenshot.name = "Negative empty"; screenshot.lifetime = .keepAlways; add(screenshot)
+    }
+
+    @MainActor func testCameraFocusSettingsAndRecalibration() {
+        let app = XCUIApplication()
+        app.launchEnvironment["NEGATIVE_UI_CAMERA"] = "1"
+        openNegative(app)
+        let image = app.descendants(matching: .any).matching(identifier: "negative-image").firstMatch
+        XCTAssertTrue(image.waitForExistence(timeout: 10))
+        image.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        // Ordinary taps focus; only explicit sampling enters the confirmation workflow.
+        XCTAssertFalse(app.buttons["negative-confirm-base"].exists)
+        app.segmentedControls["negative-camera-tap-action"].buttons["Sample film base"].tap()
+        image.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        let confirm = app.buttons["negative-confirm-base"]
+        XCTAssertTrue(confirm.waitForExistence(timeout: 10))
+        expectation(for: NSPredicate(format: "enabled == true"), evaluatedWith: confirm)
+        waitForExpectations(timeout: 10); confirm.tap()
+        let export = app.buttons["negative-export"]
+        XCTAssertTrue(export.waitForExistence(timeout: 10)); XCTAssertTrue(export.isEnabled)
+        app.buttons["Camera settings"].tap()
+        let resolution = app.descendants(matching: .any).matching(identifier: "negative-camera-resolution").firstMatch
+        if !resolution.isHittable { app.swipeUp() }
+        resolution.tap(); app.buttons["1080p"].tap()
+        let dimensions = app.staticTexts["negative-dimensions"]
+        // Dimensions are localized (for example, 1,080 × 1,920 in English).
+        expectation(for: NSPredicate { _, _ in dimensions.label.filter(\.isNumber) == "10801920" }, evaluatedWith: dimensions)
+        waitForExpectations(timeout: 10)
+        XCTAssertFalse(export.isEnabled)
+        // Native menu pickers may be exposed as PopUpButton after a configuration update.
+        let lens = app.descendants(matching: .any).matching(identifier: "negative-camera-lens").firstMatch
+        XCTAssertTrue(lens.waitForExistence(timeout: 5))
+        if !lens.isHittable { dimensions.swipeUp() }
+        lens.tap(); app.buttons["Ultra Wide"].tap()
+        expectation(for: NSPredicate(format: "label CONTAINS 'Ultra Wide' AND enabled == true"), evaluatedWith: lens)
+        waitForExpectations(timeout: 10)
+        let exposure = app.sliders["negative-camera-exposure"]
+        if !exposure.isHittable { dimensions.swipeUp() }
+        XCTAssertTrue(exposure.exists); exposure.adjust(toNormalizedSliderPosition: 0.75)
+        let autofocus = app.buttons["negative-camera-autofocus"]
+        expectation(for: NSPredicate(format: "enabled == true"), evaluatedWith: autofocus)
+        waitForExpectations(timeout: 10)
+        autofocus.tap()
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "Camera controls"; screenshot.lifetime = .keepAlways; add(screenshot)
     }
 
     @MainActor func testTIFFSamplingComparisonAndExport() throws {
@@ -44,6 +89,12 @@ final class NegativeUITests: XCTestCase {
         sample.tap()
         let image = app.descendants(matching: .any).matching(identifier: "negative-image").firstMatch
         XCTAssertTrue(image.waitForExistence(timeout: 5))
+        // The explicit center action is available without a precise image tap.
+        let center = app.buttons["negative-center-sample"]
+        XCTAssertTrue(center.exists && center.isEnabled)
+        center.tap()
+        let samplingScreenshot = XCTAttachment(screenshot: app.screenshot())
+        samplingScreenshot.name = "Film base center target"; samplingScreenshot.lifetime = .keepAlways; add(samplingScreenshot)
         image.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.15)).tap()
         let confirm = app.buttons["negative-confirm-base"]
         XCTAssertTrue(confirm.waitForExistence(timeout: 10))
@@ -54,7 +105,7 @@ final class NegativeUITests: XCTestCase {
         XCTAssertTrue(export.waitForExistence(timeout: 10)); XCTAssertTrue(export.isEnabled)
         // File-based previews survive leaving the workspace; camera capture is stopped separately.
         app.tabBars.buttons["Calculate"].tap()
-        app.tabBars.buttons["Negative"].tap()
+        app.tabBars.buttons["Film Preview"].tap()
         XCTAssertTrue(export.waitForExistence(timeout: 5)); XCTAssertTrue(export.isEnabled)
         app.segmentedControls["negative-comparison"].buttons["Original"].tap()
         app.segmentedControls["negative-comparison"].buttons["Positive"].tap()

@@ -6,11 +6,12 @@ struct FFFilmTests {
 
     @Test("The migrated catalog preserves every source profile")
     func catalogMigration() {
-        #expect(catalog.cameras.count == 33)
-        #expect(catalog.codecs.count == 15)
-        #expect(catalog.rateTable.count == 43)
+        #expect(catalog.cameras.count == 39)
+        #expect(catalog.codecs.count == 23)
+        #expect(catalog.rateTable.count == 87)
         #expect(catalog.cameras.contains(where: { $0.id == "alexa35" }))
         #expect(catalog.cameras.contains(where: { $0.id == "ronin4d-8k" }))
+        #expect(catalog.cameras.contains(where: { $0.id == "a7m4" }))
     }
 
     @Test("Default ALEXA 35 ARRIRAW HDE calculation matches the web model")

@@ -81,11 +81,11 @@ nonisolated final class NegativeFilePixels: @unchecked Sendable {
                 // Include source neighbors for the reduction filter at stripe boundaries.
                 let sourceRect = target.applying(CGAffineTransform(scaleX: 1 / sx, y: 1 / sy))
                     .insetBy(dx: -2 / sx, dy: -2 / sy).integral.intersection(image.extent)
-                autoreleasepool {
+                try autoreleasepool {
                     let tile = region(sourceRect)
                     let converted = base.map { NegativePixels.positive(tile, base: $0) } ?? tile
-                    context.render(converted.transformed(by: CGAffineTransform(scaleX: sx, y: sy)),
-                                   toBitmap: bytes.baseAddress!.advanced(by: start * rowBytes), rowBytes: rowBytes,
+                    try NegativePixels.renderBitmap(converted.transformed(by: CGAffineTransform(scaleX: sx, y: sy)),
+                                   context: context, toBitmap: bytes.baseAddress!.advanced(by: start * rowBytes), rowBytes: rowBytes,
                                    bounds: target, format: .RGBAh, colorSpace: NegativePixels.linear)
                 }
             }
@@ -103,6 +103,24 @@ nonisolated final class NegativeFilePixels: @unchecked Sendable {
 }
 
 nonisolated enum NegativePixels {
+    /// Finish each stripe before its caller reads, flushes or releases the backing memory.
+    /// Unlike render(toBitmap:), render tasks report both submission and execution errors.
+    static func renderBitmap(_ image: CIImage, context: CIContext, toBitmap memory: UnsafeMutableRawPointer,
+                             rowBytes: Int, bounds: CGRect, format: CIFormat, colorSpace: CGColorSpace) throws {
+        let destination = CIRenderDestination(bitmapData: memory, width: Int(bounds.width),
+                                              height: Int(bounds.height), bytesPerRow: rowBytes, format: format)
+        destination.colorSpace = colorSpace
+        destination.alphaMode = .premultiplied
+        // CGImage providers consume top-first rows, including within each individual stripe.
+        destination.isFlipped = true
+        do {
+            let task = try context.startTask(toRender: image, from: bounds, to: destination, at: .zero)
+            _ = try task.waitUntilCompleted()
+        } catch {
+            throw NegativeFailure(key: "negative.error.render")
+        }
+    }
+
     static let linear = CGColorSpace(name: CGColorSpace.extendedLinearSRGB)!
     static let display = CGColorSpace(name: CGColorSpace.sRGB)!
     static func context() -> CIContext {

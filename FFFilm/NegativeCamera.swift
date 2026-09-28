@@ -90,7 +90,13 @@ nonisolated final class NegativeCamera: NSObject, NegativeCameraCapture, AVCaptu
             }
         })
     }
-    deinit { for observer in observers { NotificationCenter.default.removeObserver(observer) } }
+    deinit {
+        for observer in observers { NotificationCenter.default.removeObserver(observer) }
+        // Teardown must not bypass the queue's confinement; capture the session because
+        // self is already being destroyed by the time the asynchronous stop runs.
+        let session = session
+        queue.async { session.stopRunning() }
+    }
 
     func requestAccess() async -> Bool {
         switch AVCaptureDevice.authorizationStatus(for: .video) {

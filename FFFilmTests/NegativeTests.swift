@@ -6,6 +6,29 @@ import UniformTypeIdentifiers
 
 @Suite(.serialized)
 struct NegativeTests {
+    @Test func checkedBitmapMatchesLegacyRendering() throws {
+        let context = NegativePixels.context()
+        let image = fixture(width: 72, height: 600)
+            .transformed(by: CGAffineTransform(translationX: 13, y: 17))
+        // Compare a non-origin stripe to catch vertical flips and destination placement changes.
+        let bounds = CGRect(x: 13, y: 211, width: 72, height: 63)
+        for format in [CIFormat.RGBA8, .RGBA16, .RGBAh] {
+            let rowBytes = 72 * (format == .RGBA8 ? 4 : 8)
+            let space = format == .RGBAh ? NegativePixels.linear : NegativePixels.display
+            var expected = Data(count: rowBytes * 63)
+            var actual = Data(count: rowBytes * 63)
+            expected.withUnsafeMutableBytes { bytes in
+                context.render(image, toBitmap: bytes.baseAddress!, rowBytes: rowBytes,
+                               bounds: bounds, format: format, colorSpace: space)
+            }
+            try actual.withUnsafeMutableBytes { bytes in
+                try NegativePixels.renderBitmap(image, context: context, toBitmap: bytes.baseAddress!,
+                    rowBytes: rowBytes, bounds: bounds, format: format, colorSpace: space)
+            }
+            #expect(actual == expected)
+        }
+    }
+
     @Test func ownedImportRetainsOriginalCopyAndCleansUpFailures() async throws {
         let renderer = NegativeRenderer()
         let file = temporary()

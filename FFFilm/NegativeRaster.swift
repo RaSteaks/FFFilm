@@ -35,8 +35,8 @@ nonisolated enum NegativeRaster {
             try Task.checkCancellation()
             let rows = min(256, height - start)
             let region = CGRect(x: image.extent.minX, y: image.extent.maxY - CGFloat(start + rows), width: CGFloat(width), height: CGFloat(rows))
-            autoreleasepool {
-                context.render(regionImage?(region) ?? image, toBitmap: memory.advanced(by: start * rowBytes), rowBytes: rowBytes,
+            try autoreleasepool {
+                try NegativePixels.renderBitmap(regionImage?(region) ?? image, context: context, toBitmap: memory.advanced(by: start * rowBytes), rowBytes: rowBytes,
                                bounds: region, format: depth == 16 ? .RGBA16 : .RGBA8, colorSpace: NegativePixels.display)
             }
             // Flush completed pages before advising the VM to reclaim them. Never drop dirty data.

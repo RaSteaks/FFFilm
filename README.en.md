@@ -4,7 +4,7 @@
 
 **English** | [简体中文](README.md)
 
-Data rate, storage runtime and shutter planning for the camera you actually have on set. Native SwiftUI on iPhone, iPad and Mac, with no third-party dependencies.
+Data rate, storage runtime and shutter planning for the camera you actually have on set, plus negative preview on iPhone / iPad and film slicing on macOS. Native SwiftUI on iPhone, iPad and Mac, with no third-party dependencies.
 
 ## Features
 
@@ -25,15 +25,17 @@ Data rate, storage runtime and shutter planning for the camera you actually have
 
 Preset frame rates carry their exact rational values; typed decimals stay literal.
 
-**Camera catalog** — 33 profiles across ARRI, Sony, RED, DJI, Kinefinity and standalone Apple ProRes, with manufacturer-grouped search, reorderable favorites and per-camera recording-mode details.
+**Camera catalog** — 39 profiles across ARRI, Sony, RED, DJI, Kinefinity and standalone Apple ProRes, with manufacturer-grouped search, reorderable favorites and per-camera recording-mode details.
 
 **Settings** — decimal GB/TB or binary GiB/TiB, applied to rates and totals without changing bitrate or runtime. Simplified Chinese and English follow the system language, falling back to English; camera models, codec names and FPS stay in their source form.
 
 ## Negative preview (iPhone / iPad)
 
-Open **Film Preview**, import a photo or file (including large 8/16-bit RGB or grayscale TIFF), and sample an unexposed film edge to view the positive. Compare the original, zoom to inspect, and export at source dimensions as TIFF / PNG (16-bit sRGB) or JPG (8-bit sRGB). Multi-page and floating-point TIFF are not supported.
+Open **Film Preview** and import from the photo library or Files (TIFF / JPEG / PNG / HEIC / HEIF, including large 8/16-bit RGB or grayscale images); other apps can also hand images straight to FFFilm through the system Open-in flow — cold launches included, and a failed import keeps the current source. Sample an unexposed film edge to view the positive, compare against the original, and zoom with on-demand sharpening bounded by the source size and the memory budget.
 
-The camera path locks exposure and white balance for live preview; frozen exports use the video frame dimensions. This is a preview tool without grading, cropping, presets or batch processing, and does not promise calibrated scan color. Processing stays on-device and never overwrites the input.
+The camera offers a lens choice (an automatic multi-lens camera with macro takeover, or explicit ultra-wide / wide / telephoto) and 720p / 1080p / 4K capture, with tap-to-focus where the hardware allows it. Exposure and white balance lock for live positive preview; frozen exports use the video frame dimensions.
+
+Export at source dimensions as TIFF / PNG (16-bit sRGB) or JPG (8-bit sRGB) through the share sheet, or save the positive JPG straight to Photos (add-only permission). Multi-page and floating-point TIFF are not supported. This is a preview tool without grading, cropping, presets or batch processing, and does not promise calibrated scan color. Processing stays on-device and never overwrites the input.
 
 See the [implementation notes](docs/ios-negative-film-preview.md) for simulator evidence and outstanding real-device validation of large-file limits and camera behavior.
 
@@ -62,7 +64,7 @@ xcodebuild -project FFFilm.xcodeproj -scheme FFFilm \
 ```
 
 ```sh
-# Unit tests — catalog integrity, rate tables, media planning, shutter math
+# Unit tests — catalog integrity, rate tables, media planning, shutter math and the negative renderer
 xcodebuild -project FFFilm.xcodeproj -scheme FFFilm \
   -destination 'platform=macOS' -only-testing:FFFilmTests test
 

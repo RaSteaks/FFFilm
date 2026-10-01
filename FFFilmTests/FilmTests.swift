@@ -301,6 +301,85 @@ struct FilmTests {
         await renderer.close()
     }
 
+    @Test @MainActor func frameNamesAdvanceAfterDeletionAndManualRenaming() {
+        let store = FilmStore()
+        store.addFrame(); store.addFrame(); store.addFrame()
+        store.selected = store.project.frames[0].id
+        store.removeFrame(); store.addFrame()
+        #expect(store.project.frames.map(\.name) == ["02", "03", "04"])
+        store.updateFrame { $0.name = "99" }; store.addFrame()
+        #expect(store.frame?.name == "100")
+        // User-defined labels do not participate in numeric numbering; large labels stay exact.
+        store.project.frames = [FilmFrame(name: "Roll A"), FilmFrame(name: "2147483647")]
+        store.addFrame(); #expect(store.frame?.name == "2147483648")
+        store.project.frames = [FilmFrame(name: "01"), FilmFrame(name: String(Int.max))]
+        store.addFrame(); #expect(store.frame?.name == "02")
+        #expect(store.project.valid)
+    }
+
+    @Test @MainActor func manualFrameLimitPreservesSelectionAndUndo() {
+        let store = FilmStore()
+        store.project.frames = (1...FilmProject.maximumFrames).map { FilmFrame(name: String($0)) }
+        store.selected = store.project.frames.last?.id
+        let previous = store.project, selected = store.selected
+        store.addFrame()
+        #expect(store.project == previous && store.selected == selected)
+        #expect(store.undoStack.isEmpty && store.redoStack.isEmpty)
+        #expect(store.notice.contains("1000"))
+    }
+
+    @Test @MainActor func detectionHonorsFrameLimitAndNumericNames() async throws {
+        // Exercise the real renderer so capacity checks include actual detection results.
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("FilmLimit-\(UUID()).tiff")
+        defer { try? FileManager.default.removeItem(at: url) }
+        let extent = CGRect(x: 0, y: 0, width: 600, height: 32)
+        var scan = CIImage(color: CIColor(red: 0.3, green: 0.3, blue: 0.3)).cropped(to: extent)
+        for x in [196, 396] {
+            scan = CIImage(color: .white).cropped(to: CGRect(x: x, y: 0, width: 8, height: 32)).composited(over: scan)
+        }
+        try CIContext().writeTIFFRepresentation(of: scan, to: url, format: .RGBA16,
+            colorSpace: CGColorSpace(name: CGColorSpace.sRGB)!)
+        let store = FilmStore()
+        _ = try await store.renderer.load(url, inputSpace: "sRGB")
+        try #require(try await store.renderer.detectFrames().count == 3)
+        func detect() async throws {
+            store.detect()
+            for _ in 0..<500 {
+                if !store.busy { return }
+                try await Task.sleep(for: .milliseconds(10))
+            }
+            try #require(!store.busy)
+        }
+        for count in [997, 998, 1000] {
+            store.project.frames = (1...count).map {
+                FilmFrame(name: String($0), crop: FilmRect(x: 0.1, y: 0.1, width: 0.8, height: 0.8))
+            }
+            store.selected = store.project.frames.last?.id
+            store.selection = Set([store.selected].compactMap { $0 })
+            store.undoStack = []; store.redoStack = []; store.notice = ""
+            let previous = store.project, selected = store.selected, selection = store.selection
+            try await detect()
+            if count == 997 {
+                #expect(store.project.frames.count == 1000 && store.project.valid)
+                #expect(store.project.frames.suffix(3).map(\.name) == ["998", "999", "1000"])
+                store.undo(); #expect(store.project == previous)
+            } else {
+                #expect(store.project == previous && store.selected == selected && store.selection == selection)
+                #expect(store.undoStack.isEmpty && store.redoStack.isEmpty && store.notice.contains("1000"))
+            }
+        }
+        store.project.frames = [FilmFrame(name: "02"), FilmFrame(name: "04")]
+        try await detect()
+        #expect(store.project.frames.map(\.name) == ["02", "04", "05", "06", "07"])
+        store.project.frames = [FilmFrame(name: "01")]
+        store.undoStack = []
+        let placeholder = store.project
+        try await detect()
+        #expect(store.project.frames.map(\.name) == ["01", "02", "03"])
+        #expect(store.undoStack == [placeholder])
+        await store.renderer.close()
+    }
+
     @Test @MainActor func frameGeometrySupportsGroupedUndoAndBatchRemoval() {
         let store = FilmStore()
         store.addFrame(); store.addFrame()

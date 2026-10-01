@@ -44,6 +44,9 @@ nonisolated struct FilmFrame: Codable, Equatable, Identifiable, Sendable {
 }
 
 nonisolated struct FilmProject: Codable, Equatable, Sendable {
+    /// Detection and manual drawing share this project-size ceiling.
+    static let maximumFrames = 1000
+
     var version = 1
     var sourcePath = ""
     var bookmark: Data?
@@ -54,8 +57,17 @@ nonisolated struct FilmProject: Codable, Equatable, Sendable {
     var frames: [FilmFrame] = []
     var exportJPEG = false
     var jpegQuality = 0.95
+    /// Advance numeric labels so removals and custom names do not duplicate a surviving frame's number.
+    var nextFrameName: String {
+        let numbers = Set(frames.compactMap { Int($0.name) }.filter { $0 > 0 })
+        let (next, overflow) = (numbers.max() ?? 0).addingReportingOverflow(1)
+        // Names are editable; even Int.max must not overflow. There is always a free
+        // positive number within numbers.count + 1 when the largest label is exhausted.
+        let number = overflow ? (1...(numbers.count + 1)).first { !numbers.contains($0) }! : next
+        return number < 10 ? "0\(number)" : String(number)
+    }
     var valid: Bool {
-        version == 1 && ["sRGB", "Adobe RGB", "Linear sRGB", "Display P3", "Custom ICC"].contains(inputSpace) && (inputSpace != "Custom ICC" || inputProfile != nil) && frames.count <= 1000 &&
+        version == 1 && ["sRGB", "Adobe RGB", "Linear sRGB", "Display P3", "Custom ICC"].contains(inputSpace) && (inputSpace != "Custom ICC" || inputProfile != nil) && frames.count <= Self.maximumFrames &&
         Set(frames.map(\.id)).count == frames.count && frames.allSatisfy(\.valid) && jpegQuality.isFinite && (0.1...1).contains(jpegQuality)
     }
 }

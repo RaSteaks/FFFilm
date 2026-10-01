@@ -22,7 +22,7 @@ struct MacWorkbenchToolbar: ToolbarContent {
             .pickerStyle(.segmented)
             .labelsHidden()
             .frame(width: 260)
-            .help("Rate ⌘1 · Shutter ⌘2 · Film ⌘3")
+            .help(Text("Rate ⌘1 · Shutter ⌘2 · Film ⌘3"))
             .accessibilityIdentifier("calculator-view-picker")
         }
         ToolbarItemGroup(placement: .primaryAction) {
@@ -39,7 +39,7 @@ struct MacWorkbenchToolbar: ToolbarContent {
                     }
                 }
                 .disabled(store.pinnedSetups.count >= 4)
-                .help("Pin setup for comparison (⇧⌘P)")
+                .help(Text("Pin setup for comparison (⇧⌘P)"))
                 .keyboardShortcut("p", modifiers: [.command, .shift])
                 .accessibilityIdentifier("pin-action")
             }
@@ -60,7 +60,8 @@ struct MacWorkbenchToolbar: ToolbarContent {
                 } label: {
                     Label(copied ? "nav.copied" : "nav.copy", systemImage: copied ? "checkmark" : "doc.on.doc")
                 }
-                .help(store.activeView == .rate ? "Copy configuration (⇧⌘C)" : "Copy shutter summary (⇧⌘C)")
+                // Keep each branch as localized Text; a computed String skips localization.
+                .help(store.activeView == .rate ? Text("Copy configuration (⇧⌘C)") : Text("Copy shutter summary (⇧⌘C)"))
                 .keyboardShortcut("c", modifiers: [.command, .shift])
                 .disabled(store.activeView == .shutter && store.shutterCalculation.exposure == nil)
                 .accessibilityIdentifier("copy-action")
@@ -95,7 +96,8 @@ struct MacWorkbenchCommands: Commands {
     @FocusedValue(\.calculatorStore) private var store
 
     var body: some Commands {
-        CommandMenu("Calculator") {
+        // Reuse the calculator tab title so zh-Hans users see a translated menu name.
+        CommandMenu("nav.calculate") {
             Button("nav.recording") { store?.setActiveView(.rate) }
                 .keyboardShortcut("1")
                 .disabled(store == nil)

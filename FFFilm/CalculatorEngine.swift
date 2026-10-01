@@ -101,12 +101,13 @@ struct CalculatorEngine {
         output.resolutionId = resolution(for: output, mode: selectedMode).id
         output.codecId = codec(for: output).id
         output.projectFps = normalizedRate(output.projectFps, available: catalog.projectFrameRates)
-        output.sensorFps = normalizedRate(output.sensorFps, available: availableSensorFrameRates(for: output))
-        output.shootHours = min(max(output.shootHours, 0.25), 24)
+        // Clear unsupported camera flags before validating cadence so normalization
+        // keeps deriving limits from the effective settings as rate policy evolves.
         if selectedCamera.supportsSensorOverdrive != true {
-            // Overdrive is camera-scoped; never carry a hidden toggle into a profile that cannot use it.
             output.sensorOverdrive = false
         }
+        output.sensorFps = normalizedRate(output.sensorFps, available: availableSensorFrameRates(for: output))
+        output.shootHours = min(max(output.shootHours, 0.25), 24)
         if selectedCamera.isStandaloneProRes {
             output.sensorFps = output.projectFps
         }

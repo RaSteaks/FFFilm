@@ -7,7 +7,15 @@ nonisolated final class NegativeCameraFixture: NegativeCameraCapture, @unchecked
     private let queue = DispatchQueue(label: "FFFilm.camera.fixture")
     private var handler: (@Sendable (NegativeCameraFrame, @escaping @Sendable () -> Void) -> Void)?
     private var asset: NegativeAsset?
-    func requestAccess() async -> Bool { true }
+    private let permissionScenario = ProcessInfo.processInfo.environment["NEGATIVE_UI_CAMERA_DENIED"]
+    private var accessRequests = 0
+    func requestAccess() async -> Bool {
+        // Simulator-only cases cover initial denial and permission loss before restarting.
+        queue.sync {
+            accessRequests += 1
+            return permissionScenario != "1" && (permissionScenario != "restart" || accessRequests == 1)
+        }
+    }
     func start(settings: NegativeCameraSettings, onConfiguration: @escaping @Sendable (NegativeCameraConfiguration) -> Void,
                onFrame: @escaping @Sendable (NegativeCameraFrame, @escaping @Sendable () -> Void) -> Void,
                onError: @escaping @Sendable (String) -> Void) {

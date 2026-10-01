@@ -1,5 +1,15 @@
 # FFFilm
 
+## Review follow-up fixes (2026-10-01)
+
+- AVCaptureDevice.minimumFocusDistance is reported in millimeters. Convert to centimeters with /10 in the camera settings; retain the existing unknown/fixed-focus visibility behavior and correct the unit comment.
+- Localize the macOS Calculator menu through nav.calculate and translate all workbench/pin/copy tooltips in English and Simplified Chinese. Resolve conditional copy tooltips as Text so SwiftUI keeps localization context.
+- Keep unsupported-overdrive normalization before cadence validation as defensive ordering. The existing rate policy already ignores overdrive on unsupported cameras; this is not a demonstrated frame-rate fix.
+- Share FilmProject.maximumFrames across validation and automatic/manual additions. Reject additions before mutating project, selection or undo state, with explicit bilingual failure feedback. Number both manual and detected frames from surviving numeric names, preserve custom labels, and handle Int.max without overflow.
+- Use one native 44pt Open Settings action for denied camera access in document and immersive workspaces. First denial stays in the document workbench; denial after reopening an already-used camera also exposes recovery in the immersive view.
+- Regression coverage adds real three-frame detection at the 1000-frame boundary, placeholder replacement, deletion/manual-name numbering, oversized numeric labels and selection preservation. Simulator UI coverage verifies 20 mm displays as 2 cm and exercises initial/restart denial in English/Chinese with DEBUG-only fixtures.
+- Verification: 33 focused macOS unit tests and 18 iOS NegativeStoreTests passed. Both camera UI regressions passed on iPhone 17 Pro / iOS 26.3. Built macOS English/Chinese menu, tooltip and frame-limit resources match the catalog. Catalog validation, strict UI static audit and diff checks passed. No physical-device verification was performed. Results: `/tmp/FFFilm-review.yi2Bok/fix-mac.xcresult` and `/tmp/FFFilm-review.yi2Bok/fix-ios.xcresult`.
+
 ## External image opening (2026-09-29)
 
 - Declare TIFF/JPEG/PNG/HEIC/HEIF as alternate Viewer document types in an iOS-only plist. Use system document-open delivery rather than a share extension or custom URL-scheme workaround.

@@ -30,7 +30,9 @@ struct NegativeCameraControls: View {
                 if configuration.minimumFocusDistance > 0 {
                     HStack {
                         Text("negative.camera.minimumDistance")
+                        // AVCaptureDevice reports millimeters; the displayed unit is centimeters.
                         Text(Double(configuration.minimumFocusDistance) / 10, format: .number.precision(.fractionLength(0...1)))
+                            .accessibilityIdentifier("negative-camera-minimum-distance")
                         Text("cm")
                     }.font(.caption).foregroundStyle(Palette.muted)
                 }

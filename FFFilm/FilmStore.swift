@@ -278,14 +278,21 @@ final class FilmStore {
             do {
                 let rectangles = try await renderer.detectFrames()
                 if rectangles.isEmpty { notice = filmText("未找到可靠帧间隙，请手动框选或调整现有裁切框。", "No reliable frame gaps found. Draw frames or edit the existing crop.") }
+                else if exceedsFrameLimit(adding: rectangles.count) {
+                    // change() reverts the whole mutation when the project turns invalid,
+                    // so an over-limit detection result must be refused up front.
+                    notice = frameLimitNotice
+                }
                 else {
                     change { project in
                         // Preserve prior edits: detection adds candidates instead of replacing existing frames.
                         if project.frames.count == 1 && project.frames[0].crop == FilmRect() && project.frames[0].rotation == 0 {
                             project.frames.removeAll()
                         }
-                        let offset = project.frames.count
-                        project.frames += rectangles.enumerated().map { FilmFrame(name: String(format: "%02d", offset + $0.offset + 1), crop: $0.element) }
+                        // Manual and detected frames use the same numbering after deletions.
+                        for rectangle in rectangles {
+                            project.frames.append(FilmFrame(name: project.nextFrameName, crop: rectangle))
+                        }
                     }
                     selected = project.frames.first?.id
                     notice = filmText("已生成候选帧，请检查并修正边界。", "Candidate frames added. Check and refine their boundaries.")
@@ -294,9 +301,20 @@ final class FilmStore {
             busy = false; refresh()
         }
     }
+    /// The untouched placeholder frame is replaced, not appended to.
+    private func exceedsFrameLimit(adding count: Int) -> Bool {
+        let replacing = project.frames.count == 1 && project.frames[0].crop == FilmRect() && project.frames[0].rotation == 0
+        return (replacing ? 0 : project.frames.count) + count > FilmProject.maximumFrames
+    }
+    private var frameLimitNotice: String {
+        String(format: filmText("添加帧会超过 %d 帧上限，未添加。", "Adding frames would exceed the %d-frame project limit; none were added."), FilmProject.maximumFrames)
+    }
 
     func addFrame(_ rect: FilmRect = FilmRect(x: 0.1, y: 0.1, width: 0.8, height: 0.8)) {
-        let frame = FilmFrame(name: String(format: "%02d", project.frames.count + 1), crop: rect)
+        // Reject before changing selection: change() would otherwise restore the project
+        // while leaving a nonexistent new frame selected.
+        guard project.frames.count < FilmProject.maximumFrames else { notice = frameLimitNotice; return }
+        let frame = FilmFrame(name: project.nextFrameName, crop: rect)
         change { $0.frames.append(frame) }; selected = frame.id; refresh()
     }
     func removeFrame() {

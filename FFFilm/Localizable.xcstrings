@@ -390,6 +390,23 @@
     "Added to comparison." : {
 
     },
+    "Adding frames would exceed the %d-frame project limit; none were added." : {
+      "comment" : "macOS film workbench",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adding frames would exceed the %d-frame project limit; none were added."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加帧会超过 %d 帧上限，未添加。"
+          }
+        }
+      }
+    },
     "All frames" : {
       "comment" : "macOS film workbench",
       "localizations" : {
@@ -1054,7 +1071,38 @@
 
     },
     "Copy configuration (⇧⌘C)" : {
-
+      "comment" : "macOS toolbar tooltip for copying the recording summary.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copy configuration (⇧⌘C)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "复制配置（⇧⌘C）"
+          }
+        }
+      }
+    },
+    "Copy shutter summary (⇧⌘C)" : {
+      "comment" : "macOS toolbar tooltip for copying the shutter summary.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copy shutter summary (⇧⌘C)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "复制快门摘要（⇧⌘C）"
+          }
+        }
+      }
     },
     "copy.invalidShutterSummary" : {
       "localizations" : {
@@ -3907,7 +3955,21 @@
       }
     },
     "Pin setup for comparison (⇧⌘P)" : {
-
+      "comment" : "macOS toolbar tooltip for adding the current setup to comparison.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pin setup for comparison (⇧⌘P)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将当前配置加入对比（⇧⌘P）"
+          }
+        }
+      }
     },
     "Preview rendering failed." : {
       "comment" : "macOS film workbench",
@@ -3978,7 +4040,21 @@
       }
     },
     "Rate ⌘1 · Shutter ⌘2 · Film ⌘3" : {
-
+      "comment" : "macOS workbench tab shortcuts.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rate ⌘1 · Shutter ⌘2 · Film ⌘3"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "录制 ⌘1 · 快门 ⌘2 · 胶片 ⌘3"
+          }
+        }
+      }
     },
     "Redo" : {
       "comment" : "macOS film workbench",

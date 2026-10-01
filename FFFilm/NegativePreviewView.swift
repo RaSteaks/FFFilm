@@ -178,9 +178,7 @@ struct NegativePreviewView: View {
                             Text(error).font(.callout).foregroundStyle(Palette.text)
                                 .accessibilityIdentifier("negative-error")
                             if store.cameraDenied {
-                                Button("negative.openSettings") {
-                                    if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
-                                }
+                                permissionSettingsButton
                             }
                         }
                     }
@@ -192,6 +190,15 @@ struct NegativePreviewView: View {
             }
             .background(Palette.background)
         }
+    }
+
+    /// Both workspaces expose the same recovery action after camera authorization fails.
+    private var permissionSettingsButton: some View {
+        Button("negative.openSettings") {
+            if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
+        }
+        .frame(minHeight: 44)
+        .accessibilityIdentifier("negative-open-camera-settings")
     }
 
     /// The camera owns the viewport; controls overlay it instead of shrinking its height.
@@ -231,6 +238,7 @@ struct NegativePreviewView: View {
                                 }
                                 if let error = store.error {
                                     Text(error).font(.callout).accessibilityIdentifier("negative-error")
+                                    if store.cameraDenied { permissionSettingsButton }
                                 }
                                 if store.sampling { samplingControls }
                                 else { cameraActions }

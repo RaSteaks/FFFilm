@@ -7,8 +7,8 @@ import UniformTypeIdentifiers
 final class NegativeUITests: XCTestCase {
     override func setUpWithError() throws { continueAfterFailure = false }
 
-    @MainActor private func openNegative(_ app: XCUIApplication) {
-        app.launchArguments += ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+    @MainActor private func openNegative(_ app: XCUIApplication, language: String = "en") {
+        app.launchArguments += ["-AppleLanguages", "(\(language))", "-AppleLocale", language == "en" ? "en_US" : "zh_CN"]
         app.launch()
         // The visible name is Film Preview; keep the stable workspace identifier.
         let tab = app.tabBars.buttons.matching(NSPredicate(format: "identifier == 'tab-negative' OR label == 'Film Preview'")).firstMatch
@@ -81,6 +81,10 @@ final class NegativeUITests: XCTestCase {
         let export = app.buttons["negative-export"]
         XCTAssertTrue(export.waitForExistence(timeout: 10)); XCTAssertTrue(export.isEnabled)
         app.buttons["negative-camera-settings"].tap()
+        // The fixture reports 20 millimeters, which must render as 2 centimeters.
+        let distance = app.staticTexts["negative-camera-minimum-distance"]
+        XCTAssertTrue(distance.waitForExistence(timeout: 5))
+        XCTAssertEqual(distance.label, "2")
         let resolution = app.descendants(matching: .any).matching(identifier: "negative-camera-resolution").firstMatch
         if !resolution.isHittable { app.swipeUp() }
         resolution.tap(); app.buttons["1080p"].tap()
@@ -124,6 +128,37 @@ final class NegativeUITests: XCTestCase {
         if !reopen.isHittable { app.swipeUp() }
         reopen.tap()
         XCTAssertTrue(app.buttons["negative-camera-close"].waitForExistence(timeout: 5))
+    }
+
+    @MainActor func testCameraPermissionSettingsInBothWorkspaces() {
+        for (scenario, language) in [("1", "en"), ("restart", "zh-Hans")] {
+            let app = XCUIApplication()
+            app.launchEnvironment["NEGATIVE_UI_CAMERA"] = "1"
+            app.launchEnvironment["NEGATIVE_UI_CAMERA_DENIED"] = scenario
+            openNegative(app, language: language)
+            if scenario == "restart" {
+                // A previously authorized camera remains immersive when a later start is denied.
+                let image = app.descendants(matching: .any).matching(identifier: "negative-image").firstMatch
+                XCTAssertTrue(image.waitForExistence(timeout: 10))
+                app.buttons["negative-camera-close"].tap()
+                let reopen = app.buttons["negative-camera-fullscreen"]
+                XCTAssertTrue(reopen.waitForExistence(timeout: 5))
+                if !reopen.isHittable { app.swipeUp() }
+                reopen.tap()
+                XCTAssertTrue(app.buttons["negative-camera-close"].waitForExistence(timeout: 5))
+            } else {
+                XCTAssertFalse(app.buttons["negative-camera-close"].exists)
+            }
+            XCTAssertTrue(app.staticTexts["negative-error"].waitForExistence(timeout: 5))
+            let settings = app.buttons["negative-open-camera-settings"]
+            XCTAssertTrue(settings.waitForExistence(timeout: 5))
+            if !settings.isHittable { app.scrollViews["negative-camera-actions"].swipeUp() }
+            XCTAssertTrue(settings.isHittable)
+            XCTAssertEqual(settings.label, language == "en" ? "Open Settings" : "打开设置")
+            let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+            screenshot.name = "Camera permission \(scenario) \(language)"; screenshot.lifetime = .keepAlways; add(screenshot)
+            app.terminate()
+        }
     }
 
     @MainActor func testCameraLargeTextAndCancellation() {

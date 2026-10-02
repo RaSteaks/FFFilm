@@ -1442,7 +1442,8 @@ private struct ShutterView: View {
                     }
                     if presets {
                         Menu {
-                            ForEach(ShutterFramePreset.allCases) { preset in
+                            // 100/3 is a capture cadence; keep the project-rate preset choices unchanged.
+                            ForEach(ShutterFramePreset.allCases.filter { field == .sensorFps || $0 != .fractional100Over3 }) { preset in
                                 Button(preset.label) { setNumber(preset.fps, field: field) }
                             }
                         } label: {

@@ -1,5 +1,12 @@
 # FFFilm
 
+## 100/3 camera FPS preset (2026-10-02)
+
+- Add `33.333 (100/3)` only to the shutter Camera FPS menu using the existing native menu and draft-clearing store update. Store `100.0 / 3`, not the displayed decimal; preserve the Project FPS presets and literal decimal input.
+- Rationale: [Sony's CineAltaV 2 firmware announcement](https://www.sony.com.cn/content/sonyportal/zh-cn/cms/newscenter/product/2023/20230609-1.html) explicitly associates 33.333 variable FPS with anti-flicker at 50 Hz. Under this app's ideal 100 Hz optical model, the derived frame interval is 30 ms, exactly three light periods, so successive frames sample the same light phase when timing is stable. Interpreting capture at 25 fps gives 0.75× playback and 4/3× duration.
+- Distinguish frame-phase repetition from the engine's existing complete-exposure-cycle criterion: at 100/3 fps, 180° exposes for 15 ms (1.5 light cycles), while 120°/240°/360° expose for 10/20/30 ms. Keep that criterion and its reference candidates unchanged. Stable timing and light periodicity are assumptions, not guarantees for PWM, LEDs, rolling shutters or real camera rate accuracy.
+- Verification: 31 macOS shutter/store tests passed (35 executions including parameters); the iPhone 17 Pro input workflow passed, including exact 1/100 s at 120°, draft replacement and exclusion from Project FPS. Inspected the retained open-menu screenshot. Strict UI audit and diff checks passed; DESIGN lint reported zero errors and 13 existing token warnings. Results: `/tmp/FFFilm-100over3-mac-verified.xcresult`, `/tmp/FFFilm-100over3-phone.xcresult`. No physical-camera/lighting verification was performed.
+
 ## Distribution copy review and inline FPS import (2026-10-02)
 
 - Review the 410-entry string catalog, visible calculator/settings/camera-library/film workflows and permission copy. Remove duplicate settings labels/persistence instructions, recording-task helper paragraphs, repeated duration descriptions and the shutter form's duplicate limit hint. Show a shorter video-estimate footer only on Recording.

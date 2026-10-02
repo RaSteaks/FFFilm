@@ -681,6 +681,30 @@ final class FFFilmUITests: XCTestCase {
         attachment.name = "Shutter decimal conversion"
         attachment.lifetime = .keepAlways
         add(attachment)
+
+        // Preset selection replaces the decimal draft and retains the unrounded 100/3 cadence.
+        let presets = app.buttons["shutter-presets-sensorFps"].firstMatch
+        reveal(presets, in: app)
+        presets.tap()
+        let fractionalPreset = app.buttons["33.333 (100/3)"].firstMatch
+        XCTAssertTrue(fractionalPreset.waitForExistence(timeout: 3))
+        let presetAttachment = XCTAttachment(screenshot: app.screenshot())
+        presetAttachment.name = "Camera FPS 100 over 3 preset"
+        presetAttachment.lifetime = .keepAlways
+        add(presetAttachment)
+        fractionalPreset.tap()
+        enter("120", field: "angle", in: app)
+        finishEditing(app)
+        XCTAssertTrue(app.staticTexts["shutter-time-primary"].label.contains("1/100 s"))
+
+        // The new capture preset must not leak into the delivery/project-rate menu.
+        choose("Over / undercrank", picker: "shutter-mode", in: app)
+        let projectPresets = app.buttons["shutter-presets-projectFps"].firstMatch
+        reveal(projectPresets, in: app)
+        projectPresets.tap()
+        XCTAssertTrue(app.buttons["25 fps"].firstMatch.waitForExistence(timeout: 3))
+        XCTAssertFalse(app.buttons["33.333 (100/3)"].firstMatch.exists)
+        app.buttons["25 fps"].firstMatch.tap()
     }
 
     @MainActor

@@ -30,6 +30,25 @@ struct ShutterTests {
         let rational = try #require(engine.calculateShutter(settings: settings).exposure)
         #expect(settings.sensorFps == 24_000.0 / 1_001)
         #expect(abs(rational.shutterDenominator - decimal.shutterDenominator) > 1e-6)
+
+        // A truncated 33.333 would miss exact 10 ms exposure and three light periods per frame.
+        settings.sensorFps = ShutterFramePreset.fractional100Over3.fps
+        settings.angle = 120
+        let third = try #require(engine.calculateShutter(settings: settings).exposure)
+        #expect(abs(third.exposureSeconds - 0.01) < 1e-12)
+        #expect(abs(settings.lightHz / settings.sensorFps - 3) < 1e-12)
+        settings.mode = .matching
+        settings.match = .angle
+        settings.projectFps = 25
+        let retimed = engine.calculateShutter(settings: settings)
+        #expect(abs(try #require(retimed.playbackSpeed) - 0.75) < 1e-12)
+        #expect(abs(try #require(retimed.durationMultiplier) - 4.0 / 3) < 1e-12)
+        settings.mode = .flicker
+        let candidates = engine.calculateShutter(settings: settings).candidates
+        #expect(candidates.count == 3)
+        for (candidate, angle) in zip(candidates, [120.0, 240, 360]) {
+            #expect(abs(candidate.exposure.angle - angle) < 1e-10)
+        }
     }
 
     @Test("Mains models choose complete cycles and break distance ties toward the lower angle")

@@ -326,13 +326,15 @@ enum ShutterLight: String, CaseIterable, Identifiable {
 
 /// Presets opt into exact fractional cadence; typed decimals are never reinterpreted.
 enum ShutterFramePreset: String, CaseIterable, Identifiable {
-    case fractional24, fractional30, fractional60, fps24, fps25, fps30, fps48, fps50, fps60, fps120
+    case fractional24, fractional30, fractional60, fps24, fps25, fps30, fractional100Over3, fps48, fps50, fps60, fps120
     var id: Self { self }
     var fps: Double {
         switch self {
         case .fractional24: 24_000 / 1_001
         case .fractional30: 30_000 / 1_001
         case .fractional60: 60_000 / 1_001
+        // Three 100 Hz light periods per frame in the 50 Hz mains model; do not truncate to 33.333.
+        case .fractional100Over3: 100.0 / 3
         case .fps24: 24
         case .fps25: 25
         case .fps30: 30
@@ -347,6 +349,7 @@ enum ShutterFramePreset: String, CaseIterable, Identifiable {
         case .fractional24: "23.976 (24000/1001)"
         case .fractional30: "29.97 (30000/1001)"
         case .fractional60: "59.94 (60000/1001)"
+        case .fractional100Over3: "33.333 (100/3)"
         default: "\(Int(fps)) fps"
         }
     }

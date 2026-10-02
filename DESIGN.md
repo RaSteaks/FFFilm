@@ -116,6 +116,7 @@ SHUTTER owns three native menu destinations: Convert, Flicker candidates and Ove
 The result emphasis follows the operation: angle → time makes shutter time primary, time → angle makes angle primary, and flicker/matching make the recommended angle primary while keeping time visible. One collapsed-by-default DETAILS disclosure contains decimal seconds, milliseconds, limit/support notes, playback ratios, light checks and all candidate information. Invalid/no-result messages remain visible. Preserve up to six decimal places without trailing zeros and never round stored calculation inputs. Fractional fps presets name their exact rational value; typed decimals remain literal.
 
 Exact fractional frame-rate labels appear only in the presets menu, without persistent helper text below fps fields.
+The Camera FPS menu includes `33.333 (100/3)` for 50 Hz lighting/overcrank planning; selection stores `100.0 / 3` without decimal truncation. This capture-only preset does not appear in the Project FPS menu; both fields continue to accept literal decimal input.
 
 The shared FieldCard owns field presentation, native TextField/Menu/Picker/Toggle own platform interaction, CalculatorStore owns settings and one-shot RATE import, and CalculatorEngine owns validation and results. Shutter fields keep editing drafts, show pending results for unfinished input and show a specific inline error after submit or blur. Invalid drafts must not leave a seemingly current computed result onscreen. RESET clears all shutter settings and draft state.
 

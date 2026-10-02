@@ -775,6 +775,23 @@
         }
       }
     },
+    "Cannot read the full scan. Export a 16-bit RGB TIFF from your scanning software and try again." : {
+      "comment" : "macOS film workbench",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cannot read the full scan. Export a 16-bit RGB TIFF from your scanning software and try again."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法读取完整扫描图像，请从扫描软件导出 16 位 RGB TIFF 后重试。"
+          }
+        }
+      }
+    },
     "Cannot read the scan file." : {
       "comment" : "macOS film workbench",
       "localizations" : {
@@ -1545,23 +1562,6 @@
         }
       }
     },
-    "This FFF cannot be read as a full 16-bit RGB image. Use a 16-bit RGB TIFF instead." : {
-      "comment" : "macOS film workbench",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This FFF cannot be read as a full 16-bit RGB image. Use a 16-bit RGB TIFF instead."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法从此 FFF 读取完整的 16 位 RGB 图像，请改用 16 位 RGB TIFF。"
-          }
-        }
-      }
-    },
     "field.camera" : {
       "localizations" : {
         "en" : {
@@ -2008,23 +2008,6 @@
         }
       }
     },
-    "Cannot read the full scan. Export a 16-bit RGB TIFF from your scanning software and try again." : {
-      "comment" : "macOS film workbench",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cannot read the full scan. Export a 16-bit RGB TIFF from your scanning software and try again."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法读取完整扫描图像，请从扫描软件导出 16 位 RGB TIFF 后重试。"
-          }
-        }
-      }
-    },
     "group.format" : {
       "localizations" : {
         "en" : {
@@ -2179,12 +2162,12 @@
         }
       }
     },
-    "Imported sensor %@ fps and project %@ fps from recording." : {
+    "Imported: camera %@ fps · project %@ fps" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Imported sensor %1$@ fps and project %2$@ fps from recording."
+            "value" : "Imported: camera %1$@ fps · project %2$@ fps"
           }
         }
       }
@@ -2881,6 +2864,7 @@
       }
     },
     "negative.camera.settingsHint" : {
+      "comment" : "User-facing guidance; retain actionable limits without implementation details.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -2895,8 +2879,7 @@
             "value" : "更换镜头或分辨率后需重新选取片基。4K 会增加内存和耗电。"
           }
         }
-      },
-      "comment" : "User-facing guidance; retain actionable limits without implementation details."
+      }
     },
     "negative.cameraHint" : {
       "extractionState" : "manual",
@@ -4988,6 +4971,7 @@
       }
     },
     "shutter.compromise.method" : {
+      "comment" : "User-facing guidance; retain actionable limits without implementation details.",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -5001,8 +4985,7 @@
             "value" : "优先减小各设备的最大周期偏差，同等偏差时接近首选角度。周期偏差不代表频闪强度。"
           }
         }
-      },
-      "comment" : "User-facing guidance; retain actionable limits without implementation details."
+      }
     },
     "shutter.compromise.notice" : {
       "localizations" : {
@@ -5976,6 +5959,23 @@
     },
     "This configuration is already in comparison." : {
 
+    },
+    "This FFF cannot be read as a full 16-bit RGB image. Use a 16-bit RGB TIFF instead." : {
+      "comment" : "macOS film workbench",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This FFF cannot be read as a full 16-bit RGB image. Use a 16-bit RGB TIFF instead."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法从此 FFF 读取完整的 16 位 RGB 图像，请改用 16 位 RGB TIFF。"
+          }
+        }
+      }
     },
     "This location cannot retain file access; reselect the scan when reopening the project." : {
       "comment" : "macOS film workbench",

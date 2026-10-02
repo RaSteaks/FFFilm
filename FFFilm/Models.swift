@@ -241,6 +241,25 @@ struct PinnedSetup: Identifiable, Hashable {
     let calculation: Calculation
 }
 
+/// Two independent planning questions share one camera format without overwriting inputs.
+enum RecordingTask: String, CaseIterable, Identifiable {
+    case capacity, runtime
+
+    var id: Self { self }
+    var label: LocalizedStringResource {
+        switch self {
+        case .capacity: "recording.capacity"
+        case .runtime: "recording.runtime"
+        }
+    }
+    var hint: LocalizedStringResource {
+        switch self {
+        case .capacity: "recording.capacityHint"
+        case .runtime: "recording.runtimeHint"
+        }
+    }
+}
+
 enum CalculatorView: String, CaseIterable, Identifiable, Hashable {
     case rate = "RATE"
     case shutter = "SHUTTER"
@@ -358,9 +377,9 @@ struct ShutterSettings: Equatable, Hashable {
         case .displays: .nan // The engine derives the common period from validated refresh rates.
         }
     }
+    // Resolve validation at display time so it follows the in-app language.
     static var displayRefreshError: String {
-        String(localized: "shutter.displayRefreshError",
-               defaultValue: "Enter 2–16 refresh rates (0.001–1000000 Hz, up to three decimals), separated by commas. Use . for decimals.",
+        AppText.resolve("shutter.displayRefreshError", defaultValue: "Enter 2–16 refresh rates (0.001–1000000 Hz, up to three decimals), separated by commas. Use . for decimals.",
                comment: "Inline validation for the multiple-display refresh-rate list.")
     }
 
@@ -409,18 +428,15 @@ enum ShutterInputField: String, Hashable {
 
     func error(for value: Double) -> String? {
         guard value.isFinite, value > 0 else {
-            return String(localized: "field.validationFinite",
-                          defaultValue: "Enter a finite number greater than zero.",
+            return AppText.resolve("field.validationFinite", defaultValue: "Enter a finite number greater than zero.",
                           comment: "Validation for a positive numeric shutter input.")
         }
         switch self {
         case .sensorFps, .projectFps:
-            return (0.001 ... 10_000).contains(value) ? nil : String(localized: "field.validationFPS",
-                                                                        defaultValue: "Enter 0.001–10000 fps.",
+            return (0.001 ... 10_000).contains(value) ? nil : AppText.resolve("field.validationFPS", defaultValue: "Enter 0.001–10000 fps.",
                                                                         comment: "FPS validation range.")
         case .maxAngle:
-            return value <= 360 ? nil : String(localized: "field.validationAngle",
-                                                defaultValue: "Maximum angle must be at most 360°.",
+            return value <= 360 ? nil : AppText.resolve("field.validationAngle", defaultValue: "Maximum angle must be at most 360°.",
                                                 comment: "Maximum shutter angle validation.")
         default:
             return nil

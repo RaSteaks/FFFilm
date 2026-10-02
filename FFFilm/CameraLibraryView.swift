@@ -89,7 +89,8 @@ struct CameraLibraryView: View {
                 List { catalogRows(split: false) }
             }
         }
-        .navigationTitle("nav.cameras")
+        // Refresh the native title when the app language changes.
+        .navigationTitle(AppText.localized("nav.cameras"))
         .searchable(text: $query, prompt: Text("camera.search"))
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
@@ -189,7 +190,7 @@ private struct CameraFavoritesView: View {
                 }
             }
         }
-        .navigationTitle("nav.favorites")
+        .navigationTitle(AppText.localized("nav.favorites"))
         #if os(iOS)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {

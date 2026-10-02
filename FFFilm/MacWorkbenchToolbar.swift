@@ -96,15 +96,15 @@ struct MacWorkbenchCommands: Commands {
     @FocusedValue(\.calculatorStore) private var store
 
     var body: some Commands {
-        // Reuse the calculator tab title so zh-Hans users see a translated menu name.
-        CommandMenu("nav.calculate") {
-            Button("nav.recording") { store?.setActiveView(.rate) }
+        // Commands live outside the content locale environment; observe the shared preference.
+        CommandMenu(AppText.localized("nav.calculate")) {
+            Button(AppText.localized("nav.recording")) { store?.setActiveView(.rate) }
                 .keyboardShortcut("1")
                 .disabled(store == nil)
-            Button("nav.shutter") { store?.setActiveView(.shutter) }
+            Button(AppText.localized("nav.shutter")) { store?.setActiveView(.shutter) }
                 .keyboardShortcut("2")
                 .disabled(store == nil)
-            Button("nav.film") { store?.setActiveView(.film) }
+            Button(AppText.localized("nav.film")) { store?.setActiveView(.film) }
                 .keyboardShortcut("3")
                 .disabled(store == nil)
         }

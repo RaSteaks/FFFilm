@@ -15,7 +15,7 @@ Data rate, storage runtime and shutter planning for the camera you actually have
 - Direct duration entry (0.25–24 hours) with inline validation, a native stepper and 1/4/8/12-hour presets. An incomplete draft keeps the last valid result.
 - Snapshot comparisons: pin up to four setups; duplicates are rejected.
 - Per-camera format memory. Media and planned duration stay per-window.
-- Playback duration, active image area and the calculation basis stay in a collapsed details disclosure.
+- Choose the recording format first, then enter the storage plan. The result panel has no technical-details section.
 
 **Shutter** — three modes sharing camera FPS and a user-set maximum angle.
 
@@ -27,7 +27,7 @@ Preset frame rates carry their exact rational values; typed decimals stay litera
 
 **Camera catalog** — 39 profiles across ARRI, Sony, RED, DJI, Kinefinity and standalone Apple ProRes, with manufacturer-grouped search, reorderable favorites and per-camera recording-mode details.
 
-**Settings** — decimal GB/TB or binary GiB/TiB, applied to rates and totals without changing bitrate or runtime. Simplified Chinese and English follow the system language, falling back to English; camera models, codec names and FPS stay in their source form.
+**Settings** — decimal GB/TB or binary GiB/TiB, applied to rates and totals without changing bitrate or runtime. Switch between Simplified Chinese and English in the app, with immediate updates and a saved preference. The initial language follows supported system preferences, falling back to English; camera models, codec names and FPS stay in their source form.
 
 ## Negative preview (iPhone / iPad)
 

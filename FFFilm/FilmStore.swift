@@ -259,7 +259,8 @@ final class FilmStore {
                 // Both views share the untouched scan preview until edits require compositing.
                 overview = base; image = initial
                 displayedProject = next; displayedFrameID = nil
-                notice = decoded.isFFF ? filmText("FFF 已读取；完整数据与色彩仍待真实样本对照验证。", "FFF decoded; full-data and color accuracy still require reference verification.") : bookmarkNotice
+                // Preserve the FFF compatibility caveat as actionable export guidance.
+                notice = decoded.isFFF ? filmText("FFF 兼容性有限，请在导出前对照原始扫描检查图像完整性与色彩。", "FFF compatibility is limited. Check image completeness and color against the original scan before exporting.") : bookmarkNotice
                 busy = false
             } catch {
                 info = nil; image = nil; overview = nil

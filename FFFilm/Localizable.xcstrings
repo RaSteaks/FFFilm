@@ -1,108 +1,6 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "negative.photos.save": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Save positive to Photos (JPG)"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "保存正片到相册（JPG）"
-          }
-        }
-      }
-    },
-    "negative.photos.title": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Save to Photos"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "保存到相册"
-          }
-        }
-      }
-    },
-    "negative.photos.saving": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Saving to Photos…"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "正在保存到相册…"
-          }
-        }
-      }
-    },
-    "negative.photos.saved": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Positive saved to Photos."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "正片已保存到相册。"
-          }
-        }
-      }
-    },
-    "negative.photos.denied": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Allow FFFilm to add photos in Settings, then try again."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "请在设置中允许 FFFilm 添加照片，然后重试。"
-          }
-        }
-      }
-    },
-    "negative.photos.failed": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Could not save to Photos. Please try again."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "无法保存到相册，请重试。"
-          }
-        }
-      }
-    },
     " (cancelled)" : {
       "comment" : "macOS film workbench",
       "localizations" : {
@@ -160,42 +58,12 @@
         }
       }
     },
-    "%@ @ %@ → %@ %@/h" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ @ %2$@ → %3$@ %4$@/h"
-          }
-        }
-      }
-    },
     "%@ %@" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$@ %2$@"
-          }
-        }
-      }
-    },
-    "%@ %@ per hour, %@ megabits per second" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ %2$@ per hour, %3$@ megabits per second"
-          }
-        }
-      }
-    },
-    "%@ %@ per hour, plan %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ %2$@ per hour, plan %3$@"
           }
         }
       }
@@ -242,6 +110,16 @@
     "%@ Mb/s" : {
 
     },
+    "%@, %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, %2$@"
+          }
+        }
+      }
+    },
     "%@: %@" : {
       "localizations" : {
         "en" : {
@@ -251,29 +129,6 @@
           }
         }
       }
-    },
-    "%@: %@ @ %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@: %2$@ @ %3$@"
-          }
-        }
-      }
-    },
-    "%@: %@ × %@ mm · Ø %@ · %@× S35" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@: %2$@ × %3$@ mm · Ø %4$@ · %5$@× S35"
-          }
-        }
-      }
-    },
-    "%@/h" : {
-
     },
     "%@°" : {
 
@@ -292,8 +147,14 @@
       "localizations" : {
         "en" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@° · %2$@ LIGHT CYCLES"
+            "state" : "translated",
+            "value" : "%1$@° · %2$@ light cycles"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@° · %2$@ 光源周期"
           }
         }
       }
@@ -302,8 +163,14 @@
       "localizations" : {
         "en" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@× PLAYBACK · %2$@× DURATION"
+            "state" : "translated",
+            "value" : "Playback %1$@× · Duration %2$@×"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "回放速度 %1$@× · 时长 %2$@×"
           }
         }
       }
@@ -508,18 +375,15 @@
         }
       }
     },
-    "Calculator" : {
-
-    },
     "Calculator reset." : {
 
     },
-    "Camera: %@\nFormat: %@ · %@ · %@\nFrame rate: %@ fps\nOverdrive: %@\nMedia: %@\nRate: %@ %@/h · %@ Mb/s\nPlan: %@ h · %@\nAvailable recording time: %@\nVideo estimate only; verify camera firmware, codec and media before production." : {
+    "Camera: %@\nFormat: %@ · %@ · %@\nFrame rate: %@ fps\nOverdrive: %@\nRate: %@ %@/h · %@ Mb/s" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Camera: %1$@\nFormat: %2$@ · %3$@ · %4$@\nFrame rate: %5$@ fps\nOverdrive: %6$@\nMedia: %7$@\nRate: %8$@ %9$@/h · %10$@ Mb/s\nPlan: %11$@ h · %12$@\nAvailable recording time: %13$@\nVideo estimate only; verify camera firmware, codec and media before production."
+            "value" : "Camera: %1$@\nFormat: %2$@ · %3$@ · %4$@\nFrame rate: %5$@ fps\nOverdrive: %6$@\nRate: %7$@ %8$@/h · %9$@ Mb/s"
           }
         }
       }
@@ -561,13 +425,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Catalog reference. Frame rates and codecs depend on the recording mode. Verify against camera firmware."
+            "value" : "Available frame rates and codecs vary by recording mode and camera firmware."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "目录参考。帧率与编码取决于录制模式，请以相机固件为准。"
+            "value" : "可用帧率和编码因录制模式及相机固件而异。"
           }
         }
       }
@@ -625,13 +489,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Order is shared with Recording. Removing a favorite keeps the camera in the catalog."
+            "value" : "Reorder favorites here to change their order on the recording page."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "排序与录制页共享；移除收藏不会删除相机目录项。"
+            "value" : "在此调整收藏顺序，录制页同步更新。"
           }
         }
       }
@@ -641,13 +505,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Favorites appear on Recording. Open Favorites to reorder or remove them."
+            "value" : "Favorites appear on the recording page."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "收藏会显示在录制页；打开收藏可排序或移除。"
+            "value" : "收藏会显示在录制页。"
           }
         }
       }
@@ -1104,6 +968,23 @@
         }
       }
     },
+    "copy.capacityAnswer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recording time: %@ h\nRequired storage: %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "实际拍摄时间：%@ h\n所需容量：%@"
+          }
+        }
+      }
+    },
     "copy.invalidShutterSummary" : {
       "localizations" : {
         "en" : {
@@ -1120,7 +1001,25 @@
         }
       }
     },
+    "copy.recordingFormat" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Camera: %@\nFormat: %@ · %@ · %@\nFrame rate: %@ fps\nOverdrive: %@\nRate: %@ %@/h · %@ Mb/s"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "摄影机：%@\n格式：%@ · %@ · %@\n帧率：%@ fps\nOverdrive：%@\n数据量：%@ %@/h · %@ Mb/s"
+          }
+        }
+      }
+    },
     "copy.recordingSummary" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1132,6 +1031,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "相机：%@\n格式：%@ · %@ · %@\n帧率：%@ fps\n超频：%@\n介质：%@\n速率：%@ %@/h · %@ Mb/s\n计划：%@ 小时 · %@\n可录时长：%@\n仅为视频估算；生产前请确认相机固件、编码与介质。"
+          }
+        }
+      }
+    },
+    "copy.runtimeAnswer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Media: %@\nAvailable recording time: %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "存储介质：%@\n可录制时长：%@"
           }
         }
       }
@@ -1340,13 +1256,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Plan result not updated until the duration is valid."
+            "value" : "Enter a valid duration to update the result."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "计划结果尚未更新，直到时长输入有效。"
+            "value" : "请输入有效时长以更新结果。"
           }
         }
       }
@@ -1433,6 +1349,24 @@
         }
       }
     },
+    "Enter 0.001–10000 fps." : {
+
+    },
+    "Enter 2–16 refresh rates (0.001–1000000 Hz, up to three decimals), separated by commas. Use . for decimals." : {
+
+    },
+    "Enter a finite number greater than zero." : {
+
+    },
+    "Enter a valid value to calculate." : {
+
+    },
+    "Enter a value from 0.25 to 24 hours." : {
+
+    },
+    "Enter the actual recording time." : {
+
+    },
     "Export" : {
       "comment" : "macOS film workbench",
       "localizations" : {
@@ -1514,23 +1448,6 @@
         }
       }
     },
-    "feedback.email.hint" : {
-      "comment" : "Instructions for using the selectable support email address in settings.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Copy this address into your mail app to report a problem or suggest a feature."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "可复制邮箱地址，在邮件应用中发送问题或功能建议。"
-          }
-        }
-      }
-    },
     "feedback.email.section" : {
       "localizations" : {
         "en" : {
@@ -1568,13 +1485,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Imported sensor %@ fps and project %@ fps from recording."
+            "value" : "Imported: camera %@ fps · project %@ fps"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "已从录制计算导入传感器 %@ fps、项目 %@ fps。"
+            "value" : "已导入：相机 %@ fps · 项目 %@ fps"
           }
         }
       }
@@ -1611,36 +1528,36 @@
         }
       }
     },
-    "FFF decoded; full-data and color accuracy still require reference verification." : {
+    "FFF compatibility is limited. Check image completeness and color against the original scan before exporting." : {
       "comment" : "macOS film workbench",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "FFF decoded; full-data and color accuracy still require reference verification."
+            "value" : "FFF compatibility is limited. Check image completeness and color against the original scan before exporting."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "FFF 已读取；完整数据与色彩仍待真实样本对照验证。"
+            "value" : "FFF 兼容性有限，请在导出前对照原始扫描检查图像完整性与色彩。"
           }
         }
       }
     },
-    "FFF did not decode to a full 16-bit RGB scan; preview-only decoding is rejected." : {
+    "This FFF cannot be read as a full 16-bit RGB image. Use a 16-bit RGB TIFF instead." : {
       "comment" : "macOS film workbench",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "FFF did not decode to a full 16-bit RGB scan; preview-only decoding is rejected."
+            "value" : "This FFF cannot be read as a full 16-bit RGB image. Use a 16-bit RGB TIFF instead."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "FFF 未解码为完整 16 位 RGB 扫描；拒绝使用预览图。"
+            "value" : "无法从此 FFF 读取完整的 16 位 RGB 图像，请改用 16 位 RGB TIFF。"
           }
         }
       }
@@ -1666,7 +1583,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "codec"
+            "value" : "Codec"
           }
         },
         "zh-Hans" : {
@@ -1730,7 +1647,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "mode"
+            "value" : "Mode"
           }
         },
         "zh-Hans" : {
@@ -1762,7 +1679,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "project FPS"
+            "value" : "Project FPS"
           }
         },
         "zh-Hans" : {
@@ -1778,7 +1695,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "resolution"
+            "value" : "Resolution"
           }
         },
         "zh-Hans" : {
@@ -1794,7 +1711,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "sensor FPS"
+            "value" : "Sensor FPS"
           }
         },
         "zh-Hans" : {
@@ -1979,13 +1896,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ESTIMATES · PRORES TARGETS APR 2022 · VERIFY AGAINST CAMERA"
+            "value" : "Video data estimate · actual storage use may vary"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "估算 · ProRes 目标值来自 2022 年 4 月 · 请以相机为准"
+            "value" : "视频数据量估算 · 实际用量以相机为准"
           }
         }
       }
@@ -1995,13 +1912,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Estimates. Verify against the selected camera and recording media."
+            "value" : "Video data estimate. Actual storage use may vary by camera and media."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "估算值，请根据所选相机和录制介质确认。"
+            "value" : "视频数据量估算，实际用量因相机和存储介质而异。"
           }
         }
       }
@@ -2091,19 +2008,19 @@
         }
       }
     },
-    "Full scan decoding is unavailable. An original FFF sample is required for format support." : {
+    "Cannot read the full scan. Export a 16-bit RGB TIFF from your scanning software and try again." : {
       "comment" : "macOS film workbench",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Full scan decoding is unavailable. An original FFF sample is required for format support."
+            "value" : "Cannot read the full scan. Export a 16-bit RGB TIFF from your scanning software and try again."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "系统无法解码完整扫描数据，请提供原始 FFF 样本进行适配。"
+            "value" : "无法读取完整扫描图像，请从扫描软件导出 16 位 RGB TIFF 后重试。"
           }
         }
       }
@@ -2373,6 +2290,19 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "快门工作台"
+          }
+        }
+      }
+    },
+    "Maximum angle must be at most 360°." : {
+
+    },
+    "Media: %@\nAvailable recording time: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Media: %1$@\nAvailable recording time: %2$@"
           }
         }
       }
@@ -2735,13 +2665,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Automatically switches lenses for close focus. Lens changes require a new film-base sample."
+            "value" : "Switches lenses for close focus. Resample the film base after a lens change."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "靠近胶片时自动切换适合近摄的镜头；切换后需重新选取片基。"
+            "value" : "近摄时自动切换镜头，切换后需重新选取片基。"
           }
         }
       }
@@ -2871,13 +2801,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "This lens stays selected. Choose Auto (Macro), when available, for automatic close focusing."
+            "value" : "Lens selection is fixed. Choose Auto (Macro), if available, for automatic switching."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "当前固定使用所选镜头；如有“自动（含微距）”，选择后可自动切换近摄。"
+            "value" : "当前镜头保持固定；如有“自动（含微距）”，可选择它自动切换镜头。"
           }
         }
       }
@@ -2956,16 +2886,17 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Changing lens, resolution or exposure clears the film base. Adjust first, then sample again. 4K uses more memory and power."
+            "value" : "Changing lens or resolution requires a new film-base sample. 4K uses more memory and power."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "更换镜头、分辨率或曝光后需重取片基。请先调整再取样；4K 会增加内存和耗电。"
+            "value" : "更换镜头或分辨率后需重新选取片基。4K 会增加内存和耗电。"
           }
         }
-      }
+      },
+      "comment" : "User-facing guidance; retain actionable limits without implementation details."
     },
     "negative.cameraHint" : {
       "extractionState" : "manual",
@@ -3228,13 +3159,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "This image needs more memory than is currently available. Close other work or use a smaller source; no image has been resized."
+            "value" : "Not enough memory for this image. Close other apps or import a smaller image."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "当前可用内存不足。请关闭其他任务或使用较小的源图，应用未缩小图像。"
+            "value" : "内存不足，无法处理此图像。请关闭其他应用或导入较小图像。"
           }
         }
       }
@@ -3466,13 +3397,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Import a negative, including large TIFF scans, or use a camera over an evenly lit background. Sample an unexposed film edge to preview the positive."
+            "value" : "Import a negative or use the camera. Sample an unexposed film edge to preview the positive."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "导入负片（支持大文件 TIFF），或用相机对准均匀背光上的负片。选取未曝光片边，查看正片效果。"
+            "value" : "导入负片或打开相机，选取未曝光片边以预览正片。"
           }
         }
       }
@@ -3698,6 +3629,108 @@
         }
       }
     },
+    "negative.photos.denied" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Allow FFFilm to add photos in Settings, then try again."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请在设置中允许 FFFilm 添加照片，然后重试。"
+          }
+        }
+      }
+    },
+    "negative.photos.failed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not save to Photos. Please try again."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法保存到相册，请重试。"
+          }
+        }
+      }
+    },
+    "negative.photos.save" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Save positive to Photos (JPG)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存正片到相册（JPG）"
+          }
+        }
+      }
+    },
+    "negative.photos.saved" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Positive saved to Photos."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正片已保存到相册。"
+          }
+        }
+      }
+    },
+    "negative.photos.saving" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saving to Photos…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在保存到相册…"
+          }
+        }
+      }
+    },
+    "negative.photos.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Save to Photos"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存到相册"
+          }
+        }
+      }
+    },
     "negative.positive" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3789,13 +3822,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The center dot marks the sample. Tap an unexposed film edge or return to center; avoid holes and lettering. Confirm to preview the positive."
+            "value" : "Tap an unexposed film edge, avoiding holes and lettering. Confirm to preview the positive."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "中心点为取样位置。点按未曝光片边或回到中心，避开齿孔和文字；确认后查看正片。"
+            "value" : "点按未曝光片边，避开齿孔和文字；确认后预览正片。"
           }
         }
       }
@@ -3867,6 +3900,9 @@
           }
         }
       }
+    },
+    "No complete light-cycle exposure fits the current angle limit. This does not prove that flicker will occur." : {
+
     },
     "No reliable frame gaps found. Draw frames or edit the existing crop." : {
       "comment" : "macOS film workbench",
@@ -4056,6 +4092,118 @@
         }
       }
     },
+    "Recording time: %@ h\nRequired storage: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Recording time: %1$@ h\nRequired storage: %2$@"
+          }
+        }
+      }
+    },
+    "recording.capacity" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Storage needed"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "拍摄容量"
+          }
+        }
+      }
+    },
+    "recording.capacityHint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter your recording time to estimate the storage needed."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "输入实际拍摄时间，计算所需存储容量。"
+          }
+        }
+      }
+    },
+    "recording.hourlyData" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Data per hour"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每小时数据量"
+          }
+        }
+      }
+    },
+    "recording.runtime" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recording time"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可录制时长"
+          }
+        }
+      }
+    },
+    "recording.runtimeHint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose your media capacity to estimate how long you can record."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择存储容量，计算可连续录制的时长。"
+          }
+        }
+      }
+    },
+    "recording.task" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Calculate"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "计算目标"
+          }
+        }
+      }
+    },
     "Redo" : {
       "comment" : "macOS film workbench",
       "localizations" : {
@@ -4128,6 +4276,7 @@
 
     },
     "result.activeArea" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4143,24 +4292,8 @@
         }
       }
     },
-    "result.actualDetail" : {
-      "comment" : "Clarifies that planned duration means real capture time.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "actual capture time"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "实际拍摄时间"
-          }
-        }
-      }
-    },
     "result.actualDuration" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4177,6 +4310,7 @@
       }
     },
     "result.basis" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4193,6 +4327,7 @@
       }
     },
     "result.bitrate" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4209,6 +4344,7 @@
       }
     },
     "result.captureRateDetail" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4274,6 +4410,7 @@
     },
     "result.planDetail" : {
       "comment" : "Plan total is based on the actual recording duration.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4290,6 +4427,7 @@
       }
     },
     "result.playback" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4306,6 +4444,7 @@
       }
     },
     "result.selectedCard" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4641,13 +4780,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Per-hour data, plan totals and comparisons use the selected display unit. Bitrate, recording time and utilization remain unchanged."
+            "value" : "Storage estimates and comparisons use the selected units. Bitrate and recording time stay the same."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "每小时数据量、计划总量和对比方案使用所选单位。码率、可录时长和容量占用百分比不变。"
+            "value" : "容量估算与对比使用所选单位，码率和录制时长不变。"
           }
         }
       }
@@ -4664,6 +4803,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "对计算结果的影响"
+          }
+        }
+      }
+    },
+    "settings.language" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App language"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "应用语言"
           }
         }
       }
@@ -4748,22 +4904,6 @@
         }
       }
     },
-    "settings.unitHint" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Applied immediately and kept for the next launch."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "选择后立即生效，并在下次启动时保留。"
-          }
-        }
-      }
-    },
     "Shutter result is unavailable because the input is invalid." : {
 
     },
@@ -4804,13 +4944,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "High cycle counts: bounded numerical search, not a guaranteed global optimum."
+            "value" : "Approximate search; a better match may exist."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "周期数过多：采用有上限的数值搜索，结果为近似参考，不保证全局最优。"
+            "value" : "近似搜索，可能存在更优结果。"
           }
         }
       }
@@ -4852,29 +4992,30 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Minimizes the worst deviation from a positive whole refresh cycle across devices; ties favor the preferred angle. Cycle deviation is not measured flicker. Verify with test footage."
+            "value" : "Minimizes the largest cycle deviation across displays; ties favor the preferred angle. Cycle deviation does not measure flicker."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "优先降低各设备距正整数刷新周期的最大偏差，同等偏差时接近期望角度。周期偏差不代表实测频闪强度，请实拍确认。"
+            "value" : "优先减小各设备的最大周期偏差，同等偏差时接近首选角度。周期偏差不代表频闪强度。"
           }
         }
-      }
+      },
+      "comment" : "User-facing guidance; retain actionable limits without implementation details."
     },
     "shutter.compromise.notice" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "No exact common exposure fits the angle limit. A compromise reference is available in details; flicker may remain."
+            "value" : "No exact common exposure fits. This compromise may still flicker."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "角度限制内无严格共同解，已提供折中参考（详见详情）；仍可能出现频闪。"
+            "value" : "当前限制内无严格共同解，折中结果仍可能出现频闪。"
           }
         }
       }
@@ -4884,13 +5025,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "COMPROMISE REFERENCE"
+            "value" : "Compromise reference"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "折中推荐"
+            "value" : "折中参考"
           }
         }
       }
@@ -5490,22 +5631,6 @@
         }
       }
     },
-    "shutter.limitHint" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "User-set theoretical limit · verify camera support"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "用户设定的理论上限 · 请确认相机支持"
-          }
-        }
-      }
-    },
     "shutter.match.angle" : {
       "localizations" : {
         "en" : {
@@ -5608,13 +5733,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "No complete light-cycle exposure fits the current angle limit. This does not prove that flicker will occur."
+            "value" : "No complete light-cycle exposure fits the current limits. This does not necessarily mean visible flicker."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "当前帧率和最大角度下，没有覆盖全部设备完整刷新周期的共同快门；这不代表一定出现频闪。"
+            "value" : "当前帧率与角度限制内无完整光源周期解，但不一定出现可见频闪。"
           }
         }
       }
@@ -5624,13 +5749,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "No common shutter covers complete refresh cycles for every display at this frame rate and angle limit. Try a lower frame rate, a higher angle limit or matching refresh rates; this does not prove flicker."
+            "value" : "No common exposure fits. Try a lower frame rate, a larger angle limit or matching refresh rates; verify with test footage."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "当前帧率和最大角度下，没有覆盖全部设备完整刷新周期的共同快门。可降低拍摄帧率、提高角度上限或统一设备刷新率；这不代表一定出现频闪。"
+            "value" : "无可用共同曝光。请尝试降低帧率、提高角度上限或统一刷新率，并实拍确认。"
           }
         }
       }
@@ -5905,6 +6030,9 @@
           }
         }
       }
+    },
+    "Values exceed calculation precision. Use a less extreme input." : {
+
     },
     "View" : {
       "comment" : "macOS film workbench",

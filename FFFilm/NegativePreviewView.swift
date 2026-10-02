@@ -21,7 +21,7 @@ struct NegativePreviewView: View {
                 if immersive { cameraWorkspace }
                 else { documentWorkspace }
             }
-            .navigationTitle("negative.title")
+            .navigationTitle(AppText.localized("negative.title"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbarVisibility(immersive ? .hidden : .visible, for: .navigationBar)
             .toolbarVisibility(immersive ? .hidden : .visible, for: .tabBar)
@@ -49,7 +49,7 @@ struct NegativePreviewView: View {
                         NegativeCameraControls(store: store)
                     }.padding()
                 }
-                .navigationTitle("negative.camera.settings")
+                .navigationTitle(AppText.localized("negative.camera.settings"))
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .confirmationAction) {
                     Button("negative.done") { showsCameraSettings = false }
@@ -493,6 +493,8 @@ private struct NegativeCanvas: UIViewRepresentable {
     let selected: (CGPoint) -> Void
     func makeUIView(context: Context) -> NegativeZoomView { NegativeZoomView() }
     func updateUIView(_ view: NegativeZoomView, context: Context) {
+        // Refresh UIKit accessibility text without recreating its zoom/pan state.
+        view.accessibilityLabel = AppText.localized("negative.image")
         view.selected = selected
         view.displayNeed = displayNeed
         view.setImage(image, sourceURL: sourceURL, sampling: sampling, point: point)
@@ -531,7 +533,7 @@ final class NegativeZoomView: UIScrollView, UIScrollViewDelegate {
         centerDot.shadowColor = UIColor.black.cgColor; centerDot.shadowOpacity = 1; centerDot.shadowRadius = 1
         addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(tapped(_:))))
         isAccessibilityElement = true
-        accessibilityLabel = NSLocalizedString("negative.image", comment: "Preview image")
+        accessibilityLabel = AppText.localized("negative.image", comment: "Preview image")
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
     func setImage(_ image: CGImage, sourceURL: URL?, sampling: Bool, point: CGPoint) {

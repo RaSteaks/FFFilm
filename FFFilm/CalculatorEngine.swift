@@ -313,21 +313,29 @@ struct CalculatorEngine {
         for (lower, upper) in intervals {
             let middle = lower + (upper - lower) / 2
             let counts = rates.map { max(1, (middle * $0).rounded()) }
-            var lo = lower, hi = upper
-            // max(hz*t - n) increases and max(n - hz*t) decreases. Their crossing minimizes
-            // the worst device's error; clamping also handles exposures shorter than one cycle.
-            for _ in 0..<48 {
-                let time = lo + (hi - lo) / 2
-                var increasing = -Double.infinity, decreasing = -Double.infinity
-                for (hz, n) in zip(rates, counts) {
-                    increasing = max(increasing, time * hz - n)
-                    decreasing = max(decreasing, n - time * hz)
+            // |hz*t - n| <= e gives [(n-e)/hz, (n+e)/hz]. All intervals intersect
+            // [lower, upper] exactly when e satisfies the endpoint and pairwise bounds.
+            // Solve those bounds directly instead of scanning every rate 48 times by bisection.
+            var minimumError = 0.0
+            for i in rates.indices {
+                minimumError = max(minimumError, counts[i] - rates[i] * upper,
+                                   rates[i] * lower - counts[i])
+                for j in 0..<i {
+                    let pairError = abs(rates[i] * counts[j] - rates[j] * counts[i]) / (rates[i] + rates[j])
+                    minimumError = max(minimumError, pairError)
                 }
-                if increasing < decreasing { lo = time } else { hi = time }
             }
+            var lo = lower, hi = upper
+            for (hz, n) in zip(rates, counts) {
+                lo = max(lo, (n - minimumError) / hz)
+                hi = min(hi, (n + minimumError) / hz)
+            }
+            // Roundoff can invert the feasible endpoints by a few ULPs. Their midpoint
+            // remains a candidate; clamp to the cell to preserve the camera's exposure limit.
+            let optimum = lo <= hi ? min(max(preferredTime, lo), hi) : lo + (hi - lo) / 2
             consider(lower)
             consider(upper)
-            consider(lo + (hi - lo) / 2)
+            consider(min(max(optimum, lower), upper))
             consider(min(max(preferredTime, lower), upper))
         }
         guard let exposure = shutterExposure(seconds: bestTime, fps: settings.sensorFps) else { return nil }

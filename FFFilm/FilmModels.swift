@@ -72,12 +72,17 @@ nonisolated struct FilmProject: Codable, Equatable, Sendable {
     }
 }
 
-/// Match the app's English fallback while keeping dynamic editor labels bilingual.
-nonisolated func filmText(_ chinese: String, _ english: String) -> String {
-    let translated = Bundle.main.localizedString(forKey: english, value: english, table: nil)
+/// Observe the app preference so desktop labels refresh alongside the calculator.
+@MainActor func filmText(_ chinese: String, _ english: String) -> String {
+    let language = AppLanguagePreference.shared.language
+    return filmText(chinese, english, language: language)
+}
+
+/// Background rendering reads the saved preference without accessing UI observation.
+nonisolated func filmText(_ chinese: String, _ english: String, language: AppLanguage) -> String {
+    let translated = language.bundle.localizedString(forKey: english, value: english, table: nil)
     if translated != english { return translated }
-    let language = Bundle.main.preferredLocalizations.first ?? Locale.preferredLanguages.first ?? "en"
-    return language.hasPrefix("zh-Hans") || language.hasPrefix("zh-CN") ? chinese : english
+    return language == .simplifiedChinese ? chinese : english
 }
 
 nonisolated struct FilmFailure: LocalizedError {

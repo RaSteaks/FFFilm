@@ -8,17 +8,35 @@ enum AppText {
     // arguments, so catalog format strings ("…%@…") resolve in every language.
     // Keys must be literals because the underlying initializer takes StaticString.
     static func resolve(_ key: StaticString, defaultValue: String.LocalizationValue, comment: StaticString? = nil) -> String {
-        String(localized: key, defaultValue: defaultValue, comment: comment)
+        let language = AppLanguagePreference.shared.language
+        return String(localized: key, defaultValue: defaultValue, bundle: language.bundle, locale: language.locale, comment: comment)
+    }
+
+    // Foundation lookup needs an explicit bundle as well as SwiftUI's locale environment.
+    static func localized(_ value: String.LocalizationValue, comment: StaticString? = nil) -> String {
+        let language = AppLanguagePreference.shared.language
+        return String(localized: value, bundle: language.bundle, locale: language.locale, comment: comment)
+    }
+
+    static func resource(_ value: LocalizedStringResource) -> String {
+        var resource = value
+        let language = AppLanguagePreference.shared.language
+        resource.locale = language.locale
+        return String(localized: resource)
+    }
+
+    static func key(_ key: String) -> String {
+        AppLanguagePreference.shared.language.bundle.localizedString(forKey: key, value: nil, table: nil)
     }
 
     static func captureParameter(_ parameter: CaptureParameter) -> String {
-        String(localized: parameter.label)
+        resource(parameter.label)
     }
 
     static func adjusted(parameters: [CaptureParameter]) -> String {
         // Closure form keeps the MainActor isolation of `captureParameter`;
         // a bare function reference would drop into a nonisolated context.
-        let names = parameters.map { captureParameter($0) }.formatted(.list(type: .and))
+        let names = parameters.map { captureParameter($0) }.formatted(.list(type: .and).locale(AppLanguagePreference.shared.language.locale))
         return resolve("feedback.adjusted",
                        defaultValue: "Compatibility adjusted: \(names).",
                        comment: "Non-blocking notice listing fields changed by camera compatibility.")
@@ -45,12 +63,13 @@ enum AppText {
     }
 
     static func imported(sensorFps: Double, projectFps: Double) -> String {
+        // Name both values even though the action lives in the camera FPS row.
         resolve("feedback.importedFPS",
-                defaultValue: "Imported sensor \(DisplayFormat.fps(sensorFps)) fps and project \(DisplayFormat.fps(projectFps)) fps from recording.",
+                defaultValue: "Imported: camera \(DisplayFormat.fps(sensorFps)) fps · project \(DisplayFormat.fps(projectFps)) fps",
                 comment: "One-shot shutter FPS import feedback; values are sensor FPS then project FPS.")
     }
 
-    static func recordingSummary(settings: CaptureSettings, calculation: Calculation, unit: StorageUnit) -> String {
+    static func recordingSummary(settings: CaptureSettings, calculation: Calculation, unit: StorageUnit, task: RecordingTask) -> String {
         // Catalog mode names are verbatim technical terms and never localized.
         let mode = calculation.mode.label
         let fps = calculation.camera.isStandaloneProRes ? settings.projectFps : settings.sensorFps
@@ -58,13 +77,21 @@ enum AppText {
         let plan = DisplayFormat.compactStorage(calculation.dayTotalGb, unit: unit)
         let runtime = DisplayFormat.duration(calculation.captureRuntimeHours)
         let overdrive = settings.sensorOverdrive ? "ON" : "OFF"
-        return resolve("copy.recordingSummary",
-                       defaultValue: "Camera: \(calculation.camera.name)\nFormat: \(mode) · \(calculation.resolution.label) · \(calculation.codec.name)\nFrame rate: \(DisplayFormat.fps(fps)) fps\nOverdrive: \(overdrive)\nMedia: \(calculation.media.label)\nRate: \(rate) \(unit.symbol)/h · \(DisplayFormat.number(calculation.sensorMbps)) Mb/s\nPlan: \(DisplayFormat.number(settings.shootHours, decimals: 2)) h · \(plan)\nAvailable recording time: \(runtime)\nVideo estimate only; verify camera firmware, codec and media before production.",
-                       comment: "Readable recording estimate copied to the clipboard.")
+        // Clipboard output answers only the active question, matching the visible result.
+        let format = resolve("copy.recordingFormat",
+                             defaultValue: "Camera: \(calculation.camera.name)\nFormat: \(mode) · \(calculation.resolution.label) · \(calculation.codec.name)\nFrame rate: \(DisplayFormat.fps(fps)) fps\nOverdrive: \(overdrive)\nRate: \(rate) \(unit.symbol)/h · \(DisplayFormat.number(calculation.sensorMbps)) Mb/s")
+        let answer: String
+        switch task {
+        case .capacity:
+            answer = resolve("copy.capacityAnswer", defaultValue: "Recording time: \(DisplayFormat.number(settings.shootHours, decimals: 2)) h\nRequired storage: \(plan)")
+        case .runtime:
+            answer = resolve("copy.runtimeAnswer", defaultValue: "Media: \(calculation.media.label)\nAvailable recording time: \(runtime)")
+        }
+        return format + "\n" + answer + "\n" + localized("technical.videoEstimate")
     }
 
     static func shutterSummary(settings: ShutterSettings, calculation: ShutterCalculation) -> String {
-        let mode = String(localized: settings.mode.label)
+        let mode = resource(settings.mode.label)
         guard let exposure = calculation.exposure else {
             return resolve("copy.invalidShutterSummary", defaultValue: "Shutter result is unavailable because the input is invalid.", comment: "Clipboard text when shutter input is invalid.")
         }
@@ -74,13 +101,13 @@ enum AppText {
         guard let compromise = calculation.compromise else { return summary }
         // Copy the qualification and reference angle as well as the main exposure; in matching
         // mode these are different values and must not be mistaken for the target.
-        return summary + "\n" + String(localized: "shutter.compromise.notice")
-            + "\n" + String(localized: "shutter.compromise.title")
+        return summary + "\n" + localized("shutter.compromise.notice")
+            + "\n" + localized("shutter.compromise.title")
             + ": \(DisplayFormat.shutterNumber(compromise.exposure.angle))° · \(DisplayFormat.shutterTime(compromise.exposure))"
             + "\n" + compromiseError(compromise.worstError)
             + "\n" + compromise.displays.map { displayCycleMatch($0) }.joined(separator: "\n")
-            + "\n" + String(localized: "shutter.compromise.method")
-            + (compromise.approximateSearch ? "\n" + String(localized: "shutter.compromise.approximate") : "")
+            + "\n" + localized("shutter.compromise.method")
+            + (compromise.approximateSearch ? "\n" + localized("shutter.compromise.approximate") : "")
     }
 
     static func compromiseError(_ error: Double) -> String {

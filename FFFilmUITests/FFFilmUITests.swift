@@ -38,6 +38,63 @@ final class FFFilmUITests: XCTestCase {
         #endif
     }
 
+    @MainActor
+    func testRecordingTasksSeparateInputsAndPreserveDuration() throws {
+        verifyRecordingTasks(chinese: false)
+    }
+
+    @MainActor
+    func testRecordingTasksInChinese() throws {
+        verifyRecordingTasks(chinese: true)
+    }
+
+    @MainActor
+    private func verifyRecordingTasks(chinese: Bool) {
+        let app = XCUIApplication()
+        app.launchArguments += ["-AppleLanguages", chinese ? "(zh-Hans)" : "(en)", "-AppleLocale", chinese ? "zh_CN" : "en_US"]
+        app.launch()
+        let picker = app.segmentedControls["recording-task-picker"]
+        XCTAssertTrue(picker.waitForExistence(timeout: 5))
+        let capacity = picker.buttons[chinese ? "拍摄容量" : "Storage needed"]
+        let runtime = picker.buttons[chinese ? "可录制时长" : "Recording time"]
+        let duration = app.textFields["capture-duration"].firstMatch
+        let preset = app.buttons["duration-quick-4"].firstMatch
+        reveal(preset, in: app)
+        preset.tap()
+        XCTAssertEqual(duration.value as? String, "4.00")
+        reveal(picker, in: app)
+        let capacityScreenshot = XCTAttachment(screenshot: app.screenshot())
+        capacityScreenshot.name = chinese ? "拍摄容量" : "Storage needed"
+        capacityScreenshot.lifetime = .keepAlways
+        add(capacityScreenshot)
+        runtime.tap()
+        XCTAssertFalse(duration.exists)
+        XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "plan-capacity-output").firstMatch.exists)
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "card-runtime-output").firstMatch.exists)
+        let media = app.descendants(matching: .any).matching(identifier: "capture-media").firstMatch
+        reveal(media, in: app)
+        media.tap()
+        app.buttons["1 TB"].firstMatch.tap()
+        reveal(picker, in: app)
+        let runtimeScreenshot = XCTAttachment(screenshot: app.screenshot())
+        runtimeScreenshot.name = chinese ? "可录制时长" : "Recording time"
+        runtimeScreenshot.lifetime = .keepAlways
+        add(runtimeScreenshot)
+        capacity.tap()
+        XCTAssertFalse(media.exists)
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "plan-capacity-output").firstMatch.exists)
+        XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "card-runtime-output").firstMatch.exists)
+        XCTAssertEqual(duration.value as? String, "4.00")
+        // An invalid draft must survive hiding its field and returning to capacity planning.
+        enterText("30", into: duration, in: app)
+        finishDurationEditing(app)
+        reveal(picker, in: app)
+        runtime.tap()
+        capacity.tap()
+        XCTAssertEqual(duration.value as? String, "30")
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "duration-error").firstMatch.exists)
+    }
+
     #if os(iOS)
     /// Native tab buttons can expose their localized label instead of the Tab
     /// identifier on older SDKs; both selectors remain scoped to the tab bar.
@@ -59,6 +116,72 @@ final class FFFilmUITests: XCTestCase {
         let button = tabButton(destination, in: app)
         XCTAssertTrue(button.waitForExistence(timeout: 3), app.debugDescription)
         button.tap()
+    }
+
+    @MainActor
+    func testAppLanguageSwitchesImmediatelyAndPersists() throws {
+        let app = XCUIApplication()
+        app.launchArguments += ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launchEnvironment["FFFILM_UI_RESET_LANGUAGE"] = "1"
+        app.launch()
+        // Clear only this test's preference when finished so system-language tests stay isolated.
+        defer {
+            app.terminate()
+            app.launchEnvironment["FFFILM_UI_RESET_LANGUAGE"] = "1"
+            app.launch()
+            app.terminate()
+        }
+        let duration = app.textFields["capture-duration"].firstMatch
+        let preset = app.buttons["duration-quick-4"].firstMatch
+        reveal(preset, in: app)
+        preset.tap()
+        selectTab("shutter", in: app)
+        enter("60", field: "sensorFps", in: app)
+        finishEditing(app)
+        selectTab("settings", in: app)
+        XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 3))
+        choose("简体中文", picker: "app-language-picker", in: app)
+        XCTAssertTrue(app.navigationBars["设置"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.tabBars.buttons["计算"].exists)
+        XCTAssertTrue(app.tabBars.buttons["胶片预览"].exists)
+        let unit = app.descendants(matching: .any).matching(identifier: "storage-unit-picker").firstMatch
+        XCTAssertTrue((unit.label + " " + (unit.value as? String ?? "")).contains("进制"))
+        let chinese = XCTAttachment(screenshot: app.screenshot())
+        chinese.name = "Settings - Simplified Chinese"
+        chinese.lifetime = .keepAlways
+        add(chinese)
+        selectTab("shutter", in: app)
+        XCTAssertEqual(app.textFields["shutter-sensorFps"].value as? String, "60")
+        selectTab("rate", in: app)
+        XCTAssertEqual(duration.value as? String, "4.00")
+        enterText("30", into: duration, in: app)
+        finishDurationEditing(app)
+        XCTAssertTrue(app.staticTexts["请输入 0.25–24 小时范围内的数值。"].exists)
+        selectTab("settings", in: app)
+        choose("English", picker: "app-language-picker", in: app)
+        XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 3))
+        selectTab("rate", in: app)
+        XCTAssertEqual(duration.value as? String, "30")
+        XCTAssertTrue(app.staticTexts["Enter a value from 0.25 to 24 hours."].exists)
+        selectTab("settings", in: app)
+        let english = XCTAttachment(screenshot: app.screenshot())
+        english.name = "Settings - English"
+        english.lifetime = .keepAlways
+        add(english)
+
+        // Relaunch under the opposite system language to prove the explicit choice wins.
+        app.terminate()
+        app.launchEnvironment.removeValue(forKey: "FFFILM_UI_RESET_LANGUAGE")
+        app.launchArguments = ["-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN"]
+        app.launch()
+        selectTab("settings", in: app)
+        XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 3))
+        choose("简体中文", picker: "app-language-picker", in: app)
+        app.terminate()
+        app.launchArguments = ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        selectTab("settings", in: app)
+        XCTAssertTrue(app.navigationBars["设置"].waitForExistence(timeout: 3))
     }
 
     @MainActor
@@ -323,8 +446,8 @@ final class FFFilmUITests: XCTestCase {
             .matching(NSPredicate(format: "identifier BEGINSWITH 'comparison-snapshot-'")).firstMatch
         XCTAssertTrue(snapshot.waitForExistence(timeout: 3))
         // The stored cadence is project FPS for standalone ProRes, including in comparisons.
-        XCTAssertTrue(snapshot.staticTexts["project FPS"].exists)
-        XCTAssertFalse(snapshot.staticTexts["sensor FPS"].exists)
+        XCTAssertTrue(snapshot.staticTexts["Project FPS"].exists)
+        XCTAssertFalse(snapshot.staticTexts["Sensor FPS"].exists)
     }
     #endif
 
@@ -694,6 +817,17 @@ final class FFFilmUITests: XCTestCase {
         finishEditing(app)
         let importButton = app.buttons["shutter-import"]
         reveal(importButton, in: app)
+        // Import belongs to the camera FPS row and must remain a named, usable target.
+        XCTAssertEqual(importButton.frame.midY, app.textFields["shutter-sensorFps"].frame.midY, accuracy: 2)
+        XCTAssertEqual(importButton.label, "Import FPS from recording calculator")
+        #if os(iOS)
+        // Accessibility frame subtraction can return 43.99999999999994 for 44pt.
+        XCTAssertGreaterThanOrEqual(importButton.frame.height + 1e-6, 44)
+        #endif
+        let placement = XCTAttachment(screenshot: app.screenshot())
+        placement.name = "Shutter camera FPS inline import"
+        placement.lifetime = .keepAlways
+        add(placement)
         importButton.tap()
         XCTAssertEqual(app.textFields["shutter-sensorFps"].value as? String, "24")
         enter("48", field: "sensorFps", in: app)

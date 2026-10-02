@@ -15,7 +15,10 @@ nonisolated enum NegativeFormat: String, CaseIterable, Identifiable, Sendable {
 
 nonisolated struct NegativeFailure: LocalizedError, Sendable {
     let key: String
-    var errorDescription: String? { NSLocalizedString(key, comment: "Negative preview error") }
+    // Renderer errors may be read off the main actor; resolve the persisted app preference.
+    var errorDescription: String? {
+        AppLanguage.initial().bundle.localizedString(forKey: key, value: nil, table: nil)
+    }
 }
 
 nonisolated struct NegativeBase: Sendable, Equatable {

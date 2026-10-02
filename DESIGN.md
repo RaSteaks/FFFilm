@@ -34,8 +34,8 @@ components:
     surface: "group-owned opaque surface"
     label: "system font; values use SF Mono"
   resultPanel:
-    primaryMetric: "GB or GiB per hour"
-    disclosure: "technical details collapsed by default"
+    primaryMetric: "Required storage or available recording time, selected by task"
+    disclosure: "recording has no technical disclosure; shutter details stay collapsed by default"
   presetChip:
     touchHeight: "44pt"
     desktopHeight: "28pt"
@@ -53,10 +53,10 @@ The interface should feel like a calibrated camera-side instrument: dark anodize
 
 - **Audience and primary job:** cinematographers, DITs and camera assistants estimating recording rates, media runtime and shutter relationships.
 - **Target market and evidence:** global film-production users; the migrated catalog and English technical nomenclature are the current product evidence.
-- **Locale and language policy:** Simplified Chinese or English follows the system language; all other languages fall back to English. Camera models, codec names, FPS and other production terms remain source text; numeric formatting follows the active system locale.
+- **Locale and language policy:** Settings offers exactly 简体中文 and English, shown in their native names. The initial selection follows supported system preferences with English fallback; an explicit choice takes effect immediately across scenes and persists across launches. AppLanguagePreference owns language, AppText owns eager string lookup, and FFFilmApp injects the SwiftUI locale without resetting view identity. Camera models, codec names, FPS and other production terms remain source text; numeric formatting follows the active system locale.
 - **Usage scene:** frequent, time-sensitive use on iPhone beside a camera, with iPad and macOS as wider workbench surfaces.
 - **Register:** professional production tool.
-- **Memorable signature:** the live rate result appears before detailed controls on compact phones, behaving like the readout of a field meter.
+- **Memorable signature:** the selected calculation result appears before detailed controls on compact phones, behaving like the readout of a field meter.
 - **Restraint:** native pickers, toggles and steppers remain familiar; decorative color, shadows and non-functional motion are avoided.
 - **Anti-references:** consumer finance dashboards, colorful camera-control panels and oversized card stacks that hide the live result below the fold.
 - **Token ownership/runtime mapping:** this file documents the durable intent; `Palette`, shared field surfaces and button styles in `FFFilm/ContentView.swift` are the canonical runtime mapping.
@@ -71,7 +71,7 @@ SF Pro is used for native controls and action labels. SF Mono is reserved for me
 
 ## Layout
 
-Spacing follows a 4pt rhythm. Compact iPhone layouts use 12pt gutters, put the live result above the settings list and render each setting as a horizontal row with a minimum 44pt control region. At 900pt of usable content width, the page changes to a 55:45 parameter/result split; below that threshold the result-first single-column flow remains. Capture format and storage plan groups stay expanded. Content respects safe areas and the page remains a single vertical scroller.
+Spacing follows a 4pt rhythm. Compact iPhone layouts use 12pt gutters, put the live result above the settings list and render each setting as a horizontal row with a minimum 44pt control region. At 900pt of usable content width, the page changes to a 55:45 parameter/result split; below that threshold the result-first single-column flow remains. Capture format and storage plan groups stay expanded, with capture format first and storage plan second. Recording results contain no Technical details disclosure. Content respects safe areas and the page remains a single vertical scroller.
 
 On iPad, use the available window width rather than size class alone: the workbench spans up to 1180pt and changes to the same 55:45 parameter/result split at 900pt, where the form panel has room for native pickers. RATE and SHUTTER use one page scroller with both columns moving together; narrower iPad windows put the result first. Field columns follow their actual panel width, and resizing must preserve draft input. The camera library uses a collapsible list/detail split on iPad, while settings text stays within a 680pt reading width. The camera-library sheet is presented by the content root outside the bottom-tab size-class override, preserving the system's wide iPad split presentation. iPhone and macOS retain their existing layout rules.
 
@@ -121,6 +121,12 @@ The shared FieldCard owns field presentation, native TextField/Menu/Picker/Toggl
 
 Camera fps and maximum angle are shared across the three modes; other input values survive mode changes. USE RATE FPS copies both frame rates without linking the two pages or replacing angle/light choices. The default maximum is a user-set 360° theoretical limit, not a verified camera capability. Over-limit theoretical results remain visible with a symbol and explanatory text; they are never silently clamped.
 
+Place the one-shot recording-rate import inside the Camera FPS field alongside its preset menu. Use the existing arrow.down.doc symbol and WorkbenchPressStyle, a 44pt touch target (platform control height on macOS), full localized accessibility label/hint and desktop tooltip. Keep its confirmation directly beneath the field; state both imported frame rates because project FPS is also copied. Do not allocate a separate full-width action row.
+
+### Release copy
+
+Use concise, sentence-case action and field labels in English and Simplified Chinese. Avoid duplicate field explanations, repeated settings headings and persistence instructions. Recording-task guidance remains in accessibility hints; storage-unit explanations stay in the details disclosure. Show the short video-estimate footer only on Recording; Shutter owns its camera-limit and flicker-model caveats in details, with compromise qualifications always visible. Preserve units, validation, permissions, unsupported-format recovery and meaningful compatibility limits. Scanner errors recommend a supported 16-bit RGB TIFF workflow rather than requesting samples for future development. Keep catalog/source dates in maintained reference documentation rather than unrelated screen footers.
+
 Flicker candidates show at most three nearest complete optical-cycle exposures. A 50/60 Hz mains choice explicitly assumes 100/120 Hz light pulses. Optional light checking in matching is off by default and only adds reference candidates; it never changes the target. Empty candidates, non-integer target cycles and unverified real-world lighting have distinct text. Never label a result as guaranteed flicker-free.
 
 Maintain one page scroller, compact result-first layout, native 44pt controls, keyboard focus and Dynamic Type. Center the focused input after keyboard insets settle and reserve the result panel’s height during editing so temporary invalid drafts cannot collapse the scroller or dismiss the keyboard. Use explicit accessibility containers so parent test identifiers do not replace descendant control identifiers. Error and result states combine text with symbols and do not rely on color. No new visual tokens are introduced.
@@ -137,7 +143,7 @@ Motion communicates selection, numeric changes and action completion. Press feed
 
 All result panels and pinned comparison rows support native text selection and copying, including numeric values, units, candidates and explanatory messages. On macOS, select text and use ⌘C or the native context menu; this is distinct from the configuration-copy toolbar action (⇧⌘C).
 
-Labels are short production terms in uppercase. Results preserve units beside values, show estimated recording time against the selected media capacity, distinguish capture time from playback duration, and retain the estimate disclaimer. Avoid marketing copy and decorative metrics.
+Labels are short production terms in uppercase. Results preserve units beside values, show estimated recording time against the selected media capacity, keep the recording result focused on the selected question, and retain the estimate disclaimer in copied summaries. Avoid marketing copy and decorative metrics.
 
 RATE exposes PROJECT FPS only for standalone ProRes. Camera profiles expose SENSOR FPS only, including when the selected camera codec is ProRes; the condition follows the source profile, not the codec.
 
@@ -162,7 +168,7 @@ Runtime ownership: CameraLibraryView.swift owns the native catalog/favorites/det
 
 ## Storage unit settings
 
-- Native Settings scene and toolbar link on macOS; a dedicated bottom tab with its own navigation bar on iOS. Tab labels and settings follow the established Simplified Chinese/English system-language policy. Switching tabs dismisses keyboard focus, retains editor drafts and resets transient copy feedback.
+- Native Settings scene and toolbar link on macOS; a dedicated bottom tab with its own navigation bar on iOS. Tab labels and settings follow the established Simplified Chinese/English app-language preference. Switching tabs dismisses keyboard focus, retains editor drafts and resets transient copy feedback.
 - `StorageUnit` owns decimal GB to binary GiB conversion; `SettingsView` owns the native preference picker. AppStorage persists and synchronizes the default (decimal) across windows. Reset does not erase this preference.
 - RATE and pinned storage rates and daily totals follow the preference using GB/TB or GiB/TiB. Engine values and manufacturer media labels remain decimal; bitrate, recording time and utilization stay invariant.
 - Explain common Apple/Windows conventions without claiming OS exclusivity; distinguish MB bytes from Mb bits.
@@ -171,7 +177,7 @@ Runtime ownership: CameraLibraryView.swift owns the native catalog/favorites/det
 
 ## Recording plan, memory and comparison
 
-Recording results lead with GB/h or GiB/h, then bitrate, plan total capacity, actual planned recording time and the selected card's available capture time. Playback duration, active image area and the calculation boundary remain in a collapsed Technical details disclosure. A direct duration editor accepts 0.25–24 hours, retains the last valid result while a draft is incomplete, shows inline validation and offers 1/4/8/12-hour presets alongside the native stepper.
+Recording uses a native segmented task picker: Storage needed / Recording time. Storage needed shows only the duration editor and makes required storage primary; Recording time shows only the media picker and makes available capture time primary. Both share camera format and retain independent inputs when switching. Task inputs precede format controls. GB/h or GiB/h and bitrate remain secondary. The compact scrolling summary and clipboard follow the selected task; full comparison snapshots retain both estimates. CalculatorStore owns the window-local task; ContentView reuses native Picker, FieldCard, ParameterGroup and existing Palette/Layout tokens without new colors or fonts. Playback duration, active image area and the calculation boundary remain in a collapsed Technical details disclosure. A direct duration editor accepts 0.25–24 hours, retains the last valid result while a draft is incomplete, shows inline validation and offers 1/4/8/12-hour presets alongside the native stepper.
 
 Camera format choices are remembered per camera ID in a versioned UserDefaults payload. Media and planned duration are window-local. Invalid, corrupt, future-version or catalog-missing records are ignored; each window keeps its own active state while the latest valid camera edit wins for the next switch. Compatibility normalization owns its own non-blocking adjustment banner.
 

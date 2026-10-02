@@ -1,5 +1,47 @@
 # FFFilm
 
+## Distribution copy review and inline FPS import (2026-10-02)
+
+- Review the 410-entry string catalog, visible calculator/settings/camera-library/film workflows and permission copy. Remove duplicate settings labels/persistence instructions, recording-task helper paragraphs, repeated duration descriptions and the shutter form's duplicate limit hint. Show a shorter video-estimate footer only on Recording.
+- Shorten bilingual guidance while retaining units, errors, permissions, camera support, FFF compatibility and flicker-model limitations. Replace developer-facing FFF sample requests with TIFF recovery guidance; remove the stale camera exposure-setting reference, correct the single-light Chinese message and translate shutter playback/cycle readouts.
+- Supersede the earlier separate-row import placement: put the existing import action inside Camera FPS beside the presets menu, using a named icon button with the platform's existing control height, tooltip and press feedback. Keep both-rate confirmation below the field and preserve one-shot semantics/draft clearing.
+- Reuse existing UI tests with an inline-position/accessible-name/touch-target assertion and retained screenshot. Align existing localization and comparison assertions with the edited copy. No publishing or distribution settings are changed.
+- Verification: 42 macOS language/film/shutter tests passed. Six relevant iPhone UI workflows passed across the initial run and focused recheck, plus the inline-import workflow on iPad Pro 13-inch (iOS 26.3). The initial 44pt assertion hit floating-point subtraction noise and passed after adding a 1e-6pt comparison tolerance. Reviewed retained Chinese settings, decimal FPS and inline-import screenshots. Strict UI audit, catalog/format-argument validation and diff checks passed; DESIGN lint has zero errors and 13 existing token warnings. Bundles: `/tmp/FFFilm-release-copy-mac.xcresult`, `/tmp/FFFilm-release-copy-phone.xcresult`, `/tmp/FFFilm-release-copy-phone-recheck.xcresult`, `/tmp/FFFilm-release-copy-ipad.xcresult`. Physical-device and largest Dynamic Type checks were not run.
+
+## Shutter frame-rate import placement (2026-10-02)
+
+- Initial placement, superseded by the inline FPS import above: group camera fps and (in matching mode) project fps before the remaining shutter parameters, with a trailing import row below them.
+- Preserve the existing one-shot import action, draft clearing, accessibility identifiers, native button style and platform control heights. Reuse the current compact stack/adaptive grid without adding layout tokens or changing calculation behavior.
+- Verification: existing iPhone 17 Pro import and mode-switching UI tests passed; the import UI test also passed on iPad Pro 13-inch (iOS 26.3). Reviewed the retained iPhone matching-mode screenshot. macOS build, strict UI audit (zero findings), catalog validation and diff checks passed. Result bundles: `/tmp/FFFilm-shutter-import-phone.xcresult` and `/tmp/FFFilm-shutter-import-ipad.xcresult`. Largest Dynamic Type and physical-device layout were not exercised.
+
+## Recording control order and result simplification (2026-10-02)
+
+- Show recording format before the task-specific storage plan in the shared recording controls. Preserve the selected task, format choices and duration drafts.
+- Remove the recording result’s Technical details disclosure, expansion state and supporting view; retain the answer, hourly rate and comparison actions. Shutter details remain part of the separate shutter workflow.
+- Verification: both existing English/Chinese recording-task UI regressions passed on iPhone 17 Pro, covering task switching and duration draft retention. macOS build, strict static UI audit and diff checks passed; DESIGN lint has no errors (13 existing token warnings).
+
+## In-app language preference (2026-10-02)
+
+- Add a native Settings picker for 简体中文 / English. Use the supported system language initially and persist explicit selection under `fffilm.app-language`.
+- AppLanguagePreference shares observable state across windows; FFFilmApp injects the selected locale without rebuilding view identity. Keep calculator inputs, selected tabs and image sessions intact.
+- AppText resolves dynamic copy, validation and workflow feedback using the selected language bundle; desktop film labels and UIKit image accessibility follow the same preference. Numeric input/formatting retains the system region.
+- Resolve native navigation titles explicitly to avoid stale UIKit title caching after a second language switch. Simulator regression covers both directions, translated validation, retained duration/FPS inputs and persistence under the opposite system language.
+- Verification: focused macOS language/storage/calculator tests and the iPhone 17 Pro language UI regression passed; final macOS build, catalog validation, strict static UI audit and diff checks passed. DESIGN lint has no errors (13 existing token warnings). No physical-device or iPad runtime verification.
+
+## Shutter calculation optimization (2026-10-02)
+
+- Preserve exact integer milli-Hz GCD candidates and their priority. For each fixed-cycle compromise interval, replace 48-step bisection with the analytical minimax error from pairwise interval-intersection and exposure-endpoint bounds. Clamp the recovered optimum to its interval to handle floating-point roundoff; retain preferred-angle/lower-angle tie ordering and bounded approximate search labels.
+- Cache one shutter result per CalculatorStore using the complete ShutterSettings value. Always read the observed settings on cache hits, and keep the cache itself observation-ignored so edits, import, reset and undo refresh results without render-triggered recalculation.
+- Keep the existing cycle-deviation model; do not reinterpret it as measured brightness or flicker. Regression coverage compares analytical results against an independent vertex oracle (including 16 frequencies and clipped exposures), and verifies cached-result observation and invalidation.
+- Verification: macOS ShutterTests and CalculatorStoreTests passed (31 tests, 35 executions including parameters), result `/tmp/FFFilm-shutter-optimization-tests.xcresult`; `git diff --check` passed. An isolated `swiftc -O` microbenchmark using the old/new production compromise functions measured about 3.5× faster solving for 16 rates (both exhaustive and sampled searches); this excludes parsing, cache benefits and end-to-end UI latency. Harness: `/tmp/FFFilm-shutter-benchmark.swift`. No iOS runtime or physical-camera verification was performed.
+
+## Separate recording calculations (2026-10-02)
+
+- Add window-local Storage needed / Recording time tasks sharing camera format. Expose only actual recording duration or media capacity for the selected question, preserving both inputs across switches.
+- Promote the selected answer above the shared rate; keep compact summary and human-readable copy task-specific. Comparison snapshots and legacy configuration links retain complete settings.
+- Reuse native controls and existing monochrome tokens. Keep valid draft commit/invalid draft retention, bilingual labels and accessibility identifiers; update focused store and UI regressions.
+- Verification: macOS build and all 9 CalculatorStoreTests passed. iPhone 17 Pro / iOS 26.3 passed launch, English/Chinese task switching, input isolation/retention and duration validation tests. Reviewed both Chinese task screenshots; catalog validation, localization placeholders, strict UI static audit and diff checks passed. No physical-device or iPad runtime verification.
+
 ## Review follow-up fixes (2026-10-01)
 
 - AVCaptureDevice.minimumFocusDistance is reported in millimeters. Convert to centimeters with /10 in the camera settings; retain the existing unknown/fixed-focus visibility behavior and correct the unit comment.
@@ -92,7 +134,7 @@
 - Keep selection normalization and all calculations in `CalculatorEngine` so UI and unit tests use the same implementation.
 - Keep mutable workflow state in the `@Observable` `CalculatorStore`; views receive only the store or values they render.
 - Preserve the compact monochrome workbench, video-only calculation boundary, Quick Start shortcuts and four-item comparison limit from the original Tauri application.
-- Always expose estimated recording time from the selected media capacity and actual capture cadence; distinguish it from project playback duration.
+- In Recording time, expose estimated recording time from selected media capacity and actual capture cadence; distinguish it from project playback duration.
 - In RATE, expose `PROJECT FPS` only for standalone ProRes. Camera profiles expose only `SENSOR FPS`, which already drives data-rate, recording-time and daily-storage calculations. Keep the desktop timing row at three columns.
 - Allow free-form positive decimal shutter inputs while keeping validation in `CalculatorEngine` so invalid values cannot produce non-finite results.
 - Treat `DESIGN.md` as the durable UI contract; keep the live result above detailed controls on compact iPhone layouts and retain native 44-point interactions.
@@ -203,7 +245,7 @@ All displayed rates are video-only planning estimates. Validate camera firmware,
 ### Multi-display compromise optimization (2026-09-23)
 
 - Exact common-cycle candidates retain priority and existing preferred-angle ordering. Only if no exact candidate fits, minimize `max_i |Hz_i * t - max(1, round(Hz_i * t))|` over positive exposures within the user angle limit. Positive integer targets prevent the zero-exposure degeneracy. All devices have equal priority; duplicate Hz values are equivalent. Ties (1e-12 cycles numerical tolerance) favor the preferred angle, then the lower angle.
-- Split the exposure domain at half-cycle boundaries (starting at 1.5 cycles). In each interval the nearest positive integers are fixed; minimize the convex upper envelope by bisecting the increasing/decreasing envelope crossing, including endpoints. Up to 4096 boundaries are exhausted; beyond that, optimize cells from a bounded 4096-point sampling plus the preferred exposure and label the search approximate, never globally optimal.
+- Split the exposure domain at half-cycle boundaries (starting at 1.5 cycles). In each interval the nearest positive integers are fixed; solve the convex minimax analytically using pairwise feasible-exposure bounds, including endpoints. Up to 4096 boundaries are exhausted; beyond that, optimize cells from a bounded 4096-point sampling plus the preferred exposure and label the search approximate, never globally optimal.
 - `ShutterCompromise` stays separate from exact candidates. Flicker mode displays its angle/time with a visible qualification; matching keeps the target, status and playback ratios, showing the compromise only as a reference in details. Details and clipboard expose per-Hz cycles, nearest positive integers and deviations. These are cycle errors, not measured brightness or flicker percentages.
 - English and Simplified Chinese strings live in `Localizable.xcstrings`; `AppText` owns dynamic detail and clipboard formatting. Reuse the native result/details layout without introducing new UI tokens.
 - Regression coverage includes analytical 50/60 Hz minimax, independent dense-search oracles, exact-solution priority, duplicates/order, decimal rates, short exposures, numerical underflow, bounded extreme-rate search, matching-target preservation and clipboard reference values.

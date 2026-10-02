@@ -4,6 +4,7 @@ import ImageIO
 import UniformTypeIdentifiers
 
 /// All decoding and rendering runs off the main actor. Only immutable snapshots cross this boundary.
+/// Error messages read the saved language instead of accessing the observable UI preference.
 actor FilmRenderer {
     private let context = CIContext(options: [.workingColorSpace: CGColorSpace(name: CGColorSpace.extendedLinearSRGB)!, .workingFormat: CIFormat.RGBAf, .cacheIntermediates: false])
     private var source: CIImage?
@@ -34,7 +35,7 @@ actor FilmRenderer {
 
     private static func openImageSource(_ url: URL) throws -> CGImageSource {
         guard let imageSource = CGImageSourceCreateWithURL(url as CFURL, [kCGImageSourceTypeIdentifierHint: UTType.tiff.identifier] as CFDictionary) else {
-            throw FilmFailure(message: filmText("无法读取扫描文件。", "Cannot read the scan file."))
+            throw FilmFailure(message: filmText("无法读取扫描文件。", "Cannot read the scan file.", language: AppLanguage.initial()))
         }
         return imageSource
     }
@@ -42,7 +43,7 @@ actor FilmRenderer {
     /// FFF files can expose several IFDs, including a small embedded preview.
     private static func largestImage(in imageSource: CGImageSource) throws -> (Int, [String: Any]) {
         guard CGImageSourceGetCount(imageSource) > 0 else {
-            throw FilmFailure(message: filmText("无法读取扫描文件。", "Cannot read the scan file."))
+            throw FilmFailure(message: filmText("无法读取扫描文件。", "Cannot read the scan file.", language: AppLanguage.initial()))
         }
         var bestIndex = 0, bestArea = 0
         var bestProperties: [String: Any] = [:]
@@ -61,13 +62,14 @@ actor FilmRenderer {
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
         let imageSource = try Self.openImageSource(url)
         let (bestIndex, properties) = try Self.largestImage(in: imageSource)
+        // Give users a supported recovery format instead of requesting developer samples.
         guard let cg = CGImageSourceCreateImageAtIndex(imageSource, bestIndex, [kCGImageSourceShouldCache: false] as CFDictionary) else {
-            throw FilmFailure(message: filmText("系统无法解码完整扫描数据，请提供原始 FFF 样本进行适配。", "Full scan decoding is unavailable. An original FFF sample is required for format support."))
+            throw FilmFailure(message: filmText("无法读取完整扫描图像，请从扫描软件导出 16 位 RGB TIFF 后重试。", "Cannot read the full scan. Export a 16-bit RGB TIFF from your scanning software and try again.", language: AppLanguage.initial()))
         }
         let isFFF = url.pathExtension.lowercased() == "fff"
         // ImageIO accepting a file is insufficient: reject preview-only and non-RGB RAW decoding.
         if isFFF && (cg.bitsPerComponent < 16 || cg.colorSpace?.model != .rgb) {
-            throw FilmFailure(message: filmText("FFF 未解码为完整 16 位 RGB 扫描；拒绝使用预览图。", "FFF did not decode to a full 16-bit RGB scan; preview-only decoding is rejected."))
+            throw FilmFailure(message: filmText("无法从此 FFF 读取完整的 16 位 RGB 图像，请改用 16 位 RGB TIFF。", "This FFF cannot be read as a full 16-bit RGB image. Use a 16-bit RGB TIFF instead.", language: AppLanguage.initial()))
         }
         let profiled = properties[kCGImagePropertyProfileName as String] != nil
         // Embedded profiles describe the actual stored pixels and take precedence over
@@ -77,12 +79,12 @@ actor FilmRenderer {
             space = embedded
         } else if let inputProfile {
             guard let custom = CGColorSpace(iccData: inputProfile as CFData), custom.model == .rgb else {
-                throw FilmFailure(message: filmText("输入 ICC 必须是有效的 RGB 配置文件。", "The input ICC must be a valid RGB profile."))
+                throw FilmFailure(message: filmText("输入 ICC 必须是有效的 RGB 配置文件。", "The input ICC must be a valid RGB profile.", language: AppLanguage.initial()))
             }
             space = custom
         } else {
             guard ["sRGB", "Adobe RGB", "Linear sRGB", "Display P3"].contains(inputSpace) else {
-                throw FilmFailure(message: filmText("缺少有效的输入色彩配置。", "A valid input color profile is required."))
+                throw FilmFailure(message: filmText("缺少有效的输入色彩配置。", "A valid input color profile is required.", language: AppLanguage.initial()))
             }
             space = Self.colorSpace(inputSpace)
         }
@@ -110,7 +112,7 @@ actor FilmRenderer {
         let scaled = normalized.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
         let previewSpace = CGColorSpace(name: CGColorSpace.extendedLinearSRGB)!
         guard let materialized = context.createCGImage(scaled, from: scaled.extent, format: .RGBAh, colorSpace: previewSpace) else {
-            throw FilmFailure(message: filmText("预览渲染失败。", "Preview rendering failed."))
+            throw FilmFailure(message: filmText("预览渲染失败。", "Preview rendering failed.", language: AppLanguage.initial()))
         }
         // Commit only after decoding succeeds; later edits now read bounded preview pixels.
         if hasAccess { accessURL?.stopAccessingSecurityScopedResource() }
@@ -166,25 +168,25 @@ actor FilmRenderer {
     }
 
     func render(project: FilmProject, frame: FilmFrame?) throws -> CGImage {
-        guard let preview, let basePreview else { throw FilmFailure(message: filmText("请先导入扫描。", "Import a scan first.")) }
+        guard let preview, let basePreview else { throw FilmFailure(message: filmText("请先导入扫描。", "Import a scan first.", language: AppLanguage.initial())) }
         // The untouched strip is already rendered; reuse it for the canvas and thumbnails.
         if frame == nil && !project.frames.contains(where: { $0.rotation != 0 }) { return basePreview }
         let image = rendered(preview, project: project, frame: frame)
         guard let result = context.createCGImage(image, from: image.extent, format: .RGBAh, colorSpace: CGColorSpace(name: CGColorSpace.extendedLinearSRGB)!) else {
-            throw FilmFailure(message: filmText("预览渲染失败。", "Preview rendering failed."))
+            throw FilmFailure(message: filmText("预览渲染失败。", "Preview rendering failed.", language: AppLanguage.initial()))
         }
         return result
     }
 
     /// Render rotated frame thumbnails from the cached preview at their display size.
     func thumbnail(frame: FilmFrame) throws -> CGImage {
-        guard let preview else { throw FilmFailure(message: filmText("请先导入扫描。", "Import a scan first.")) }
+        guard let preview else { throw FilmFailure(message: filmText("请先导入扫描。", "Import a scan first.", language: AppLanguage.initial())) }
         let image = cropped(preview, frame: frame)
         let scale = min(1, 96 / image.extent.width, 60 / image.extent.height)
         let scaled = image.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
         // Keep the same extended-linear display path as the main preview.
         guard let result = context.createCGImage(scaled, from: scaled.extent, format: .RGBAh, colorSpace: CGColorSpace(name: CGColorSpace.extendedLinearSRGB)!) else {
-            throw FilmFailure(message: filmText("预览渲染失败。", "Preview rendering failed."))
+            throw FilmFailure(message: filmText("预览渲染失败。", "Preview rendering failed.", language: AppLanguage.initial()))
         }
         return result
     }
@@ -245,7 +247,7 @@ actor FilmRenderer {
     }
 
     func export(project: FilmProject, frame: FilmFrame?, to url: URL) throws {
-        guard let source else { throw FilmFailure(message: filmText("请先导入扫描。", "Import a scan first.")) }
+        guard let source else { throw FilmFailure(message: filmText("请先导入扫描。", "Import a scan first.", language: AppLanguage.initial())) }
         let image = rendered(source, project: project, frame: frame)
         let space = Self.colorSpace(project.exportJPEG ? "sRGB" : "Adobe RGB")
         if project.exportJPEG {

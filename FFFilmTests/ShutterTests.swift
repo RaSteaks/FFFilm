@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 import Testing
 @testable import FFFilm
 
@@ -364,6 +365,96 @@ struct ShutterTests {
                 #expect(!compromise.approximateSearch)
             }
         }
+    }
+
+    @MainActor
+    @Test("Analytical compromises match an independent piecewise-linear vertex oracle")
+    func analyticalCompromiseOracle() throws {
+        let cases: [[Double]] = [
+            [59.94, 60], [0.001, 144], [50, 60, 144],
+            [24, 25, 30, 48, 50, 59.94, 60, 72, 90, 100, 120, 144, 165, 200, 240, 360]
+        ]
+        for rates in cases {
+            for maximum in [1.0, 143.9, 360] {
+                var settings = ShutterSettings.default
+                settings.mode = .flicker
+                settings.light = .displays
+                settings.displayRefreshRates = rates.map(String.init(describing:)).joined(separator: ",")
+                settings.maxAngle = maximum
+                let limit = maximum / (360 * settings.sensorFps)
+                var boundaries = [0.0, limit]
+                for hz in rates {
+                    var n = 1.0
+                    while (n + 0.5) / hz < limit {
+                        boundaries.append((n + 0.5) / hz)
+                        n += 1
+                    }
+                }
+                boundaries.sort()
+                var oracleError = Double.infinity
+                // A convex piecewise-linear minimum is at an endpoint or a crossing of
+                // two signed error lines. Enumerate vertices without the production formula.
+                for (lower, upper) in zip(boundaries, boundaries.dropFirst()) {
+                    let counts = rates.map { max(1, (($0 * (lower + upper)) / 2).rounded()) }
+                    var times = [lower, upper]
+                    for i in rates.indices {
+                        for j in rates.indices {
+                            let crossing = (counts[i] + counts[j]) / (rates[i] + rates[j])
+                            if crossing >= lower, crossing <= upper { times.append(crossing) }
+                        }
+                    }
+                    for time in times where time > 0 {
+                        let error = rates.map { abs($0 * time - max(1, ($0 * time).rounded())) }.max()!
+                        oracleError = min(oracleError, error)
+                    }
+                }
+                let result = try #require(engine.calculateShutter(settings: settings).compromise)
+                #expect(abs(result.worstError - oracleError) < 1e-10)
+                #expect(result.exposure.exposureSeconds > 0 && result.exposure.exposureSeconds <= limit)
+                #expect(!result.approximateSearch)
+            }
+        }
+    }
+
+    @MainActor
+    @Test("Cached shutter results track edits, invalid inputs, import, reset and undo")
+    func cachedShutterResults() async throws {
+        let store = CalculatorStore()
+        store.activeView = .shutter
+        store.shutterSettings.mode = .flicker
+        store.shutterSettings.light = .displays
+        store.shutterSettings.displayRefreshRates = "50, 60"
+        let original = store.shutterCalculation
+        #expect(store.shutterCalculation == original)
+
+        // Register on a warm cache: a hit must retain input observation, while unrelated
+        // recording state changes and additional reads must not invalidate the observer.
+        await confirmation("Cached result observes shutter inputs", expectedCount: 1) { changed in
+            withObservationTracking {
+                _ = store.shutterCalculation
+            } onChange: {
+                changed()
+            }
+            store.settings.sensorFps = 60
+            #expect(store.shutterCalculation == original)
+            store.shutterSettings.maxAngle = 90
+        }
+        #expect(store.shutterCalculation == engine.calculateShutter(settings: store.shutterSettings))
+        #expect(store.shutterCalculation != original)
+        store.shutterSettings.displayRefreshRates = "60,"
+        #expect(store.shutterCalculation.status == .invalidDisplays)
+        #expect(store.shutterCalculation.exposure == nil)
+        store.shutterSettings.displayRefreshRates = "59.94, 60"
+        store.importShutterFrameRates()
+        let imported = store.shutterCalculation
+        #expect(imported == engine.calculateShutter(settings: store.shutterSettings))
+        store.resetActiveView()
+        #expect(store.shutterCalculation == engine.calculateShutter(settings: .default))
+        store.undoReset()
+        #expect(store.shutterCalculation == imported)
+        store.shutterSettings.mode = .matching
+        store.shutterSettings.checksFlicker = true
+        #expect(store.shutterCalculation == engine.calculateShutter(settings: store.shutterSettings))
     }
 
     @MainActor

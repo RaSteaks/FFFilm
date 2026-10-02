@@ -4,19 +4,30 @@ import SwiftUI
 import UIKit
 #endif
 
-/// AppStorage shares the preference across windows and retains it after relaunch.
+/// App-wide language and storage preferences are shared across windows and retained after relaunch.
 struct SettingsView: View {
     @AppStorage(StorageUnit.preferenceKey) private var unit: StorageUnit = .decimal
+    @Bindable private var languagePreference = AppLanguagePreference.shared
 
     var body: some View {
+        // Each native row already supplies its label; avoid duplicate headings and
+        // routine persistence instructions, keeping unit explanations in the disclosure.
         Form {
+            Section {
+                // Native names remain recognizable even when the current language is unfamiliar.
+                Picker("settings.language", selection: $languagePreference.language) {
+                    ForEach(AppLanguage.allCases) { language in
+                        Text(verbatim: language.nativeName).tag(language)
+                    }
+                }
+                .accessibilityIdentifier("app-language-picker")
+            }
+
             Section {
                 Picker("settings.capacity", selection: $unit) {
                     ForEach(StorageUnit.allCases) { Text($0.title).tag($0) }
                 }
                 .accessibilityIdentifier("storage-unit-picker")
-                Text("settings.unitHint")
-                    .foregroundStyle(.secondary)
                 // Keep collapsed explanations in the same section as the capacity preference.
                 DisclosureGroup("settings.details") {
                     VStack(alignment: .leading, spacing: 12) {
@@ -33,7 +44,7 @@ struct SettingsView: View {
                     .padding(.vertical, 8)
                 }
                 .accessibilityIdentifier("storage-unit-details")
-            } header: { Text("settings.capacity") }
+            }
 
             Section {
                 LabeledContent {
@@ -43,10 +54,6 @@ struct SettingsView: View {
                 } label: {
                     Label("feedback.email.title", systemImage: "envelope")
                 }
-                // Keep the support address selectable so users can copy it into their preferred mail app.
-                Text("feedback.email.hint")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
             } header: { Text("feedback.email.section") }
         }
         .formStyle(.grouped)
@@ -56,7 +63,8 @@ struct SettingsView: View {
         .frame(maxWidth: UIDevice.current.userInterfaceIdiom == .pad ? 680 : .infinity)
         .frame(maxWidth: .infinity)
         #endif
-        .navigationTitle("settings.title")
+        // Native navigation bars cache localized keys; change the resolved title on each switch.
+        .navigationTitle(AppText.localized("settings.title"))
         .preferredColorScheme(.dark)
         #if os(macOS)
         .frame(width: 560, height: 580)

@@ -201,13 +201,17 @@ private struct CalculatorWorkbench: View {
                             ShutterView(store: store, isWide: shutterWide, scrollProxy: proxy)
                         }
 
-                        Text("footer.estimate")
-                            .font(.system(size: 9, weight: .medium, design: .monospaced))
-                            .tracking(0.8)
-                            .foregroundStyle(Palette.mutedDeep)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.top, 4)
-                            .accessibilityLabel(Text("footer.estimateAccessibility"))
+                        // Shutter results carry their own model limits; recording provenance
+                        // and storage caveats should not appear on the shutter calculator.
+                        if view == .rate {
+                            Text("footer.estimate")
+                                .font(.system(size: 9, weight: .medium, design: .monospaced))
+                                .tracking(0.8)
+                                .foregroundStyle(Palette.mutedDeep)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.top, 4)
+                                .accessibilityLabel(Text("footer.estimateAccessibility"))
+                        }
                     }
                     .frame(maxWidth: maximumWidth)
                     .padding(.horizontal, Layout.pageGutter)
@@ -433,7 +437,19 @@ private struct RateView: View {
 
     var body: some View {
         VStack(spacing: Layout.sectionSpacing) {
-            // Favorites stay directly below the page actions on phones.
+            // Select the question first; changing it preserves both planning inputs.
+            VStack(alignment: .leading, spacing: 6) {
+                Picker("recording.task", selection: Binding(get: { store.recordingTask }, set: { store.recordingTask = $0 })) {
+                    ForEach(RecordingTask.allCases) { task in
+                        Text(task.label).tag(task)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .frame(minHeight: Layout.controlHeight)
+                .accessibilityIdentifier("recording-task-picker")
+                // Field labels explain the task visually; keep extra guidance available to VoiceOver.
+                .accessibilityHint(Text(store.recordingTask.hint))
+            }
             QuickStartView(store: store, showsCameras: $showsCameras)
             AdaptiveWorkbenchLayout(wide: isWide, resultFirstWhenStacked: true, leadingFraction: 0.55) {
                 CaptureControls(store: store, availableWidth: isWide ? (contentWidth - Layout.workbenchColumnSpacing) * 0.55 : contentWidth)
@@ -468,6 +484,7 @@ private struct CaptureControls: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Layout.sectionSpacing) {
+            // Establish the recording format before entering the task-specific storage plan.
             ParameterGroup(title: "group.format") {
                 formatFields
             }
@@ -485,6 +502,15 @@ private struct CaptureControls: View {
         }
         // Leaving a tab dismisses editing without discarding an unfinished duration.
         .onDisappear { durationFocused = false }
+        .onChange(of: store.recordingTask) { _, _ in
+            // Commit valid edits before hiding the field; invalid drafts remain available on return.
+            commitDurationDraft()
+            durationFocused = false
+        }
+        // Revalidate only the message; preserve the draft and its commit state.
+        .onChange(of: AppLanguagePreference.shared.language) { _, _ in
+            if durationError != nil { validateDuration(durationDraft) }
+        }
         .onChange(of: store.settings.shootHours) { _, value in
             durationDraft = DisplayFormat.number(value, decimals: 2)
             durationError = nil
@@ -515,16 +541,10 @@ private struct CaptureControls: View {
 
     @ViewBuilder
     private var storageFields: some View {
-        if usesCompactLayout {
-            VStack(spacing: 4) {
-                FieldCard("field.media") { mediaPicker }
-                durationField
-            }
+        if store.recordingTask == .capacity {
+            durationField
         } else {
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], alignment: .leading, spacing: 8) {
-                FieldCard("field.media") { mediaPicker }
-                durationField
-            }
+            FieldCard("field.media") { mediaPicker }
         }
     }
 
@@ -715,8 +735,8 @@ private struct CaptureControls: View {
         // plan, so a half-typed decimal cannot clobber the field mid-edit.
         guard let value = parsedDuration(text) else {
             durationError = text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                ? String(localized: "duration.empty", defaultValue: "Enter the actual recording time.", comment: "Empty recording-duration validation.")
-                : String(localized: "duration.invalid", defaultValue: "Enter a value from 0.25 to 24 hours.", comment: "Recording-duration validation range.")
+                ? AppText.resolve("duration.empty", defaultValue: "Enter the actual recording time.", comment: "Empty recording-duration validation.")
+                : AppText.resolve("duration.invalid", defaultValue: "Enter a value from 0.25 to 24 hours.", comment: "Recording-duration validation range.")
             durationPending = true
             return
         }
@@ -750,7 +770,6 @@ private struct RateResults: View {
     let showsScrollOffset: Bool
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var technicalDetailsExpanded = false
     @State private var showsComparison = false
     private var usesCompactLayout: Bool {
         #if os(iOS)
@@ -765,48 +784,34 @@ private struct RateResults: View {
         // the trailing modifiers from re-running the engine on every read.
         let result = store.calculation
         return VStack(alignment: .leading, spacing: usesCompactLayout ? 12 : 16) {
-            let selectedCardLabel = String(localized: "result.selectedCard")
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(DisplayFormat.number(unit.converted(decimalGB: result.sensorGbPerHour)))
+            // The answer to the selected question is primary; rate remains a shared reference.
+            VStack(alignment: .leading, spacing: 6) {
+                Text(store.recordingTask.label)
+                    .font(.caption)
+                    .foregroundStyle(Palette.muted)
+                Text(store.recordingTask == .capacity
+                     ? DisplayFormat.compactStorage(result.dayTotalGb, unit: unit)
+                     : DisplayFormat.duration(result.captureRuntimeHours))
                     .font(.system(size: usesCompactLayout ? 38 : 46, weight: .light, design: .monospaced))
                     .monospacedDigit()
-                    .contentTransition(.numericText(value: result.sensorGbPerHour))
                     .lineLimit(1)
                     .minimumScaleFactor(0.65)
-                Text("\(unit.symbol)/h")
-                    .foregroundStyle(Palette.muted)
-                    .fixedSize()
-                Spacer(minLength: 4)
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text("result.bitrate")
-                        .font(.caption)
-                        .foregroundStyle(Palette.muted)
-                    Text("\(DisplayFormat.number(result.sensorMbps)) Mb/s")
-                        .font(.system(.body, design: .monospaced))
-                        .monospacedDigit()
-                }
             }
             .accessibilityElement(children: .combine)
-            .accessibilityLabel(Text("\(DisplayFormat.number(unit.converted(decimalGB: result.sensorGbPerHour))) \(unit.symbol) per hour, \(DisplayFormat.number(result.sensorMbps)) megabits per second"))
+            .accessibilityIdentifier(store.recordingTask == .capacity ? "plan-capacity-output" : "card-runtime-output")
 
-            planningRow(title: "result.planCapacity",
-                        value: DisplayFormat.compactStorage(result.dayTotalGb, unit: unit),
-                        detail: String(localized: "result.planDetail",
-                                       defaultValue: "\(DisplayFormat.duration(store.settings.shootHours)) actual recording",
-                                       comment: "Plan total is based on the actual recording duration."))
-                .accessibilityIdentifier("plan-capacity-output")
-            planningRow(title: "result.actualDuration",
-                        value: DisplayFormat.duration(store.settings.shootHours),
-                        detail: String(localized: "result.actualDetail",
-                                       defaultValue: "actual capture time",
-                                       comment: "Clarifies that planned duration means real capture time."))
-                .accessibilityIdentifier("record-time-output")
-            planningRow(title: "result.cardDuration",
-                        value: DisplayFormat.duration(result.captureRuntimeHours),
-                        // Keep the capacity comparison in this row without adding
-                        // a separate warning to the compact result surface.
-                        detail: "\(DisplayFormat.compactStorage(result.media.capacityGb, unit: unit)) · \(selectedCardLabel) · \(result.media.label) · \(DisplayFormat.number(result.dayUsagePercent, decimals: 0))%")
-                .accessibilityIdentifier("card-runtime-output")
+            if store.recordingTask == .capacity {
+                planningRow(title: "field.duration",
+                            value: DisplayFormat.duration(store.settings.shootHours))
+                    .accessibilityIdentifier("record-time-output")
+            } else {
+                planningRow(title: "field.media",
+                            value: DisplayFormat.compactStorage(result.media.capacityGb, unit: unit),
+                            detail: result.media.label)
+            }
+            planningRow(title: "recording.hourlyData",
+                        value: "\(DisplayFormat.number(unit.converted(decimalGB: result.sensorGbPerHour))) \(unit.symbol)/h",
+                        detail: "\(DisplayFormat.number(result.sensorMbps)) Mb/s")
 
             HStack(spacing: 8) {
                 Button { store.pinCurrentSetup() } label: {
@@ -829,16 +834,6 @@ private struct RateResults: View {
                     .accessibilityIdentifier("comparison-view")
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-
-            Divider().overlay(Palette.line)
-            DisclosureGroup(isExpanded: $technicalDetailsExpanded) {
-                technicalDetails(result)
-            } label: {
-                Text("result.technicalDetails")
-                    .font(.system(.caption, design: .monospaced))
-                    .frame(minHeight: Layout.controlHeight, alignment: .leading)
-            }
-            .accessibilityIdentifier("rate-technical-details")
         }
         .font(.system(size: 12, weight: .medium, design: .monospaced))
         .padding(usesCompactLayout ? 14 : 18)
@@ -860,7 +855,7 @@ private struct RateResults: View {
         }
     }
 
-    private func planningRow(title: LocalizedStringKey, value: String, detail: String) -> some View {
+    private func planningRow(title: LocalizedStringKey, value: String, detail: String? = nil) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
             Text(title)
                 .font(.system(.caption, weight: .semibold))
@@ -871,40 +866,18 @@ private struct RateResults: View {
                 Text(value)
                     .font(.system(.body, design: .monospaced))
                     .monospacedDigit()
-                Text(detail)
-                    .font(.caption)
-                    .foregroundStyle(Palette.muted)
-                    .multilineTextAlignment(.trailing)
+                // Secondary text is optional when the row label already explains the value.
+                if let detail {
+                    Text(detail)
+                        .font(.caption)
+                        .foregroundStyle(Palette.muted)
+                        .multilineTextAlignment(.trailing)
+                }
             }
         }
         .fixedSize(horizontal: false, vertical: true)
     }
 
-    // @ViewBuilder is required for multi-statement members outside `body`.
-    // The result is passed in so this disclosure reuses the single evaluation.
-    @ViewBuilder
-    private func technicalDetails(_ result: Calculation) -> some View {
-        let playbackLabel = String(localized: "result.playback")
-        let basisLabel = String(localized: "result.basis")
-        let activeAreaLabel = String(localized: "result.activeArea")
-        let captureLabel = String(localized: "result.captureRateDetail")
-        let basis = result.camera.isStandaloneProRes ? "PROJECT FPS" : "SENSOR FPS"
-        VStack(alignment: .leading, spacing: 8) {
-            Text("\(playbackLabel): \(DisplayFormat.duration(result.projectRuntimeHours)) @ \(DisplayFormat.fps(store.settings.projectFps))")
-            Text("\(basisLabel): \(basis)")
-            if !result.camera.isStandaloneProRes, store.settings.sensorFps != store.settings.projectFps {
-                Text("\(captureLabel) @ \(DisplayFormat.fps(store.settings.sensorFps)) → \(DisplayFormat.number(unit.converted(decimalGB: result.sensorGbPerHour))) \(unit.symbol)/h")
-            }
-            if !result.camera.isStandaloneProRes {
-                Text("\(activeAreaLabel): \(DisplayFormat.number(result.clipWidthMm, decimals: 2)) × \(DisplayFormat.number(result.clipHeightMm, decimals: 2)) mm · Ø \(DisplayFormat.number(result.imageCircleMm)) · \(DisplayFormat.number(result.formatFactor, decimals: 2))× S35")
-            }
-            Detail("technical.videoEstimate")
-        }
-        .font(.system(.caption, design: .monospaced))
-        .foregroundStyle(Palette.muted)
-        .fixedSize(horizontal: false, vertical: true)
-        .padding(.top, 6)
-    }
 }
 
 private struct CompactRateSummary: View {
@@ -913,13 +886,16 @@ private struct CompactRateSummary: View {
 
     var body: some View {
         let result = store.calculation
-        let planLabel = String(localized: "result.planCapacity")
+        let taskLabel = AppText.resource(store.recordingTask.label)
+        let answer = store.recordingTask == .capacity
+            ? DisplayFormat.compactStorage(result.dayTotalGb, unit: unit)
+            : DisplayFormat.duration(result.captureRuntimeHours)
         HStack(spacing: 10) {
-            Text("\(DisplayFormat.number(unit.converted(decimalGB: result.sensorGbPerHour))) \(unit.symbol)/h")
+            Text(answer)
                 .font(.system(.callout, design: .monospaced))
                 .monospacedDigit()
             Spacer(minLength: 8)
-            Text("\(planLabel) \(DisplayFormat.compactStorage(result.dayTotalGb, unit: unit))")
+            Text(taskLabel)
                 .font(.system(.caption, design: .monospaced))
                 .foregroundStyle(Palette.muted)
                 .lineLimit(1)
@@ -929,7 +905,7 @@ private struct CompactRateSummary: View {
         .background(.ultraThinMaterial, in: Capsule())
         .overlay { Capsule().stroke(Palette.line) }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(Text("\(DisplayFormat.number(unit.converted(decimalGB: result.sensorGbPerHour))) \(unit.symbol) per hour, plan \(DisplayFormat.compactStorage(result.dayTotalGb, unit: unit))"))
+        .accessibilityLabel(Text("\(taskLabel), \(answer)"))
         .accessibilityIdentifier("rate-compact-summary")
     }
 }
@@ -1003,7 +979,7 @@ private struct ComparisonSheet: View {
                     }
                 }
             }
-            .navigationTitle("nav.viewComparison")
+            .navigationTitle(AppText.localized("nav.viewComparison"))
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("nav.done") { dismiss() }
@@ -1137,30 +1113,6 @@ private struct ShutterView: View {
                 .fieldPicker(compact: usesCompactLayout)
                 .accessibilityIdentifier("shutter-mode")
             }
-            Button {
-                focusedInput = nil
-                let imported = store.importShutterFrameRates()
-                importFeedback = AppText.imported(sensorFps: imported.sensor, projectFps: imported.project)
-                for field in [ShutterInputField.sensorFps, .projectFps] {
-                    drafts.removeValue(forKey: field)
-                    validatedFields.remove(field)
-                }
-            } label: {
-                Label("shutter.import", systemImage: "arrow.down.doc")
-                    .font(.system(.caption, design: .monospaced))
-                    .frame(minHeight: Layout.controlHeight)
-            }
-            .buttonStyle(.bordered)
-            .accessibilityIdentifier("shutter-import")
-            .accessibilityHint(Text("shutter.importHint"))
-
-            if let importFeedback {
-                Label(importFeedback, systemImage: "checkmark.circle")
-                    .font(.caption)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .accessibilityIdentifier("shutter-import-feedback")
-            }
-
             if usesCompactLayout {
                 VStack(spacing: 8) { shutterFields }
             } else {
@@ -1168,7 +1120,6 @@ private struct ShutterView: View {
                     shutterFields
                 }
             }
-            Detail("shutter.limitHint")
         }
         #if os(macOS)
         .padding(18)
@@ -1176,6 +1127,29 @@ private struct ShutterView: View {
         #endif
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("shutter-controls")
+    }
+
+    // Import is a secondary action of the camera FPS field, with a full accessible
+    // label and tooltip so the compact icon remains understandable on every platform.
+    private var importFrameRatesButton: some View {
+        Button {
+            focusedInput = nil
+            let imported = store.importShutterFrameRates()
+            importFeedback = AppText.imported(sensorFps: imported.sensor, projectFps: imported.project)
+            for field in [ShutterInputField.sensorFps, .projectFps] {
+                drafts.removeValue(forKey: field)
+                validatedFields.remove(field)
+            }
+        } label: {
+            Label("shutter.import", systemImage: "arrow.down.doc")
+                .labelStyle(.iconOnly)
+                .frame(minWidth: Layout.controlHeight, minHeight: Layout.controlHeight)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(WorkbenchPressStyle())
+        .accessibilityIdentifier("shutter-import")
+        .accessibilityHint(Text("shutter.importHint"))
+        .help(Text("shutter.import"))
     }
 
     @ViewBuilder
@@ -1298,11 +1272,11 @@ private struct ShutterView: View {
 
             switch calculation.status {
             case .invalidInput(let field):
-                statusLabel(field.error(for: store.shutterSettings[keyPath: field.keyPath]) ?? String(localized: "shutter.invalid", defaultValue: "Enter a valid value to calculate.", comment: "Invalid shutter result status."), symbol: "pencil.circle")
+                statusLabel(field.error(for: store.shutterSettings[keyPath: field.keyPath]) ?? AppText.resolve("shutter.invalid", defaultValue: "Enter a valid value to calculate.", comment: "Invalid shutter result status."), symbol: "pencil.circle")
             case .invalidDisplays:
                 statusLabel(ShutterSettings.displayRefreshError, symbol: "pencil.circle")
             case .numericalLimit:
-                statusLabel(String(localized: "shutter.numericalLimit", defaultValue: "Values exceed calculation precision. Use a less extreme input.", comment: "Numerical limit status."), symbol: "exclamationmark.triangle")
+                statusLabel(AppText.resolve("shutter.numericalLimit", defaultValue: "Values exceed calculation precision. Use a less extreme input.", comment: "Numerical limit status."), symbol: "exclamationmark.triangle")
             case .noCandidates:
                 noCandidates
             default:
@@ -1311,7 +1285,7 @@ private struct ShutterView: View {
 
             if calculation.compromise != nil {
                 // Keep the qualification visible even when the details disclosure is collapsed.
-                statusLabel(String(localized: "shutter.compromise.notice"), symbol: "info.circle")
+                statusLabel(AppText.localized("shutter.compromise.notice"), symbol: "info.circle")
                     .accessibilityIdentifier("shutter-compromise-notice")
             }
             if calculation.exposure != nil {
@@ -1367,8 +1341,8 @@ private struct ShutterView: View {
                 if let matches = calculation.matchesLightCycles {
                     let completeKey = store.shutterSettings.light == .displays ? "shutter.displayComplete" : "shutter.complete"
                     let incompleteKey = store.shutterSettings.light == .displays ? "shutter.displayIncomplete" : "shutter.incomplete"
-                    statusLabel(matches ? String(localized: String.LocalizationValue(completeKey))
-                                : String(localized: String.LocalizationValue(incompleteKey)),
+                    statusLabel(matches ? AppText.localized(String.LocalizationValue(completeKey))
+                                : AppText.localized(String.LocalizationValue(incompleteKey)),
                                 symbol: matches ? "checkmark.circle" : "info.circle")
                     if calculation.candidates.isEmpty && calculation.compromise == nil { noCandidates }
                 }
@@ -1396,7 +1370,7 @@ private struct ShutterView: View {
                             if store.shutterSettings.light == .displays,
                                let rates = store.shutterSettings.displayRefreshMilliHz {
                                 Text("\(DisplayFormat.shutterNumber(candidate.exposure.angle))°")
-                                let cyclesLabel = String(localized: "shutter.cycles")
+                                let cyclesLabel = AppText.localized("shutter.cycles")
                                 Text(rates.map { rate in
                                     let hz = Double(rate) / 1_000
                                     return "\(DisplayFormat.shutterNumber(hz)) Hz × \(DisplayFormat.shutterNumber(candidate.exposure.exposureSeconds * hz)) \(cyclesLabel)"
@@ -1429,8 +1403,8 @@ private struct ShutterView: View {
 
     private var noCandidates: some View {
         statusLabel(store.shutterSettings.light == .displays
-                    ? String(localized: "shutter.noDisplayCandidates")
-                    : String(localized: "shutter.noCandidates", defaultValue: "No complete light-cycle exposure fits the current angle limit. This does not prove that flicker will occur.", comment: "No candidate status."), symbol: "info.circle")
+                    ? AppText.localized("shutter.noDisplayCandidates")
+                    : AppText.resolve("shutter.noCandidates", defaultValue: "No complete light-cycle exposure fits the current angle limit. This does not prove that flicker will occur.", comment: "No candidate status."), symbol: "info.circle")
             .accessibilityIdentifier("shutter-no-candidates")
     }
 
@@ -1481,7 +1455,14 @@ private struct ShutterView: View {
                         .accessibilityLabel(Text(title) + Text(verbatim: " · ") + Text("shutter.presets"))
                         .accessibilityIdentifier("shutter-presets-\(field.rawValue)")
                     }
+                    if field == .sensorFps { importFrameRatesButton }
                 }
+            }
+            if field == .sensorFps, let importFeedback {
+                Label(importFeedback, systemImage: "checkmark.circle")
+                    .font(.caption)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("shutter-import-feedback")
             }
             if validatedFields.contains(field), let error = field.error(for: store.shutterSettings[keyPath: field.keyPath]) {
                 Label(error, systemImage: "exclamationmark.circle")

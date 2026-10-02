@@ -14,12 +14,16 @@ final class CalculatorStore {
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private var cameraMemories: [String: CameraSettingsMemory]
     @ObservationIgnored private var resetUndoSnapshot: ResetUndoSnapshot?
+    // One window-local entry bounds memory and avoids repeating the multi-frequency search.
+    @ObservationIgnored private var shutterCache: (settings: ShutterSettings, result: ShutterCalculation)?
 
     let catalog: CatalogData
     var settings: CaptureSettings
     var shutterSettings: ShutterSettings
     var shutterInputRevision = 0
     var activeView: CalculatorView = .rate
+    // Window-local task selection never changes the shared camera format or planning inputs.
+    var recordingTask: RecordingTask = .capacity
     var pinnedSetups: [PinnedSetup] = []
     var quickStartCameraIds: [String]
 
@@ -57,7 +61,15 @@ final class CalculatorStore {
     }
 
     var calculation: Calculation { engine.calculate(settings: settings) }
-    var shutterCalculation: ShutterCalculation { engine.calculateShutter(settings: shutterSettings) }
+    var shutterCalculation: ShutterCalculation {
+        // Read observed inputs even on cache hits, so views still update after direct edits,
+        // import, reset or undo. Cache writes themselves must not trigger view invalidation.
+        let inputs = shutterSettings
+        if let shutterCache, shutterCache.settings == inputs { return shutterCache.result }
+        let result = engine.calculateShutter(settings: inputs)
+        shutterCache = (inputs, result)
+        return result
+    }
     var currentCamera: CameraProfile { engine.camera(id: settings.cameraId) }
     var currentMode: SensorMode { engine.mode(for: settings) }
     var currentResolution: Resolution { engine.resolution(for: settings) }
@@ -105,7 +117,7 @@ final class CalculatorStore {
     }
 
     func readableRecordingSummary(storageUnit: StorageUnit) -> String {
-        AppText.recordingSummary(settings: settings, calculation: calculation, unit: storageUnit)
+        AppText.recordingSummary(settings: settings, calculation: calculation, unit: storageUnit, task: recordingTask)
     }
 
     func readableShutterSummary() -> String {

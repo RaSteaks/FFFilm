@@ -157,6 +157,31 @@ struct CalculatorStoreTests {
         #expect(store.settings.shootHours == 6.75)
     }
 
+    @Test("Planning tasks preserve inputs and copy only the active answer")
+    func independentRecordingTasks() {
+        let store = CalculatorStore()
+        store.setShootHours(3.5)
+        store.selectMedia("1tb")
+        let settings = store.settings
+        let capacity = store.calculation.dayTotalGb
+        let runtime = store.calculation.captureRuntimeHours
+        store.recordingTask = .runtime
+        #expect(store.settings == settings)
+        let summary = store.readableRecordingSummary(storageUnit: .decimal)
+        #expect(summary.contains(DisplayFormat.duration(runtime)))
+        #expect(!summary.contains("3.50 h"))
+        // Planned hours never affect available recording time; media never affects required storage.
+        store.setShootHours(7)
+        #expect(store.calculation.captureRuntimeHours == runtime)
+        store.recordingTask = .capacity
+        store.selectMedia("2tb")
+        #expect(store.calculation.dayTotalGb == capacity * 2)
+        let capacitySummary = store.readableRecordingSummary(storageUnit: .decimal)
+        #expect(capacitySummary.contains("7.00 h"))
+        #expect(!capacitySummary.contains("Media:"))
+        #expect(!capacitySummary.contains("存储介质："))
+    }
+
     @Test("Readable summaries include the storage plan in both unit systems")
     func readableSummaries() {
         let store = CalculatorStore()

@@ -29,6 +29,7 @@ final class NegativeImageState {
     }
 }
 
+// New workflow notices resolve through AppText using the current app language.
 @MainActor @Observable
 final class NegativeStore {
     private(set) var asset: NegativeAsset?
@@ -123,7 +124,7 @@ final class NegativeStore {
         externalOpenID = UUID()
         share = nil; photoNotice = nil
         guard url.isFileURL else {
-            error = String(localized: "negative.error.decode")
+            error = AppText.localized("negative.error.decode")
             return
         }
         let file = NegativeExternalFile(url)
@@ -184,7 +185,7 @@ final class NegativeStore {
         operation = Task {
             let granted = await camera.requestAccess()
             guard revision == id, !Task.isCancelled else { return }
-            guard granted else { phase = nil; cameraDenied = true; error = String(localized: "negative.error.permission"); return }
+            guard granted else { phase = nil; cameraDenied = true; error = AppText.localized("negative.error.permission"); return }
             let generation = UUID(); cameraRevision = generation
             base = nil; positive = nil; sampling = false; candidate = nil; showsPositive = false
             isCamera = true; live = true; paused = false; captureLocked = false
@@ -220,7 +221,7 @@ final class NegativeStore {
                     // Freeze the last displayed source before allowing static sampling/export.
                     // Suspension also cancels pending renders and invalidates late callbacks.
                     self.suspend()
-                    self.error = NSLocalizedString(key, comment: "Camera error")
+                    self.error = AppText.key(key)
                     // Interrupted configuration cannot retain a valid sampled base.
                     self.base = nil; self.positive = nil; self.showsPositive = false; self.camera.setBase(nil)
                 }
@@ -420,7 +421,7 @@ final class NegativeStore {
             guard revision == id, !Task.isCancelled else { return }
             guard granted else {
                 photoAccessDenied = true
-                photoNotice = String(localized: "negative.photos.denied")
+                photoNotice = AppText.localized("negative.photos.denied")
                 return
             }
             do {
@@ -431,10 +432,10 @@ final class NegativeStore {
                 // busy state (also across backgrounding) until completion to prevent duplicates.
                 phase = .savingPhotos
                 try await photoLibrary.save(url)
-                photoNotice = String(localized: "negative.photos.saved")
+                photoNotice = AppText.localized("negative.photos.saved")
             } catch {
                 if revision == id && !Task.isCancelled {
-                    photoNotice = String(localized: "negative.photos.failed") + "\n" + error.localizedDescription
+                    photoNotice = AppText.localized("negative.photos.failed") + "\n" + error.localizedDescription
                 }
             }
         }

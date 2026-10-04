@@ -41,7 +41,7 @@ See the [implementation notes](docs/ios-negative-film-preview.md) for simulator 
 
 ## Film slicing (macOS only)
 
-Open **Film** in the Mac toolbar, or press **⌘3**. Import a TIFF or experimental Flextight FFF strip, detect frame gaps or draw frames manually, then crop, rotate, reorder and export. Automatic boundaries are candidates and should be checked. Save `.fffilm` projects to resume slicing without modifying the scan.
+Open **Film** in the Mac toolbar, or press **⌘3**. Drop or import a TIFF / experimental Flextight FFF scan, detect frame gaps or draw frames manually, then crop, rotate, reorder and export. Scan dimensions and sprockets identify 135, 120 or large format; select a format manually when detection is uncertain. **Add frame** joins the previous frame and sizes the new slice for the film format. Without reliable gaps, 120 starts at 6×6 and subsequent frames inherit the preceding frame's height. Automatic identification and boundaries are candidates and should be checked. Save `.fffilm` projects to resume slicing without modifying the scan.
 
 Export current, checked or all frames as 16-bit Adobe RGB TIFF or 8-bit sRGB JPEG. Whole-strip output places rotated crops in their original slots, clipping to the slot boundaries; individual exports retain full rotated bounds. Zoom, undo/redo and batch selection remain available.
 

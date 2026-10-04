@@ -53,4 +53,21 @@ struct AppLanguageTests {
         #expect(AppLanguage.simplifiedChinese.bundle.localizedString(forKey: "settings.language", value: nil, table: nil) == "应用语言")
         #expect(AppLanguage.english.bundle.localizedString(forKey: "settings.language", value: nil, table: nil) == "App language")
     }
+
+    @Test func privacyDescriptionsMatchPlatform() throws {
+        // Check the packaged plist: Xcode can synthesize empty keys from SDK-conditional settings.
+        for key in ["NSCameraUsageDescription", "NSPhotoLibraryAddUsageDescription"] {
+            #if os(iOS)
+            let description = try #require(Bundle.main.infoDictionary?[key] as? String)
+            #expect(!description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            for language in AppLanguage.allCases {
+                let localized = language.bundle.localizedString(forKey: key, value: nil, table: "InfoPlist")
+                #expect(!localized.isEmpty && localized != key)
+            }
+            #else
+            // The desktop workbench uses selected files, with no camera or Photos access.
+            #expect(Bundle.main.infoDictionary?[key] == nil)
+            #endif
+        }
+    }
 }

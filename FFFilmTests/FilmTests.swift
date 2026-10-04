@@ -1,6 +1,7 @@
 #if os(macOS)
 import Testing
 import Foundation
+import AppKit
 import CoreImage
 import ImageIO
 @testable import FFFilm
@@ -219,6 +220,32 @@ struct FilmTests {
         #expect(store.project == project)
     }
 
+    @Test @MainActor func windowGuardRetainsAndForwardsSheetDelegate() throws {
+        let coordinator = FilmWindowGuard.Coordinator(store: FilmStore())
+        weak var original: FilmSheetDelegateProbe?
+        autoreleasepool {
+            let delegate = FilmSheetDelegateProbe()
+            coordinator.original = delegate
+            original = delegate
+        }
+        // NSWindow retains neither delegate: the proxy must own its forwarded
+        // delegate until dismissal, or native sheet completion can be lost.
+        let retained = try #require(original)
+        let selector = #selector(NSWindowDelegate.windowDidEndSheet(_:))
+        #expect(coordinator.responds(to: selector))
+        (coordinator as NSWindowDelegate).windowDidEndSheet?(Notification(name: NSWindow.didEndSheetNotification))
+        #expect(retained.endedSheets == 1)
+
+        // Closing restores the forwarded delegate and breaks the proxy's
+        // strong ownership; no visible window or native file service is needed.
+        let window = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 32, height: 32), styleMask: [], backing: .buffered, defer: true)
+        window.delegate = coordinator
+        coordinator.windowWillClose(Notification(name: NSWindow.willCloseNotification, object: window))
+        #expect(window.delegate === retained)
+        #expect(coordinator.original == nil)
+        #expect(retained.closedWindows == 1)
+    }
+
     @Test func rotatedJPEGFlattensTransparentCornersAndThumbnailRotates() async throws {
         let directory = FileManager.default.temporaryDirectory.appending(path: "FilmJPEG-\(UUID())")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -398,5 +425,13 @@ struct FilmTests {
         store.removeFrame(); #expect(store.project.frames.isEmpty)
         store.undo(); #expect(store.project.frames.count == 2)
     }
+}
+
+/// A sheet callback probe with no window or global owner of its own.
+@MainActor private final class FilmSheetDelegateProbe: NSObject, NSWindowDelegate {
+    var endedSheets = 0
+    var closedWindows = 0
+    func windowDidEndSheet(_ notification: Notification) { endedSheets += 1 }
+    func windowWillClose(_ notification: Notification) { closedWindows += 1 }
 }
 #endif

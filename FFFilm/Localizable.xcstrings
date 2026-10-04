@@ -211,6 +211,210 @@
     "%lld%%" : {
 
     },
+    "Add directly after the previous frame using the film format's frame length." : {
+      "comment" : "macOS scan import and physical film geometry",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add directly after the previous frame using the film format's frame length."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "紧接上一帧添加，按胶片规格设置帧高。"
+          }
+        }
+      }
+    },
+    "Automatic (%@)" : {
+      "comment" : "macOS scan import and physical film geometry",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatic (%@)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自动（%@）"
+          }
+        }
+      }
+    },
+    "Cannot access the scan. Drag the file from Finder again." : {
+      "comment" : "macOS scan import and physical film geometry",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cannot access the scan. Drag the file from Finder again."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法访问扫描文件，请从 Finder 重新拖入文件。"
+          }
+        }
+      }
+    },
+    "Detected from scan dimensions and sprockets; select a format to correct it." : {
+      "comment" : "macOS scan import and physical film geometry",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Detected from scan dimensions and sprockets; select a format to correct it."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "根据扫描尺寸和齿孔识别规格；识别不准时可手动选择。"
+          }
+        }
+      }
+    },
+    "Drop a TIFF or Flextight FFF scan file." : {
+      "comment" : "macOS scan import and physical film geometry",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drop a TIFF or Flextight FFF scan file."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请拖入 TIFF 或 Flextight FFF 扫描文件。"
+          }
+        }
+      }
+    },
+    "Drop one scan file at a time." : {
+      "comment" : "macOS scan import and physical film geometry",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drop one scan file at a time."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请一次拖入一个扫描文件。"
+          }
+        }
+      }
+    },
+    "Drop or import a TIFF / Flextight FFF scan to split, crop and export frames." : {
+      "comment" : "macOS scan import and physical film geometry",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drop or import a TIFF / Flextight FFF scan to split, crop and export frames."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "拖入或导入 TIFF / Flextight FFF 扫描，分割、裁切并导出。"
+          }
+        }
+      }
+    },
+    "Film format" : {
+      "comment" : "macOS scan import and physical film geometry",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Film format"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "胶片规格"
+          }
+        }
+      }
+    },
+    "Large format" : {
+      "comment" : "macOS scan import and physical film geometry",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Large format"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "大画幅"
+          }
+        }
+      }
+    },
+    "Not enough scan remains for a full frame. Adjust the previous boundary or draw a frame." : {
+      "comment" : "macOS scan import and physical film geometry",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not enough scan remains for a full frame. Adjust the previous boundary or draw a frame."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "扫描剩余长度不足以添加完整帧，请调整上一帧边界或手动框选。"
+          }
+        }
+      }
+    },
+    "Release to import scan" : {
+      "comment" : "macOS scan import and physical film geometry",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Release to import scan"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "松开以导入扫描"
+          }
+        }
+      }
+    },
+    "Unknown" : {
+      "comment" : "macOS scan import and physical film geometry",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unknown"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未识别"
+          }
+        }
+      }
+    },
     "↶ 90°" : {
 
     },

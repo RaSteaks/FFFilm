@@ -6,6 +6,7 @@ struct FilmWorkbenchView: View {
     /// Owned by the embedding workbench (ContentView) so the film document and
     /// renderer survive workbench-tab switches; no longer a standalone window.
     @Bindable var store: FilmStore
+    @State private var dropTargeted = false
 
     /// Split-pane minimums plus the divider: the narrowest window that keeps both
     /// panes visible. ContentView raises the window minimum to this while the
@@ -15,13 +16,55 @@ struct FilmWorkbenchView: View {
     static var minimumWindowWidth: CGFloat { canvasMinimumWidth + inspectorMinimumWidth + 20 }
 
     var body: some View {
+        scanDropTarget
+        .overlay {
+            if dropTargeted && store.canImportScan {
+                // Highlight both empty and loaded workbenches without moving their controls.
+                RoundedRectangle(cornerRadius: 10).stroke(Palette.text, style: StrokeStyle(lineWidth: 2, dash: [8, 4]))
+                    .padding(6)
+                    .overlay(alignment: .top) {
+                        Text(filmText("松开以导入扫描", "Release to import scan"))
+                            .padding(10).background(Palette.surface, in: RoundedRectangle(cornerRadius: 6)).padding(12)
+                    }
+                    .allowsHitTesting(false)
+            }
+        }
+        .background(Palette.background)
+        .toolbar { toolbar }
+        .alert(filmText("操作未完成", "Operation failed"), isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) {
+            Button(filmText("好", "OK")) { store.error = nil }
+        } message: { Text(store.error ?? "") }
+        .onChange(of: store.showStrip) { _, _ in store.zoom = 1; store.refresh() }
+        .onChange(of: store.canImportScan) { _, allowed in if !allowed { dropTargeted = false } }
+        .focusedSceneValue(\.filmStore, store)
+    }
+
+    @ViewBuilder private var scanDropTarget: some View {
+        if #available(macOS 26, *) {
+            workbench.dropDestination(for: URL.self, isEnabled: store.canImportScan) { urls, _ in
+                dropTargeted = false
+                store.importDroppedScans(urls)
+            }
+            .onDropSessionUpdated { session in
+                dropTargeted = store.canImportScan && (session.phase == .entering || session.phase == .active)
+            }
+        } else {
+            // Keep the established Transferable API for the macOS 15 deployment target.
+            workbench.dropDestination(for: URL.self) { urls, _ in
+                dropTargeted = false
+                return store.importDroppedScans(urls)
+            } isTargeted: { dropTargeted = $0 && store.canImportScan }
+        }
+    }
+
+    private var workbench: some View {
         HSplitView {
             VStack(spacing: 0) {
                 if store.info == nil {
                     ContentUnavailableView {
                         Label(filmText("胶片工作台", "Film workbench"), systemImage: "film")
                     } description: {
-                        Text(filmText("导入 TIFF 或 Flextight FFF 整条扫描，分割、裁切并导出。", "Import a TIFF or Flextight FFF strip, split, crop and export frames."))
+                        Text(filmText("拖入或导入 TIFF / Flextight FFF 扫描，分割、裁切并导出。", "Drop or import a TIFF / Flextight FFF scan to split, crop and export frames."))
                     } actions: {
                         Button(filmText("导入扫描", "Import scan")) { store.openScan() }
                         Button(filmText("打开项目", "Open project")) { store.openProject() }
@@ -47,13 +90,7 @@ struct FilmWorkbenchView: View {
             }.frame(minWidth: Self.canvasMinimumWidth, maxWidth: .infinity, maxHeight: .infinity)
             inspector.frame(minWidth: Self.inspectorMinimumWidth, idealWidth: 330, maxWidth: 380)
         }
-        .background(Palette.background)
-        .toolbar { toolbar }
-        .alert(filmText("操作未完成", "Operation failed"), isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) {
-            Button(filmText("好", "OK")) { store.error = nil }
-        } message: { Text(store.error ?? "") }
-        .onChange(of: store.showStrip) { _, _ in store.zoom = 1; store.refresh() }
-        .focusedSceneValue(\.filmStore, store)
+        .contentShape(Rectangle())
     }
 
     @ToolbarContentBuilder private var toolbar: some ToolbarContent {
@@ -143,6 +180,16 @@ struct FilmWorkbenchView: View {
 
     private var cropControls: some View {
         VStack(alignment: .leading, spacing: 10) {
+            // Detection is a geometric suggestion; an override leaves existing crops intact.
+            Picker(filmText("胶片规格", "Film format"), selection: Binding(get: { store.project.filmFormat }, set: { value in store.change { $0.filmFormat = value } })) {
+                Text(String(format: filmText("自动（%@）", "Automatic (%@)"), store.info?.layout.format?.title ?? filmText("未识别", "Unknown")))
+                    .tag(Optional<FilmFormat>.none)
+                ForEach(FilmFormat.allCases, id: \.self) { format in
+                    Text(format.title).tag(Optional(format))
+                }
+            }
+            .accessibilityIdentifier("film-format-picker")
+            .help(filmText("根据扫描尺寸和齿孔识别规格；识别不准时可手动选择。", "Detected from scan dimensions and sprockets; select a format to correct it."))
             Button(filmText("自动识别帧间隙", "Detect frame gaps")) { store.detect() }
             Picker(filmText("画布工具", "Canvas tool"), selection: $store.drawMode) {
                 Text(filmText("选择", "Select")).tag(0)
@@ -150,6 +197,8 @@ struct FilmWorkbenchView: View {
             }.onChange(of: store.drawMode) { _, mode in if mode != 0 { store.showStrip = true } }
             HStack {
                 Button(filmText("添加帧", "Add frame")) { store.addFrame() }
+                    .accessibilityIdentifier("film-add-frame")
+                    .help(filmText("紧接上一帧添加，按胶片规格设置帧高。", "Add directly after the previous frame using the film format's frame length."))
                 Button(filmText("删除所选", "Remove selected")) { store.removeFrame() }.disabled(store.frame == nil)
             }
             if let frame = store.frame {
@@ -496,7 +545,9 @@ struct FilmWindowGuard: NSViewRepresentable {
     }
     final class Coordinator: NSObject, NSWindowDelegate {
         let store: FilmStore
-        weak var original: NSWindowDelegate?
+        // NSWindow's delegate is weak; retain the delegate we replace so native
+        // sheet lifecycle callbacks can still reach SwiftUI through this proxy.
+        var original: NSWindowDelegate?
         private var confirmedClose = false
         init(store: FilmStore) { self.store = store }
         override func responds(to selector: Selector!) -> Bool { super.responds(to: selector) || original?.responds(to: selector) == true }
@@ -515,7 +566,15 @@ struct FilmWindowGuard: NSViewRepresentable {
         func windowWillClose(_ notification: Notification) {
             store.renderTask?.cancel()
             Task { await store.renderer.close() }
-            original?.windowWillClose?(notification)
+            // Restore SwiftUI's delegate and release our ownership when this
+            // window closes, so the retained delegate cannot keep it alive.
+            let delegate = original
+            if let window = notification.object as? NSWindow, window.delegate === self {
+                window.delegate = delegate
+            }
+            original = nil
+            store.window = nil
+            delegate?.windowWillClose?(notification)
         }
     }
 }

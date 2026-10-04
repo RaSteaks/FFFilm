@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
+    <!-- Keep iOS-only privacy keys here: conditional generated-plist settings
+         also emit empty values into the macOS bundle. Localize in InfoPlist.xcstrings. -->
+    <key>NSCameraUsageDescription</key>
+    <string>Use the camera to preview negatives as positives after sampling the film base.</string>
+    <key>NSPhotoLibraryAddUsageDescription</key>
+    <string>Save positive film images to your photo library.</string>
     <!-- Advertise only the formats the negative decoder actually accepts. -->
     <key>CFBundleDocumentTypes</key><array><dict>
         <key>CFBundleTypeName</key><string>Film Image</string>

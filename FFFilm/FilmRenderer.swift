@@ -18,6 +18,7 @@ actor FilmRenderer {
         let hasProfile: Bool
         let isFFF: Bool
         let profileName: String
+        let layout: FilmLayout
     }
 
     struct ScanProbe: Sendable {
@@ -121,8 +122,13 @@ actor FilmRenderer {
         source = oriented
         basePreview = materialized
         preview = CIImage(cgImage: materialized, options: [.colorSpace: previewSpace])
+        // Classify from the bounded, oriented preview; no full-resolution analysis copy.
+        let (pixels, width, height) = previewPixels()
+        let frames = Self.frameRects(pixels: pixels, width: width, height: height)
+        let layout = FilmScanAnalysis.layout(width: Int(oriented.extent.width), height: Int(oriented.extent.height),
+            properties: properties, pixels: pixels, previewWidth: width, previewHeight: height, frames: frames)
         // A custom ICC can have no CGColorSpace name; retain its selected label then.
-        return SourceInfo(width: Int(oriented.extent.width), height: Int(oriented.extent.height), depth: cg.bitsPerComponent, hasProfile: profiled, isFFF: isFFF, profileName: space.name as String? ?? inputSpace)
+        return SourceInfo(width: Int(oriented.extent.width), height: Int(oriented.extent.height), depth: cg.bitsPerComponent, hasProfile: profiled, isFFF: isFFF, profileName: space.name as String? ?? inputSpace, layout: layout)
     }
 
     static func colorSpace(_ name: String) -> CGColorSpace {
@@ -193,10 +199,20 @@ actor FilmRenderer {
 
     /// Detect sustained gaps across the center band; exclude sprockets near the strip edges.
     func detectFrames() throws -> [FilmRect] {
-        guard let preview else { return [] }
+        let (pixels, width, height) = previewPixels()
+        return Self.frameRects(pixels: pixels, width: width, height: height)
+    }
+
+    /// Import classification and explicit gap detection use the same sampled pixels.
+    private func previewPixels() -> ([UInt8], Int, Int) {
+        guard let preview else { return ([], 0, 0) }
         let width = Int(preview.extent.width), height = Int(preview.extent.height)
         var pixels = [UInt8](repeating: 0, count: width * height * 4)
         context.render(preview, toBitmap: &pixels, rowBytes: width * 4, bounds: preview.extent, format: .RGBA8, colorSpace: Self.colorSpace("sRGB"))
+        return (pixels, width, height)
+    }
+
+    private static func frameRects(pixels: [UInt8], width: Int, height: Int) -> [FilmRect] {
         let horizontal = width >= height
         let length = horizontal ? width : height, cross = horizontal ? height : width
         guard length > 10, cross > 4 else { return [] }
@@ -209,7 +225,7 @@ actor FilmRenderer {
             }
             signal[i] = total / max(1, count)
         }
-        return Self.split(signal: signal, horizontal: horizontal)
+        return split(signal: signal, horizontal: horizontal)
     }
 
     static func split(signal: [Double], horizontal: Bool) -> [FilmRect] {

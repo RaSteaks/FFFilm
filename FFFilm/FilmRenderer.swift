@@ -10,6 +10,8 @@ actor FilmRenderer {
     private var source: CIImage?
     private var preview: CIImage?
     private var basePreview: CGImage?
+    // Retain one display tier only; thumbnails/detection keep using the bounded base preview.
+    private var displayCache: (project: FilmProject, frame: FilmFrame?, limit: CGFloat, image: CGImage)?
     private var accessURL: URL?
     private var hasAccess = false
 
@@ -120,6 +122,7 @@ actor FilmRenderer {
         accessURL = url
         hasAccess = url.startAccessingSecurityScopedResource()
         source = oriented
+        displayCache = nil
         basePreview = materialized
         preview = CIImage(cgImage: materialized, options: [.colorSpace: previewSpace])
         // Classify from the bounded, oriented preview; no full-resolution analysis copy.
@@ -136,14 +139,14 @@ actor FilmRenderer {
     }
 
     func close() {
-        source = nil; preview = nil; basePreview = nil
+        source = nil; preview = nil; basePreview = nil; displayCache = nil
         context.clearCaches()
         if hasAccess { accessURL?.stopAccessingSecurityScopedResource() }
         accessURL = nil; hasAccess = false
     }
 
     /// Normalized rectangles use top-left coordinates, unlike Core Image's bottom-left origin.
-    static func pixelRect(_ crop: FilmRect, extent: CGRect) -> CGRect {
+    nonisolated static func pixelRect(_ crop: FilmRect, extent: CGRect) -> CGRect {
         CGRect(x: extent.minX + crop.x * extent.width, y: extent.minY + (1 - crop.y - crop.height) * extent.height,
                width: crop.width * extent.width, height: crop.height * extent.height).integral.intersection(extent)
     }
@@ -173,8 +176,46 @@ actor FilmRenderer {
         return strip.cropped(to: input.extent)
     }
 
-    func render(project: FilmProject, frame: FilmFrame?) throws -> CGImage {
+    /// Bound RGBAh display output to 128 MiB and 8192 pixels per side, never enlarging the source.
+    /// Rounded tiers avoid rendering for every small trackpad change; exports remain unrestricted.
+    nonisolated static func displayLimit(_ requested: CGFloat, size: CGSize) -> CGFloat {
+        guard requested.isFinite, requested > 0, size.width > 0, size.height > 0 else { return 0 }
+        let longest = max(size.width, size.height)
+        let tier = requested <= 1800 ? requested : (requested / 512).rounded(.up) * 512
+        let budget = sqrt(16_777_216 / (size.width * size.height)) * longest
+        return min(tier, longest, 8192, budget)
+    }
+
+    func render(project: FilmProject, frame: FilmFrame?, displayLongSide: CGFloat? = nil) throws -> CGImage {
         guard let preview, let basePreview else { throw FilmFailure(message: filmText("请先导入扫描。", "Import a scan first.", language: AppLanguage.initial())) }
+        try Task.checkCancellation()
+        if let requested = displayLongSide, let source {
+            let size = FilmZoom.sourceSize(width: Int(source.extent.width), height: Int(source.extent.height), frame: frame)
+            let limit = Self.displayLimit(requested, size: size)
+            if let cache = displayCache, cache.project == project, cache.frame == frame, cache.limit >= limit {
+                return cache.image
+            }
+            let lowResolution = rendered(preview, project: project, frame: frame)
+            if limit > max(lowResolution.extent.width, lowResolution.extent.height) + 1 {
+                // Crop/rotate from the full source BEFORE downsampling: a short frame must
+                // not inherit the entire strip's 1800px limit or upscale already blurred pixels.
+                let image = rendered(source, project: project, frame: frame)
+                let scale = min(1, limit / max(image.extent.width, image.extent.height))
+                let normalized = image.transformed(by: CGAffineTransform(translationX: -image.extent.minX, y: -image.extent.minY))
+                // Integral output dimensions enforce the pixel budget while retaining the full bounds.
+                let width = max(1, floor(image.extent.width * scale + 0.000001))
+                let height = max(1, floor(image.extent.height * scale + 0.000001))
+                let scaled = normalized.transformed(by: CGAffineTransform(
+                    scaleX: width / normalized.extent.width, y: height / normalized.extent.height))
+                guard let result = context.createCGImage(scaled, from: CGRect(x: 0, y: 0, width: width, height: height), format: .RGBAh,
+                    colorSpace: CGColorSpace(name: CGColorSpace.extendedLinearSRGB)!) else {
+                    throw FilmFailure(message: filmText("预览渲染失败。", "Preview rendering failed.", language: AppLanguage.initial()))
+                }
+                try Task.checkCancellation()
+                displayCache = (project, frame, limit, result)
+                return result
+            }
+        }
         // The untouched strip is already rendered; reuse it for the canvas and thumbnails.
         if frame == nil && !project.frames.contains(where: { $0.rotation != 0 }) { return basePreview }
         let image = rendered(preview, project: project, frame: frame)

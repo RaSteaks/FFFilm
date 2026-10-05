@@ -34,7 +34,6 @@ struct FilmWorkbenchView: View {
         .alert(filmText("操作未完成", "Operation failed"), isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) {
             Button(filmText("好", "OK")) { store.error = nil }
         } message: { Text(store.error ?? "") }
-        .onChange(of: store.showStrip) { _, _ in store.zoom = 1; store.refresh() }
         .onChange(of: store.canImportScan) { _, allowed in if !allowed { dropTargeted = false } }
         .focusedSceneValue(\.filmStore, store)
     }
@@ -110,12 +109,22 @@ struct FilmWorkbenchView: View {
             Picker(filmText("视图", "View"), selection: $store.showStrip) {
                 Text(filmText("整条", "Strip")).tag(true)
                 Text(filmText("单帧", "Frame")).tag(false)
-            }.pickerStyle(.segmented).frame(width: 140)
+            }.pickerStyle(.segmented).frame(width: 140).accessibilityIdentifier("film-view-picker")
             Spacer()
-            Button { store.zoom = max(1, store.zoom / 1.5) } label: { Image(systemName: "minus.magnifyingglass") }.help(filmText("缩小", "Zoom out"))
-            Text("\(Int(store.zoom * 100))%").font(.caption.monospacedDigit())
-            Button { store.zoom = min(8, store.zoom * 1.5) } label: { Image(systemName: "plus.magnifyingglass") }.help(filmText("放大", "Zoom in"))
-            Button(filmText("适合", "Fit")) { store.zoom = 1 }
+            // Toolbar, keyboard and native gestures share the same bounded store zoom.
+            Button { store.zoomOut() } label: { Image(systemName: "minus.magnifyingglass") }
+                .help(filmText("缩小", "Zoom out") + " (⌘−)")
+                .accessibilityLabel(filmText("缩小", "Zoom out")).accessibilityIdentifier("film-zoom-out")
+                .disabled(!store.canZoom || store.zoom <= FilmZoom.levels.first!)
+            Text("\(Int((store.zoom * 100).rounded()))%").font(.caption.monospacedDigit())
+                .frame(width: 42).accessibilityIdentifier("film-zoom-value")
+            Button { store.zoomIn() } label: { Image(systemName: "plus.magnifyingglass") }
+                .help(filmText("放大", "Zoom in") + " (⌘+)")
+                .accessibilityLabel(filmText("放大", "Zoom in")).accessibilityIdentifier("film-zoom-in")
+                .disabled(!store.canZoom || store.zoom >= FilmZoom.levels.last!)
+            Button(filmText("适合", "Fit")) { store.fitCanvas() }
+                .help(filmText("适合", "Fit") + " (⌘0)").accessibilityIdentifier("film-zoom-fit")
+                .disabled(!store.canZoom)
         }.padding(10)
     }
     private var sourceIdentity: some View {
@@ -319,9 +328,18 @@ private struct FilmCanvasBorder: Equatable {
     let edge: FilmCropEdge
 }
 
+private struct FilmCanvasDisplayRequest: Equatable {
+    let identity: FilmCanvasIdentity
+    let sourceSize: CGSize
+    let layout: FilmCanvasLayout
+    let displayScale: CGFloat
+    let enabled: Bool
+}
+
 struct FilmCanvas: View {
     let store: FilmStore
     @Binding var drawMode: Int
+    @Environment(\.displayScale) private var displayScale
     @State private var dragRect: CGRect?
     @State private var dragTarget: (id: UUID, crop: FilmRect, edge: FilmCropEdge?)?
     @State private var hoveredBorder: FilmCanvasBorder?
@@ -409,107 +427,116 @@ struct FilmCanvas: View {
 
     var body: some View {
         GeometryReader { viewport in
-            ScrollView([.horizontal, .vertical]) {
-                if let image = store.image {
-                    let scale = min(viewport.size.width / CGFloat(image.width), viewport.size.height / CGFloat(image.height)) * store.zoom
-                    let size = CGSize(width: CGFloat(image.width) * scale, height: CGFloat(image.height) * scale)
-                    ZStack(alignment: .topLeading) {
-                        Image(decorative: image, scale: 1).resizable().frame(width: size.width, height: size.height)
-                        if store.showStrip {
-                            ForEach(store.project.frames) { frame in
-                                Rectangle().stroke(store.selected == frame.id ? .white : .gray, style: StrokeStyle(lineWidth: 1.5, dash: [6, 3]))
-                                    .frame(width: frame.crop.width * size.width, height: frame.crop.height * size.height)
-                                    .overlay(alignment: .topLeading) { Text(frame.name).font(.caption).padding(3).background(.black.opacity(0.7)) }
-                                    .offset(x: frame.crop.x * size.width, y: frame.crop.y * size.height)
-                                    .allowsHitTesting(false)
-                            }
-                            if drawMode == 0, let selected = store.frame {
-                                borderFeedback(for: selected, in: size)
-                            }
-                        }
-                        if let dragRect { Rectangle().stroke(.yellow, lineWidth: 2).frame(width: dragRect.width, height: dragRect.height).offset(x: dragRect.minX, y: dragRect.minY) }
-                    }
-                    .frame(width: size.width, height: size.height)
-                    .contentShape(Rectangle())
-                    .gesture(DragGesture(minimumDistance: 0).onChanged { value in
-                        guard store.showStrip, !store.busy, !store.exporting else { return }
-                        if drawMode == 0 {
-                            if dragTarget == nil, let target = target(at: value.startLocation, in: size) {
-                                store.select(target.id)
-                                dragTarget = target
-                                store.beginEdit()
-                            }
-                            if let target = dragTarget {
-                                store.updateFrame { frame in
-                                    if let edge = target.edge {
-                                        let delta: CGFloat = switch edge {
-                                        case .left, .right: value.translation.width / size.width
-                                        case .top, .bottom: value.translation.height / size.height
-                                        }
-                                        frame.crop = target.crop.resizing(edge, by: delta)
-                                    } else {
-                                        frame.crop.x = min(1 - target.crop.width, max(0, target.crop.x + value.translation.width / size.width))
-                                        frame.crop.y = min(1 - target.crop.height, max(0, target.crop.y + value.translation.height / size.height))
-                                    }
-                                }
-                            }
-                        } else {
-                            let x = min(size.width, max(0, min(value.startLocation.x, value.location.x)))
-                            let y = min(size.height, max(0, min(value.startLocation.y, value.location.y)))
-                            dragRect = CGRect(x: x, y: y, width: min(size.width - x, abs(value.location.x - value.startLocation.x)), height: min(size.height - y, abs(value.location.y - value.startLocation.y)))
-                        }
-                    }.onEnded { _ in
-                        defer {
-                            dragRect = nil
-                            dragTarget = nil
-                            hoveredBorder = nil
-                            NSCursor.arrow.set()
-                            store.endEdit()
-                        }
-                        guard let rectangle = dragRect, rectangle.width >= 3, rectangle.height >= 3 else { return }
-                        let crop = FilmRect(x: rectangle.minX / size.width, y: rectangle.minY / size.height, width: rectangle.width / size.width, height: rectangle.height / size.height)
-                        guard crop.valid else { return }
-                        if drawMode == 1 { store.addFrame(crop) }
-                        drawMode = 0
-                    })
-                    .onContinuousHover(coordinateSpace: .local) { phase in
-                        guard drawMode == 0, store.showStrip, !store.busy, !store.exporting else {
-                            hoveredBorder = nil
-                            NSCursor.arrow.set()
-                            return
-                        }
-                        if let edge = dragTarget?.edge {
-                            switch edge {
-                            case .left, .right: NSCursor.resizeLeftRight.set()
-                            case .top, .bottom: NSCursor.resizeUpDown.set()
-                            }
-                            return
-                        }
-                        switch phase {
-                        case .active(let point):
-                            if let target = target(at: point, in: size), let edge = target.edge {
-                                hoveredBorder = FilmCanvasBorder(id: target.id, edge: edge)
-                                switch edge {
-                                case .left, .right: NSCursor.resizeLeftRight.set()
-                                case .top, .bottom: NSCursor.resizeUpDown.set()
-                                }
-                            } else {
-                                hoveredBorder = nil
-                                NSCursor.arrow.set()
-                            }
-                        case .ended:
-                            hoveredBorder = nil
-                            NSCursor.arrow.set()
-                        }
-                    }
-                    .frame(minWidth: viewport.size.width, minHeight: viewport.size.height)
+            let size = FilmZoom.fittedSize(source: store.canvasSize, viewport: viewport.size, zoom: store.zoom)
+            let layout = FilmCanvasLayout(imageSize: size, viewport: viewport.size)
+            let request = FilmCanvasDisplayRequest(
+                identity: FilmCanvasIdentity(sourceGeneration: store.sourceGeneration, showStrip: store.showStrip,
+                                             frameID: store.showStrip ? nil : store.selected),
+                sourceSize: store.canvasSize, layout: layout, displayScale: displayScale, enabled: store.canZoom)
+            FilmCanvasScrollView(store: store, layout: layout, content: canvas(in: size))
+                .task(id: request) {
+                    // Read the local display scale, including when this window moves between displays.
+                    store.displayNeeds(max(size.width, size.height) * max(1, displayScale))
                 }
-            }
         }
         .background(.black.opacity(0.4))
         .onChange(of: drawMode) { _, _ in
             hoveredBorder = nil
             NSCursor.arrow.set()
+        }
+    }
+
+    @ViewBuilder private func canvas(in size: CGSize) -> some View {
+        if let image = store.image {
+            ZStack(alignment: .topLeading) {
+                Image(decorative: image, scale: 1).resizable().frame(width: size.width, height: size.height)
+                if store.showStrip {
+                    ForEach(store.project.frames) { frame in
+                        Rectangle().stroke(store.selected == frame.id ? .white : .gray, style: StrokeStyle(lineWidth: 1.5, dash: [6, 3]))
+                            .frame(width: frame.crop.width * size.width, height: frame.crop.height * size.height)
+                            .overlay(alignment: .topLeading) { Text(frame.name).font(.caption).padding(3).background(.black.opacity(0.7)) }
+                            .offset(x: frame.crop.x * size.width, y: frame.crop.y * size.height)
+                            .allowsHitTesting(false)
+                    }
+                    if drawMode == 0, let selected = store.frame {
+                        borderFeedback(for: selected, in: size)
+                    }
+                }
+                if let dragRect { Rectangle().stroke(.yellow, lineWidth: 2).frame(width: dragRect.width, height: dragRect.height).offset(x: dragRect.minX, y: dragRect.minY) }
+            }
+            .frame(width: size.width, height: size.height)
+            .contentShape(Rectangle())
+            .gesture(DragGesture(minimumDistance: 0).onChanged { value in
+                guard store.showStrip, !store.busy, !store.exporting else { return }
+                if drawMode == 0 {
+                    if dragTarget == nil, let target = target(at: value.startLocation, in: size) {
+                        store.select(target.id)
+                        dragTarget = target
+                        store.beginEdit()
+                    }
+                    if let target = dragTarget {
+                        store.updateFrame { frame in
+                            if let edge = target.edge {
+                                let delta: CGFloat = switch edge {
+                                case .left, .right: value.translation.width / size.width
+                                case .top, .bottom: value.translation.height / size.height
+                                }
+                                frame.crop = target.crop.resizing(edge, by: delta)
+                            } else {
+                                frame.crop.x = min(1 - target.crop.width, max(0, target.crop.x + value.translation.width / size.width))
+                                frame.crop.y = min(1 - target.crop.height, max(0, target.crop.y + value.translation.height / size.height))
+                            }
+                        }
+                    }
+                } else {
+                    let x = min(size.width, max(0, min(value.startLocation.x, value.location.x)))
+                    let y = min(size.height, max(0, min(value.startLocation.y, value.location.y)))
+                    dragRect = CGRect(x: x, y: y, width: min(size.width - x, abs(value.location.x - value.startLocation.x)), height: min(size.height - y, abs(value.location.y - value.startLocation.y)))
+                }
+            }.onEnded { _ in
+                defer {
+                    dragRect = nil
+                    dragTarget = nil
+                    hoveredBorder = nil
+                    NSCursor.arrow.set()
+                    store.endEdit()
+                }
+                guard let rectangle = dragRect, rectangle.width >= 3, rectangle.height >= 3 else { return }
+                let crop = FilmRect(x: rectangle.minX / size.width, y: rectangle.minY / size.height, width: rectangle.width / size.width, height: rectangle.height / size.height)
+                guard crop.valid else { return }
+                if drawMode == 1 { store.addFrame(crop) }
+                drawMode = 0
+            })
+            .onContinuousHover(coordinateSpace: .local) { phase in
+                guard drawMode == 0, store.showStrip, !store.busy, !store.exporting else {
+                    hoveredBorder = nil
+                    NSCursor.arrow.set()
+                    return
+                }
+                if let edge = dragTarget?.edge {
+                    switch edge {
+                    case .left, .right: NSCursor.resizeLeftRight.set()
+                    case .top, .bottom: NSCursor.resizeUpDown.set()
+                    }
+                    return
+                }
+                switch phase {
+                case .active(let point):
+                    if let target = target(at: point, in: size), let edge = target.edge {
+                        hoveredBorder = FilmCanvasBorder(id: target.id, edge: edge)
+                        switch edge {
+                        case .left, .right: NSCursor.resizeLeftRight.set()
+                        case .top, .bottom: NSCursor.resizeUpDown.set()
+                        }
+                    } else {
+                        hoveredBorder = nil
+                        NSCursor.arrow.set()
+                    }
+                case .ended:
+                    hoveredBorder = nil
+                    NSCursor.arrow.set()
+                }
+            }
         }
     }
 }
@@ -526,6 +553,13 @@ struct FilmCommands: Commands {
             Button(filmText("保存项目", "Save project")) { store?.saveProject() }.keyboardShortcut("s").disabled(store?.info == nil || store?.busy == true || store?.exporting == true || store?.presentingSheet == true)
             Button(filmText("撤销胶片调整", "Undo film edit")) { store?.undo() }.keyboardShortcut("z").disabled(store?.undoStack.isEmpty != false || store?.busy == true || store?.exporting == true || store?.presentingSheet == true)
             Button(filmText("重做胶片调整", "Redo film edit")) { store?.redo() }.keyboardShortcut("z", modifiers: [.command, .shift]).disabled(store?.redoStack.isEmpty != false || store?.busy == true || store?.exporting == true || store?.presentingSheet == true)
+            Divider()
+            Button(filmText("放大", "Zoom in")) { store?.zoomIn() }.keyboardShortcut("+", modifiers: .command)
+                .disabled(store?.canZoom != true || (store?.zoom ?? 8) >= FilmZoom.levels.last!)
+            Button(filmText("缩小", "Zoom out")) { store?.zoomOut() }.keyboardShortcut("-", modifiers: .command)
+                .disabled(store?.canZoom != true || (store?.zoom ?? 1) <= FilmZoom.levels.first!)
+            Button(filmText("适合", "Fit")) { store?.fitCanvas() }.keyboardShortcut("0", modifiers: .command)
+                .disabled(store?.canZoom != true)
         }
     }
 }

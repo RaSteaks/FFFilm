@@ -41,7 +41,13 @@ final class FilmStore {
     var image: CGImage?
     var overview: CGImage?
     var info: FilmRenderer.SourceInfo?
-    var showStrip = true
+    var showStrip = true {
+        didSet {
+            guard showStrip != oldValue else { return }
+            displayLongSide = nil
+            refresh()
+        }
+    }
     // The canvas tool and export scope live here, not in the view's @State:
     // switching workbench tabs removes the film view, which would reset them.
     var drawMode = 0
@@ -59,7 +65,20 @@ final class FilmStore {
     var savedProject = FilmProject()
     var undoStack: [FilmProject] = []
     var redoStack: [FilmProject] = []
-    var zoom = 1.0
+    // Each canvas mode retains its zoom/region across frame and workbench-tab switches.
+    private var stripZoom = 1.0
+    private var frameZoom = 1.0
+    var zoom: Double {
+        get { showStrip ? stripZoom : frameZoom }
+        set {
+            if showStrip { stripZoom = FilmZoom.clamped(newValue) }
+            else { frameZoom = FilmZoom.clamped(newValue) }
+        }
+    }
+    @ObservationIgnored private var stripCenter = CGPoint(x: 0.5, y: 0.5)
+    @ObservationIgnored private var frameCenter = CGPoint(x: 0.5, y: 0.5)
+    @ObservationIgnored private var displayLongSide: CGFloat?
+    @ObservationIgnored private var displayedLimit: CGFloat = 0
     @ObservationIgnored weak var window: NSWindow?
     @ObservationIgnored let renderer = FilmRenderer()
     @ObservationIgnored var renderTask: Task<Void, Never>?
@@ -70,6 +89,12 @@ final class FilmStore {
     @ObservationIgnored private var editStart: FilmProject?
     var dirty: Bool { project != savedProject }
     var canImportScan: Bool { !busy && !exporting && !presentingSheet }
+    var canZoom: Bool { info != nil && canImportScan }
+    var canvasCenter: CGPoint { showStrip ? stripCenter : frameCenter }
+    var canvasSize: CGSize {
+        guard let info else { return .zero }
+        return FilmZoom.sourceSize(width: info.width, height: info.height, frame: showStrip ? nil : frame)
+    }
     var frame: FilmFrame? { project.frames.first { $0.id == selected } }
     var targets: Set<UUID> { selection.isEmpty ? Set([selected].compactMap { $0 }) : selection }
     var sourceFileName: String { URL(fileURLWithPath: project.sourcePath).lastPathComponent }
@@ -91,7 +116,28 @@ final class FilmStore {
         FilmAppDelegate.stores.add(self)
     }
 
-    func select(_ id: UUID) { selected = id; refresh() }
+    func select(_ id: UUID) {
+        if selected != id && !showStrip { displayLongSide = nil }
+        selected = id; refresh()
+    }
+
+    func zoomIn() { if canZoom { zoom = FilmZoom.stepped(zoom, direction: 1) } }
+    func zoomOut() { if canZoom { zoom = FilmZoom.stepped(zoom, direction: -1) } }
+    func fitCanvas() { if canZoom { zoom = 1 } }
+
+    func rememberCanvasCenter(_ center: CGPoint, strip: Bool) {
+        // Scroll changes do not invalidate SwiftUI or trigger another render.
+        if strip { stripCenter = center } else { frameCenter = center }
+    }
+
+    /// The canvas reports its current long-side need in device pixels, including Retina scale.
+    func displayNeeds(_ longSide: CGFloat) {
+        guard canZoom, longSide.isFinite, longSide > 0 else { return }
+        let limit = FilmRenderer.displayLimit(longSide, size: canvasSize)
+        guard displayLongSide != limit else { return }
+        displayLongSide = limit
+        refresh(debounce: .milliseconds(200))
+    }
 
     /// Coalesce direct manipulation into a single undo entry instead of one entry per pixel.
     func beginEdit() { if editStart == nil { editStart = project } }
@@ -130,24 +176,29 @@ final class FilmStore {
         selection.formIntersection(Set(project.frames.map(\.id)))
     }
 
-    func refresh() {
+    func refresh(debounce: Duration = .milliseconds(70)) {
         renderTask?.cancel(); renderRevision += 1
         let revision = renderRevision, snapshot = project, target = showStrip ? nil : frame
-        guard info != nil else { return }
+        let wanted = displayLongSide
+        guard info != nil, !busy else { return }
         // Import and unchanged view state already have a completed image to display.
-        if image != nil, displayedProject == snapshot, displayedFrameID == target?.id { return }
-        if target == nil, !snapshot.frames.contains(where: { $0.rotation != 0 }), let overview {
+        if image != nil, displayedProject == snapshot, displayedFrameID == target?.id,
+           wanted == nil || displayedLimit + 1 >= wanted! { return }
+        if target == nil, !snapshot.frames.contains(where: { $0.rotation != 0 }), let overview,
+           wanted == nil || CGFloat(max(overview.width, overview.height)) + 1 >= wanted! {
             image = overview; displayedProject = snapshot; displayedFrameID = nil
+            displayedLimit = CGFloat(max(overview.width, overview.height))
             return
         }
         renderTask = Task {
             do {
-                try await Task.sleep(for: .milliseconds(70))
+                try await Task.sleep(for: debounce)
                 try Task.checkCancellation()
-                let rendered = try await renderer.render(project: snapshot, frame: target)
+                let rendered = try await renderer.render(project: snapshot, frame: target, displayLongSide: wanted)
                 guard !Task.isCancelled, revision == renderRevision else { return }
                 image = rendered
                 displayedProject = snapshot; displayedFrameID = target?.id
+                displayedLimit = max(wanted ?? 0, CGFloat(max(rendered.width, rendered.height)))
             } catch is CancellationError { } catch {
                 if !Task.isCancelled, revision == renderRevision { self.error = error.localizedDescription }
             }
@@ -305,7 +356,9 @@ final class FilmStore {
                 sourceGeneration += 1
                 if restoring == nil { projectURL = nil }
                 undoStack.removeAll(); redoStack.removeAll(); selection.removeAll()
-                selected = next.frames.first?.id; showStrip = true; zoom = 1; drawMode = 0; exportScope = 0
+                selected = next.frames.first?.id; showStrip = true; stripZoom = 1; frameZoom = 1; drawMode = 0; exportScope = 0
+                stripCenter = CGPoint(x: 0.5, y: 0.5); frameCenter = stripCenter
+                displayLongSide = nil; displayedLimit = CGFloat(max(initial.width, initial.height))
                 // Both views share the untouched scan preview until edits require compositing.
                 overview = base; image = initial
                 displayedProject = next; displayedFrameID = nil
@@ -315,6 +368,7 @@ final class FilmStore {
             } catch {
                 info = nil; image = nil; overview = nil
                 displayedProject = nil; displayedFrameID = nil
+                displayLongSide = nil; displayedLimit = 0
                 // Keep conflicting actions disabled until renderer cleanup has finished.
                 await renderer.close()
                 self.error = error.localizedDescription

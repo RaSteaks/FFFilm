@@ -1,5 +1,20 @@
 # FFFilm
 
+## 本地临时文件整理（2026-10-05）
+
+- 可复用的发布截图、测试脚本与合成扫描样本、诊断记录、图标设计原稿和历史签名分发包已集中到 `/Users/rasteaks/Desktop/FFFilm/未命名文件夹`。以后需要这些资料时，优先查看该目录的 `整理说明.txt` 和 `清理记录-20261005/result.json`；后者记录原路径、现路径、用途和完整性校验。此前记录中的 `/tmp/FFFilm-*` 路径仅代表当时的验证位置，不再作为现存文件位置。
+- 构建缓存、过期测试结果与中间截图、空测试偏好和运行目录、重复图片及生成的 `premium-audit.json` 已移至 `/Users/rasteaks/.Trash/FFFilm-临时文件清理-20261005`，未永久删除。需要新的构建、测试或审计结果时从当前源码重新生成，不将这些产物提交到 Git。
+- 主仓库、Git 历史、当前未提交的缩放实现与测试、图标正式源文件、Codex Run 配置保留原位。正式应用、真实摄影工程、用户设置、应用数据及 Xcode Organizer 签名归档保留各自正常位置。独立的 Formats & Data Rate Calculator 仓库及其临时资料不属于本次范围。
+- `复用脚本与样本/FFFilm-import-delegate-project.fffilm` 的扫描路径已更新为同目录 `FFFilm-import-16bit.tiff`；旧安全书签已移除，首次在应用中打开时按原生定位提示选择该 TIFF。原始 JSON 留在清理记录中作对照；这是合成回归样本，不是真实摄影工程。
+- 验证：131 个保留资料文件完成 SHA-256 校验；107 个受保护源码、配置和资源文件与整理前完全一致。移动目录核对了文件类型、大小和 inode，并保留逐项恢复清单。应用源码没有修改，本次不重新构建或运行应用测试，以免重新生成刚清理的产物。
+
+## macOS film canvas zoom (2026-10-04)
+
+- Confirmed the fixed 1800px canvas, absent zoom render demand, mode-switch reset, asymmetric ×1.5 button steps and missing explicit zoom accessibility identifiers. Normalized crop drag/drawing coordinates remain valid; preserve them.
+- FilmStore owns independent Strip/Frame zoom and normalized viewport centers. FilmZoomScrollView wraps only the SwiftUI canvas to anchor zoom and handle native pinch, Command-scroll and double-click. Toolbar/menu actions share fixed 1/1.5/2/3/4/6/8 stops, Fit and scene-focused Command shortcuts; imported scans reset both modes.
+- Canvas demand uses source geometry, viewport points, zoom and local display scale. Debounce sharper previews, reject stale/cancelled work, crop/rotate the full source before downsampling, and retain one bounded RGBAh display cache (8192px long side / 16,777,216 pixels). Keep the import/thumbnail/detection preview at 1800px and preserve full-resolution exports.
+- Verification: all 38 focused macOS film/zoom/format/language tests passed (`/tmp/FFFilm-zoom-verified-tests.xcresult`), including source-pixel detail, rotated crop/export dimensions, tier reuse, source-reset cancellation, attached-window restoration and direct native Command-wheel dispatch. macOS Debug and iOS Simulator Debug builds passed. The independently named verification app on macOS 15.7.3 exercised 800% preview, Command +/−/0, two-axis scroll restoration across workbench tabs, independent mode zoom, selecting another frame without reset, double-click, 200% crop-border drag plus one-step undo, and the 820pt minimum window width. Strict UI audit, catalog validation and diff checks passed; DESIGN lint has zero errors and its 13 existing token warnings. Physical trackpad pinch and a hardware Command-wheel gesture were not exercised; the wheel unit test does not post input to the desktop.
+
 ## macOS scan drops, physical film formats and contiguous frames (2026-10-04)
 
 - Accept a single TIFF/FFF Finder drop across the empty or loaded Film page. Reuse the existing unsaved-project prompt, input-profile selection and import gate; keep security-scoped access alive across sheets and asynchronous decoding. Reject folders, unsupported/remote URLs, multiple files and competing operations before modifying the project.

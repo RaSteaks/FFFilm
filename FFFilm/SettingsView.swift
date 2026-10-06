@@ -55,6 +55,11 @@ struct SettingsView: View {
                     Label("feedback.email.title", systemImage: "envelope")
                 }
             } header: { Text("feedback.email.section") }
+            footer: {
+                // The native form footer keeps attribution separate from preference rows.
+                AppCopyrightFooter()
+                    .padding(.top, 8)
+            }
         }
         .formStyle(.grouped)
         #if os(iOS)

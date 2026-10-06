@@ -1,5 +1,20 @@
 import SwiftUI
 
+/// Reuses the app metadata for the year and owner; the notice is identical in both app languages.
+struct AppCopyrightFooter: View {
+    var body: some View {
+        if let copyright = Bundle.main.object(forInfoDictionaryKey: "NSHumanReadableCopyright") as? String {
+            Text(verbatim: "Copyright \(copyright)")
+                .font(.caption2)
+                .foregroundStyle(Palette.muted)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity)
+                .accessibilityIdentifier("app-copyright")
+        }
+    }
+}
+
 // Shared primitives keep desktop density separate from touch-oriented presentation.
 struct FieldCard<Content: View>: View {
     let title: LocalizedStringKey

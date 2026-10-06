@@ -243,7 +243,8 @@ final class FFFilmUITests: XCTestCase {
         selectTab("rate", in: app)
         XCTAssertFalse(app.navigationBars["Settings"].exists)
         XCTAssertEqual(duration.value as? String, "12.00")
-        let expectedUnit = wasBinary ? "GB per hour" : "GiB per hour"
+        // The result displays the abbreviated hourly unit after the preference changes.
+        let expectedUnit = wasBinary ? "GB/h" : "GiB/h"
         let result = app.descendants(matching: .any).matching(identifier: "rate-results").firstMatch
         XCTAssertTrue(result.descendants(matching: .any)
             .matching(NSPredicate(format: "label CONTAINS %@", expectedUnit)).firstMatch.waitForExistence(timeout: 3))

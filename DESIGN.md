@@ -99,6 +99,8 @@ iOS uses three persistent native bottom tabs in this order: Calculate (计算), 
 
 ### Forms and overlays
 
+`AppCopyrightFooter` in `WorkbenchComponents.swift` displays “Copyright © 2026 朱煜天” in both app languages, prefixing `NSHumanReadableCopyright` from the app bundle with “Copyright” to keep the year and owner aligned with the existing app metadata. Use centered native caption typography and `Palette.muted`, allowing Dynamic Type and wrapping. macOS anchors the shared footer below every main workbench; iOS places it at the end of calculator and file-preview scroll content above the native tab bar. Settings uses a native form section footer. Immersive camera capture retains its full viewport.
+
 Native menu pickers are intentional because platform-owned selection behavior is appropriate for catalog choices. Shutter variables use typed numeric fields because frame rates and angles must accept production-specific decimal values outside the catalog presets. Compact fields use visible left labels and right-aligned controls. No nested vertical scrolling, custom select popovers or modal confirmation is required for routine reversible changes.
 
 ### macOS desktop components

@@ -152,6 +152,9 @@ struct NegativePreviewView: View {
                         .frame(minHeight: max(300, geometry.size.height - 100))
                         .disabled(store.busy != nil)
                     }
+                    // File review shares the page footer; immersive capture keeps its full viewport.
+                    AppCopyrightFooter()
+                        .padding(.top, 4)
                 }
                 .padding(12)
                 .frame(maxWidth: 1180)

@@ -63,6 +63,13 @@ struct ContentView: View {
                 }
             }
             .frame(minWidth: store.activeView == .film ? FilmWorkbenchView.minimumWindowWidth : 760, minHeight: 560)
+            // All desktop workbenches share a footer below their scroll and canvas content.
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                AppCopyrightFooter()
+                    .padding(.horizontal, Layout.pageGutter)
+                    .padding(.vertical, 8)
+                    .background(Palette.background)
+            }
             .toolbar { MacWorkbenchToolbar(store: store) }
             .focusedSceneValue(\.calculatorStore, store)
             // Protect unsaved film documents even when another workbench is selected.
@@ -212,6 +219,11 @@ private struct CalculatorWorkbench: View {
                                 .padding(.top, 4)
                                 .accessibilityLabel(Text("footer.estimateAccessibility"))
                         }
+                        #if os(iOS)
+                        // Keep attribution in the page scroller above the native tab bar.
+                        AppCopyrightFooter()
+                            .padding(.top, 4)
+                        #endif
                     }
                     .frame(maxWidth: maximumWidth)
                     .padding(.horizontal, Layout.pageGutter)

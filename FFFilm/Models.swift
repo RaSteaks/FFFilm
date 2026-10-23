@@ -283,8 +283,8 @@ enum CalculatorView: String, CaseIterable, Identifiable, Hashable {
 
 // MARK: - Shutter workbench
 
-enum ShutterMode: String, CaseIterable, Identifiable, Hashable {
-    case conversion, flicker, matching
+enum ShutterMode: String, CaseIterable, Identifiable, Hashable, Codable {
+    case conversion, matching, flicker
     var id: Self { self }
     var label: LocalizedStringResource {
         switch self {
@@ -295,7 +295,7 @@ enum ShutterMode: String, CaseIterable, Identifiable, Hashable {
     }
 }
 
-enum ShutterDirection: String, CaseIterable, Identifiable {
+enum ShutterDirection: String, CaseIterable, Identifiable, Codable {
     case angleToTime, timeToAngle
     var id: Self { self }
     var label: LocalizedStringResource {
@@ -303,7 +303,7 @@ enum ShutterDirection: String, CaseIterable, Identifiable {
     }
 }
 
-enum ShutterMatch: String, CaseIterable, Identifiable {
+enum ShutterMatch: String, CaseIterable, Identifiable, Codable {
     case exposure, angle
     var id: Self { self }
     var label: LocalizedStringResource {
@@ -311,7 +311,7 @@ enum ShutterMatch: String, CaseIterable, Identifiable {
     }
 }
 
-enum ShutterLight: String, CaseIterable, Identifiable {
+enum ShutterLight: String, CaseIterable, Identifiable, Codable {
     case mains50, mains60, custom, displays
     var id: Self { self }
     var label: LocalizedStringResource {
@@ -353,9 +353,13 @@ enum ShutterFramePreset: String, CaseIterable, Identifiable {
         default: "\(Int(fps)) fps"
         }
     }
+
+    /// Frequent production cadences stay one tap away; the menu retains every exact preset.
+    static let quick: [Self] = [.fractional24, .fps24, .fps25, .fps50, .fps60]
+    var shortLabel: String { self == .fractional24 ? "23.976" : String(Int(fps)) }
 }
 
-struct ShutterSettings: Equatable, Hashable {
+struct ShutterSettings: Equatable, Hashable, Codable {
     var mode: ShutterMode = .conversion
     var direction: ShutterDirection = .angleToTime
     var match: ShutterMatch = .exposure
@@ -413,7 +417,7 @@ struct ShutterSettings: Equatable, Hashable {
 }
 
 /// Both the engine and editable fields use these same domain limits.
-enum ShutterInputField: String, Hashable {
+enum ShutterInputField: String, Hashable, CaseIterable {
     case sensorFps, projectFps, angle, shutterDenominator, targetAngle, preferredAngle, maxAngle, customLightHz
 
     var keyPath: WritableKeyPath<ShutterSettings, Double> {
@@ -460,6 +464,12 @@ struct ShutterCandidate: Equatable, Hashable, Identifiable {
     let cycles: Double
     let exposure: ShutterExposure
     var id: Double { cycles }
+
+    /// At one capture FPS, angle and exposure-time ratios are identical.
+    func differenceStops(relativeTo angle: Double) -> Double? {
+        guard angle.isFinite, angle > 0, exposure.angle.isFinite, exposure.angle > 0 else { return nil }
+        return log2(exposure.angle) - log2(angle)
+    }
 }
 
 /// A cycle-domain mismatch, not an estimate of measured flicker or brightness.
@@ -494,4 +504,52 @@ struct ShutterCalculation: Equatable, Hashable {
     var candidates: [ShutterCandidate] = []
     // Separate from exact candidates so matching mode never replaces its target exposure.
     var compromise: ShutterCompromise? = nil
+    // A separate achievable alternative never replaces an over-limit theoretical answer.
+    var maximumExposure: ShutterExposure? = nil
+    var maximumExposureDifferenceStops: Double? {
+        guard let exposure, let maximumExposure else { return nil }
+        return log2(maximumExposure.exposureSeconds) - log2(exposure.exposureSeconds)
+    }
+}
+
+/// Versioned, valid-only launch memory; unfinished editor drafts remain window-local.
+struct ShutterSettingsMemory: Codable {
+    static let key = "fffilm.shutter-settings-memory"
+    let version: Int
+    let settings: ShutterSettings
+
+    init(settings: ShutterSettings) { version = 1; self.settings = settings }
+
+    var isValid: Bool {
+        version == 1 && ShutterInputField.allCases.allSatisfy {
+            $0.error(for: settings[keyPath: $0.keyPath]) == nil
+        } && settings.displayRefreshMilliHz != nil
+    }
+}
+
+enum ShutterTimeInput {
+    /// Bare numbers retain the existing reciprocal-seconds convention. Explicit units
+    /// and fractions let operators paste camera readouts without first doing arithmetic.
+    static func denominator(_ text: String, locale: Locale = .current) -> Double? {
+        var input = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            .replacingOccurrences(of: locale.decimalSeparator ?? ".", with: ".")
+        var secondsMultiplier: Double?
+        if input.hasSuffix("ms") { secondsMultiplier = 0.001; input.removeLast(2) }
+        else if input.hasSuffix("s") { secondsMultiplier = 1; input.removeLast() }
+        input = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        func positive(_ value: String) -> Double? {
+            let value = value.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !value.hasSuffix("."), let number = Double(value), number.isFinite, number > 0 else { return nil }
+            return number
+        }
+        let parts = input.components(separatedBy: "/")
+        let result: Double
+        if parts.count == 2 {
+            guard let numerator = positive(parts[0]), let denominator = positive(parts[1]) else { return nil }
+            result = denominator / numerator / (secondsMultiplier ?? 1)
+        } else if parts.count == 1, let number = positive(input) {
+            result = secondsMultiplier.map { 1 / (number * $0) } ?? number
+        } else { return nil }
+        return result.isFinite && result > 0 ? result : nil
+    }
 }

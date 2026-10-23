@@ -373,6 +373,8 @@ private struct HeaderView: View {
     }
 
     private func copyCurrent() {
+        // Header copying is the same committed calculation as the result-panel action.
+        if view == .shutter { store.rememberShutterResult() }
         let summary = view == .rate
             ? store.readableRecordingSummary(storageUnit: unit)
             : store.readableShutterSummary()
@@ -1056,11 +1058,23 @@ private struct ShutterView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @FocusState private var focusedInput: ShutterInputField?
     // Draft text belongs to the editor; only parsed numeric values enter the pure calculation model.
-    @State private var drafts: [ShutterInputField: String] = [:]
-    @State private var validatedFields: Set<ShutterInputField> = []
+    @State private var rigDrafts: [ShutterRigID: [ShutterInputField: String]] = [:]
+    @State private var rigValidatedFields: [ShutterRigID: Set<ShutterInputField>] = [:]
+    @State private var workspaceSheet: ShutterSheet?
+    @State private var editingRig: ShutterRigID?
+    private var drafts: [ShutterInputField: String] {
+        get { rigDrafts[store.shutterWorkspace.selectedRig] ?? [:] }
+        nonmutating set { rigDrafts[store.shutterWorkspace.selectedRig] = newValue }
+    }
+    private var validatedFields: Set<ShutterInputField> {
+        get { rigValidatedFields[store.shutterWorkspace.selectedRig] ?? [] }
+        nonmutating set { rigValidatedFields[store.shutterWorkspace.selectedRig] = newValue }
+    }
     @State private var resultHeight: CGFloat = 0
     @State private var editingResultHeight: CGFloat = 0
     @State private var importFeedback: String?
+    @State private var copyRevision = 0
+    @State private var showsCopyConfirmation = false
     private var result: ShutterCalculation { store.shutterCalculation }
 
     private var usesCompactLayout: Bool {
@@ -1072,7 +1086,42 @@ private struct ShutterView: View {
     }
 
     var body: some View {
-        Group {
+        VStack(spacing: Layout.sectionSpacing) {
+            HStack(spacing: 8) {
+                Picker("shutter.rig.title", selection: Binding(get: { store.shutterWorkspace.selectedRig }, set: { next in
+                    focusedInput = nil
+                    withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.18)) { store.selectShutterRig(next) }
+                })) {
+                    ForEach(ShutterRigID.allCases) { rig in Text(verbatim: rig.rawValue).tag(rig) }
+                }
+                .pickerStyle(.segmented).labelsHidden()
+                .frame(minHeight: Layout.controlHeight)
+                .accessibilityIdentifier("shutter-rig")
+                Button("shutter.library.title", systemImage: "tray.full") {
+                    focusedInput = nil
+                    store.rememberShutterResult()
+                    workspaceSheet = .library
+                }
+                .buttonStyle(.bordered)
+                .accessibilityIdentifier("shutter-library")
+                Button { focusedInput = nil; workspaceSheet = .rig } label: {
+                    Image(systemName: "slider.horizontal.3").frame(minWidth: Layout.controlHeight, minHeight: Layout.controlHeight)
+                }
+                .buttonStyle(WorkbenchPressStyle())
+                .accessibilityLabel(Text("shutter.rig.configure"))
+                .accessibilityIdentifier("shutter-rig-configure")
+            }
+            if !store.shutterWorkspace.active.cameraLabel.isEmpty {
+                Text(store.shutterWorkspace.active.cameraLabel).font(.caption).foregroundStyle(Palette.muted)
+                    .lineLimit(2)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            Picker("shutter.field.mode", selection: switching(\.mode)) {
+                ForEach(ShutterMode.allCases) { mode in Text(mode.label).tag(mode) }
+            }
+            .pickerStyle(.segmented)
+            .frame(minHeight: Layout.controlHeight)
+            .accessibilityIdentifier("shutter-mode")
             #if os(iOS)
             // A single layout keeps focused fields and draft text alive through
             // resizing. iPad and compact iPhone lead with the result; regular
@@ -1101,30 +1150,44 @@ private struct ShutterView: View {
             #endif
         }
         .onChange(of: focusedInput) { old, new in
-            if let old { validatedFields.insert(old) }
+            if let old, let editingRig {
+                // Blur belongs to the rig that owned focus, even if selection has already moved.
+                rigValidatedFields[editingRig, default: []].insert(old)
+                if editingRig == store.shutterWorkspace.selectedRig { store.rememberShutterResult() }
+            }
             if old == nil, new != nil { editingResultHeight = resultHeight }
+            editingRig = new == nil ? nil : store.shutterWorkspace.selectedRig
         }
         .onChange(of: store.shutterInputRevision) { _, _ in
             drafts.removeAll()
             validatedFields.removeAll()
             importFeedback = nil
             focusedInput = nil
+            showsCopyConfirmation = false
         }
         .onChange(of: store.shutterSettings.mode) { _, _ in
             focusedInput = nil
             importFeedback = nil
         }
+        .onChange(of: store.shutterWorkspace.selectedRig) { _, _ in
+            focusedInput = nil; importFeedback = nil; showsCopyConfirmation = false
+        }
+        .sheet(item: $workspaceSheet) { sheet in
+            switch sheet {
+            case .library: ShutterLibraryView(store: store)
+            case .rig: ShutterRigView(store: store)
+            case .save(let record): ShutterSaveView(store: store, snapshot: record)
+            }
+        }
+        .task(id: copyRevision) {
+            guard showsCopyConfirmation else { return }
+            do { try await Task.sleep(for: .seconds(1.5)) } catch { return }
+            showsCopyConfirmation = false
+        }
     }
 
     private var controls: some View {
         VStack(alignment: .leading, spacing: 8) {
-            FieldCard("shutter.field.mode") {
-                Picker("shutter.field.mode", selection: value(\.mode)) {
-                    ForEach(ShutterMode.allCases) { mode in Text(mode.label).tag(mode) }
-                }
-                .fieldPicker(compact: usesCompactLayout)
-                .accessibilityIdentifier("shutter-mode")
-            }
             if usesCompactLayout {
                 VStack(spacing: 8) { shutterFields }
             } else {
@@ -1146,6 +1209,7 @@ private struct ShutterView: View {
     private var importFrameRatesButton: some View {
         Button {
             focusedInput = nil
+            showsCopyConfirmation = false
             let imported = store.importShutterFrameRates()
             importFeedback = AppText.imported(sensorFps: imported.sensor, projectFps: imported.project)
             for field in [ShutterInputField.sensorFps, .projectFps] {
@@ -1168,18 +1232,22 @@ private struct ShutterView: View {
     private var shutterFields: some View {
         numberField("shutter.field.cameraFPS", field: .sensorFps, suffix: "FPS", presets: true)
         if store.shutterSettings.mode == .conversion {
-            FieldCard("shutter.field.input") {
-                Picker("shutter.field.input", selection: value(\.direction)) {
+            VStack(alignment: .leading, spacing: 8) {
+                Picker("shutter.field.input", selection: switching(\.direction)) {
                     ForEach(ShutterDirection.allCases) { direction in Text(direction.label).tag(direction) }
                 }
-                .fieldPicker(compact: usesCompactLayout)
+                .pickerStyle(.segmented)
+                .frame(minHeight: Layout.controlHeight)
                 .accessibilityIdentifier("shutter-direction")
+                if store.shutterSettings.direction == .angleToTime {
+                    numberField("shutter.field.angle", field: .angle, suffix: "°")
+                        .transition(.opacity)
+                } else {
+                    numberField("shutter.field.time", field: .shutterDenominator, suffix: "")
+                        .transition(.opacity)
+                }
             }
-            if store.shutterSettings.direction == .angleToTime {
-                numberField("shutter.field.angle", field: .angle, suffix: "°")
-            } else {
-                numberField("shutter.field.time", field: .shutterDenominator, suffix: "s⁻¹")
-            }
+            .transition(.opacity)
         }
         if store.shutterSettings.mode == .matching {
             numberField("shutter.field.projectFPS", field: .projectFps, suffix: "FPS", presets: true)
@@ -1214,7 +1282,7 @@ private struct ShutterView: View {
             if store.shutterSettings.light == .displays {
                 VStack(alignment: .leading, spacing: 4) {
                     FieldCard("shutter.field.displayRates") {
-                        TextField("shutter.displayPlaceholder", text: value(\.displayRefreshRates))
+                        TextField("shutter.displayPlaceholder", text: displayRefreshDraft)
                             .workbenchNumberStyle()
                             .frame(minHeight: Layout.controlHeight)
                             .focused($focusedInput, equals: .customLightHz)
@@ -1251,9 +1319,10 @@ private struct ShutterView: View {
                         .monospacedDigit()
                         .accessibilityIdentifier("shutter-time-primary")
                 } else {
-                    Text(store.shutterSettings.mode == .flicker
-                         ? (calculation.compromise == nil ? "shutter.primary.recommended" : "shutter.compromise.title")
-                         : "shutter.primary.angle")
+                    Text(calculation.status == .exceedsMaximum ? "shutter.primary.theoretical" :
+                            store.shutterSettings.mode == .flicker
+                            ? (calculation.compromise == nil ? "shutter.primary.recommended" : "shutter.compromise.title")
+                            : "shutter.primary.angle")
                         .font(.system(.caption, design: .monospaced))
                         .foregroundStyle(Palette.muted)
                     Text("\(DisplayFormat.shutterNumber(exposure.angle))°")
@@ -1272,14 +1341,79 @@ private struct ShutterView: View {
                         .font(.system(.body, design: .monospaced))
                         .accessibilityIdentifier("shutter-angle-output")
                 }
-                Button {
-                    PlatformClipboard.copy(store.readableShutterSummary())
-                } label: {
-                    Label("shutter.copyResult", systemImage: "doc.on.doc")
-                        .frame(minHeight: Layout.controlHeight)
+                if calculation.status == .exceedsMaximum {
+                    // Critical feasibility stays beside the answer, outside collapsed details.
+                    statusLabel(AppText.shutterOverLimit(store.shutterSettings.maxAngle), symbol: "exclamationmark.triangle")
+                        .accessibilityIdentifier("shutter-over-limit")
+                    if let alternative = calculation.maximumExposure,
+                       let stops = calculation.maximumExposureDifferenceStops {
+                        Text(AppText.shutterMaximumAlternative(alternative, stops: stops))
+                            .font(.system(.caption, design: .monospaced))
+                            .fixedSize(horizontal: false, vertical: true)
+                            .accessibilityIdentifier("shutter-maximum-alternative")
+                    }
                 }
-                .buttonStyle(.bordered)
-                .accessibilityIdentifier("shutter-copy-action")
+                HStack(spacing: 8) {
+                    Button {
+                        store.rememberShutterResult()
+                        PlatformClipboard.copy(store.readableShutterSummary())
+                        showsCopyConfirmation = true
+                        copyRevision += 1
+                    } label: {
+                        // Reserve the full action label so completion feedback does not shift the button.
+                        ZStack {
+                            Label("shutter.copyResult", systemImage: "doc.on.doc").hidden()
+                            Label(showsCopyConfirmation ? "shutter.copied" : "shutter.copyResult",
+                                  systemImage: showsCopyConfirmation ? "checkmark" : "doc.on.doc")
+                        }
+                        .frame(minHeight: Layout.controlHeight)
+                    }
+                    .buttonStyle(.bordered)
+                    .accessibilityIdentifier("shutter-copy-action")
+                    Button("shutter.library.save", systemImage: "bookmark") {
+                        focusedInput = nil
+                        if let record = store.currentShutterRecord() { workspaceSheet = .save(record) }
+                    }
+                    .buttonStyle(.bordered)
+                    .accessibilityIdentifier("shutter-save-setup")
+                }
+            }
+
+            if store.shutterSettings.needsLight {
+                Text(AppText.shutterLightModel(store.shutterSettings))
+                    .font(.caption).foregroundStyle(Palette.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+                if !calculation.candidates.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        ForEach(calculation.candidates) { candidate in
+                            HStack {
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text("\(DisplayFormat.shutterNumber(candidate.exposure.angle))° · \(DisplayFormat.shutterTime(candidate.exposure))")
+                                    let target = store.shutterSettings.mode == .flicker ? store.shutterSettings.preferredAngle : calculation.exposure?.angle
+                                    if let target, let stops = candidate.differenceStops(relativeTo: target) {
+                                        Text(AppText.shutterCandidateDifference(stops))
+                                            .font(.caption).foregroundStyle(Palette.muted)
+                                    }
+                                }
+                                Spacer(minLength: 4)
+                                if store.shutterSettings.mode == .flicker {
+                                    Button("shutter.candidate.use") {
+                                        focusedInput = nil
+                                        drafts.removeValue(forKey: .preferredAngle)
+                                        store.chooseShutterCandidate(candidate)
+                                    }
+                                    .buttonStyle(.bordered)
+                                    .frame(minHeight: Layout.controlHeight)
+                                    .accessibilityLabel(Text("shutter.candidate.use") + Text(verbatim: " \(DisplayFormat.shutterNumber(candidate.exposure.angle))°"))
+                                    .accessibilityIdentifier("shutter-candidate-\(candidate.cycles)")
+                                }
+                            }
+                        }
+                        Text("shutter.candidate.scope").font(.caption).foregroundStyle(Palette.muted)
+                    }
+                    .accessibilityElement(children: .contain)
+                    .accessibilityIdentifier("shutter-candidates")
+                }
             }
 
             switch calculation.status {
@@ -1332,11 +1466,7 @@ private struct ShutterView: View {
             if let exposure = calculation.exposure {
                 Text(DisplayFormat.exposureDuration(exposure))
                     .font(.system(.caption, design: .monospaced))
-                if calculation.status == .exceedsMaximum {
-                    statusLabel(AppText.resolve("shutter.overLimit",
-                                                defaultValue: "Theoretical angle exceeds the \(DisplayFormat.shutterNumber(store.shutterSettings.maxAngle))° limit. Cannot realize this exposure within the limit.",
-                                                comment: "Shutter result exceeds the user-set angle limit."), symbol: "exclamationmark.triangle")
-                } else {
+                if calculation.status != .exceedsMaximum {
                     Detail("shutter.withinLimit")
                 }
                 if let speed = calculation.playbackSpeed, let duration = calculation.durationMultiplier {
@@ -1436,22 +1566,32 @@ private struct ShutterView: View {
                         .workbenchNumberStyle()
                         .frame(minHeight: Layout.controlHeight)
                         .multilineTextAlignment(usesCompactLayout ? .trailing : .leading)
-                        .numericKeyboard()
+                        .numericKeyboard(allowsTimeExpression: field == .shutterDenominator)
                         .focused($focusedInput, equals: field)
                         .submitLabel(.done)
                         .onSubmit { validatedFields.insert(field); focusedInput = nil }
                         .accessibilityLabel(Text(title))
                         .accessibilityHint(Text(suffix))
                         .accessibilityIdentifier("shutter-\(field.rawValue)")
-                    Text(verbatim: suffix).foregroundStyle(Palette.muted)
-                    if field == .angle {
-                        Button("180°") { setNumber(180, field: .angle) }
-                            .buttonStyle(.bordered)
-                            .font(.caption)
-                            .frame(minWidth: Layout.controlHeight, minHeight: Layout.controlHeight)
-                            .accessibilityLabel(Text("shutter.use180"))
-                            .accessibilityIdentifier("shutter-180")
+                    if field == .shutterDenominator {
+                        // Expressions contain separators/units; clear explicitly without losing
+                        // focus or asking the operator to select individual text tokens.
+                        Button {
+                            showsCopyConfirmation = false
+                            drafts[field] = ""
+                            validatedFields.remove(field)
+                            store.updateShutterSettings(Double.nan, at: field.keyPath)
+                            focusedInput = field
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .frame(minWidth: Layout.controlHeight, minHeight: Layout.controlHeight)
+                        }
+                        .buttonStyle(WorkbenchPressStyle())
+                        .disabled(draft(field).wrappedValue.isEmpty)
+                        .accessibilityLabel(Text("shutter.clearTime"))
+                        .accessibilityIdentifier("shutter-clear-time")
                     }
+                    if !suffix.isEmpty { Text(verbatim: suffix).foregroundStyle(Palette.muted) }
                     if presets {
                         Menu {
                             // 100/3 is a capture cadence; keep the project-rate preset choices unchanged.
@@ -1471,6 +1611,19 @@ private struct ShutterView: View {
                     if field == .sensorFps { importFrameRatesButton }
                 }
             }
+            if presets {
+                quickPresets(field: field, values: ShutterFramePreset.quick.map { ($0.shortLabel, $0.fps, $0.label) })
+            } else if [.angle, .targetAngle, .preferredAngle].contains(field) {
+                quickPresets(field: field, values: [90.0, 172.8, 180, 270].map {
+                    (DisplayFormat.shutterNumber($0) + "°", $0, DisplayFormat.shutterNumber($0) + "°")
+                })
+            } else if field == .shutterDenominator {
+                quickPresets(field: field, values: [48.0, 50, 60, 100].map {
+                    ("1/" + DisplayFormat.shutterNumber($0), $0, "1/" + DisplayFormat.shutterNumber($0) + " s")
+                })
+                Text("shutter.timeInputHint")
+                    .font(.caption).foregroundStyle(Palette.muted)
+            }
             if field == .sensorFps, let importFeedback {
                 Label(importFeedback, systemImage: "checkmark.circle")
                     .font(.caption)
@@ -1487,32 +1640,84 @@ private struct ShutterView: View {
         .id(field)
     }
 
+    private var displayRefreshDraft: Binding<String> {
+        Binding(get: { store.shutterSettings.displayRefreshRates }, set: { text in
+            // Update the live result and valid launch memory while typing; the shared
+            // focus/submit handler records history only when editing is completed.
+            showsCopyConfirmation = false
+            store.updateShutterSettings(text, at: \.displayRefreshRates)
+            validatedFields.remove(.customLightHz)
+        })
+    }
+
     private func draft(_ field: ShutterInputField) -> Binding<String> {
         Binding(get: {
-            drafts[field] ?? (store.shutterSettings[keyPath: field.keyPath].isFinite
-                             ? DisplayFormat.shutterNumber(store.shutterSettings[keyPath: field.keyPath]) : "")
+            if let draft = drafts[field] { return draft }
+            let number = store.shutterSettings[keyPath: field.keyPath]
+            guard number.isFinite else { return "" }
+            let formatted = DisplayFormat.shutterNumber(number)
+            return field == .shutterDenominator ? "1/\(formatted) s" : formatted
         }, set: { text in
+            // Clear feedback at the edit event; NaN draft settings are not an Equatable trigger.
+            showsCopyConfirmation = false
             drafts[field] = text
             // A trailing decimal separator is an unfinished draft, never a silently committed integer.
             let separator = Locale.current.decimalSeparator ?? "."
             let normalized = text.trimmingCharacters(in: .whitespacesAndNewlines)
                 .replacingOccurrences(of: separator, with: ".")
-            let parsed = normalized.hasSuffix(".") ? nil : Double(normalized)
+            let parsed = field == .shutterDenominator ? ShutterTimeInput.denominator(text)
+                : (normalized.hasSuffix(".") ? nil : Double(normalized))
             store.updateShutterSettings(parsed ?? .nan, at: field.keyPath)
             validatedFields.remove(field)
         })
     }
 
     private func setNumber(_ number: Double, field: ShutterInputField) {
+        showsCopyConfirmation = false
         focusedInput = nil
         drafts.removeValue(forKey: field)
         validatedFields.remove(field)
         store.updateShutterSettings(number, at: field.keyPath)
+        store.rememberShutterResult()
+    }
+
+    /// Presets reuse the existing monochrome button style and exact model values.
+    private func quickPresets(field: ShutterInputField, values: [(String, Double, String)]) -> some View {
+        ScrollView(.horizontal) {
+            HStack(spacing: 6) {
+                ForEach(values, id: \.1) { title, number, accessibleLabel in
+                    let selected = store.shutterSettings[keyPath: field.keyPath] == number
+                    Button(title) { setNumber(number, field: field) }
+                        .buttonStyle(PresetButtonStyle(selected: selected))
+                        .accessibilityLabel(accessibleLabel)
+                        .accessibilityAddTraits(selected ? .isSelected : [])
+                        .accessibilityIdentifier("shutter-quick-\(field.rawValue)-\(number)")
+                }
+            }
+        }
+        .scrollIndicators(.hidden)
+    }
+
+    /// Animate only explicit task/direction changes. Fields retain their identity and
+    /// draft storage, and native SwiftUI transactions can be interrupted by another tap.
+    private func switching<Value>(_ keyPath: WritableKeyPath<ShutterSettings, Value>) -> Binding<Value> {
+        Binding(get: { store.shutterSettings[keyPath: keyPath] }, set: { next in
+            focusedInput = nil
+            showsCopyConfirmation = false
+            withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.18)) {
+                store.updateShutterSettings(next, at: keyPath)
+            }
+            store.rememberShutterResult()
+        })
     }
 
     private func value<Value>(_ keyPath: WritableKeyPath<ShutterSettings, Value>) -> Binding<Value> {
         Binding(get: { store.shutterSettings[keyPath: keyPath] },
-                set: { store.updateShutterSettings($0, at: keyPath) })
+                set: {
+                    showsCopyConfirmation = false
+                    store.updateShutterSettings($0, at: keyPath)
+                    store.rememberShutterResult()
+                })
     }
 }
 

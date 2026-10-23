@@ -20,10 +20,12 @@ Data rate, storage runtime and shutter planning for the camera you actually have
 **Shutter** — three modes sharing camera FPS and a user-set maximum angle.
 
 - **Convert** — angle ⇄ exposure time, with the primary readout following the conversion direction.
-- **Flicker reference** — flicker-free angles against mains (50/60 Hz), a custom optical rate, or 2–16 display refresh rates.
-- **Over / undercrank** — match an exposure by keeping the angle or the time, with playback speed and an optional light check.
+- **Flicker reference** — optical-cycle model candidates for mains (50/60 Hz), a custom optical rate, or 2–16 display refresh rates. Adopt a candidate directly and inspect its relative exposure difference; test footage is still required.
+- **Frame rate (over / undercrank)** — match by keeping angle or exposure time, with playback speed and an optional light check. Over-limit results include both the theoretical target and achievable exposure at the limit.
 
 Preset frame rates carry their exact rational values; typed decimals stay literal.
+
+DIT shortcuts expose common FPS, angles and exposure times; time input accepts `1/50`, `20 ms` and `0.02 s`. Independent A/B/C camera slots retain settings and camera/mode notes, including window-local drafts while switching. Saved setups and the latest 12 distinct calculations restore to their source camera slot. Field-check conditions and notes are user-recorded observations, not automatic flicker detection.
 
 **Camera catalog** — 39 profiles across ARRI, Sony, RED, DJI, Kinefinity and standalone Apple ProRes, with manufacturer-grouped search, reorderable favorites and per-camera recording-mode details.
 

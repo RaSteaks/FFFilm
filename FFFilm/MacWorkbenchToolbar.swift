@@ -46,6 +46,8 @@ struct MacWorkbenchToolbar: ToolbarContent {
             // Both calculator tabs expose Copy after the in-content header is removed.
             if store.activeView != .film {
                 Button {
+                    // Keyboard and toolbar copies participate in the same bounded shutter history.
+                    if store.activeView == .shutter { store.rememberShutterResult() }
                     let summary = store.activeView == .rate
                         ? store.readableRecordingSummary(storageUnit: unit)
                         : store.readableShutterSummary()

@@ -107,7 +107,20 @@
         }
       }
     },
+    "%@ Hz mains · assumes %@ Hz light pulses" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ Hz mains · assumes %2$@ Hz light pulses"
+          }
+        }
+      }
+    },
     "%@ Mb/s" : {
+
+    },
+    "%@ stops versus target" : {
 
     },
     "%@, %@" : {
@@ -215,9 +228,6 @@
 
     },
     "↷ 90°" : {
-
-    },
-    "180°" : {
 
     },
     "A valid input color profile is required." : {
@@ -375,6 +385,16 @@
         }
       }
     },
+    "At the limit: %@° · %@\nExposure change: %@ stops versus target, with other exposure settings unchanged." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "At the limit: %1$@° · %2$@\nExposure change: %3$@ stops versus target, with other exposure settings unchanged."
+          }
+        }
+      }
+    },
     "Automatic (%@)" : {
       "comment" : "macOS scan import and physical film geometry",
       "localizations" : {
@@ -388,6 +408,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "自动（%@）"
+          }
+        }
+      }
+    },
+    "Baseline: %@ fps · %@°\nGoal: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Baseline: %1$@ fps · %2$@°\nGoal: %3$@"
           }
         }
       }
@@ -411,6 +441,16 @@
     },
     "Calculator reset." : {
 
+    },
+    "Camera %@: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Camera %1$@: %2$@"
+          }
+        }
+      }
     },
     "Camera: %@\nFormat: %@ · %@ · %@\nFrame rate: %@ fps\nOverdrive: %@\nRate: %@ %@/h · %@ Mb/s" : {
       "localizations" : {
@@ -877,6 +917,16 @@
         }
       }
     },
+    "Capture FPS: %@\nUser-set maximum: %@°" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Capture FPS: %1$@\nUser-set maximum: %2$@°"
+          }
+        }
+      }
+    },
     "Choose folder & export…" : {
       "comment" : "macOS film workbench",
       "localizations" : {
@@ -1120,6 +1170,40 @@
         }
       }
     },
+    "copy.shutterBaseline" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Baseline: %1$@ fps · %2$@°\nGoal: %3$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "基准：%1$@ fps · %2$@°\n目标：%3$@"
+          }
+        }
+      }
+    },
+    "copy.shutterContext" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Capture FPS: %1$@\nUser-set maximum: %2$@°"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "拍摄帧率：%1$@\n用户设定上限：%2$@°"
+          }
+        }
+      }
+    },
     "copy.shutterHint" : {
       "localizations" : {
         "en" : {
@@ -1132,6 +1216,40 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "复制快门结果摘要。"
+          }
+        }
+      }
+    },
+    "copy.shutterLight" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Light model: %1$@ · %2$@ Hz"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "光源模型：%1$@ · %2$@ Hz"
+          }
+        }
+      }
+    },
+    "copy.shutterPreference" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preferred angle: %@°"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "偏好角度：%@°"
           }
         }
       }
@@ -2363,6 +2481,19 @@
         }
       }
     },
+    "Light model: %@ · %@ Hz" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Light model: %1$@ · %2$@ Hz"
+          }
+        }
+      }
+    },
+    "Light-pulse model: %@ Hz" : {
+
+    },
     "Locate the original scan file" : {
       "comment" : "macOS film workbench",
       "localizations" : {
@@ -3477,23 +3608,6 @@
         }
       }
     },
-    "negative.freeze" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Freeze"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "定格"
-          }
-        }
-      }
-    },
     "negative.fit" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3511,19 +3625,19 @@
         }
       }
     },
-    "negative.zoomIn" : {
+    "negative.freeze" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zoom in"
+            "value" : "Freeze"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "放大"
+            "value" : "定格"
           }
         }
       }
@@ -4072,6 +4186,23 @@
         }
       }
     },
+    "negative.zoomIn" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zoom in"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "放大"
+          }
+        }
+      }
+    },
     "No complete light-cycle exposure fits the current angle limit. This does not prove that flicker will occur." : {
 
     },
@@ -4194,6 +4325,9 @@
           }
         }
       }
+    },
+    "Preferred angle: %@°" : {
+
     },
     "Preview rendering failed." : {
       "comment" : "macOS film workbench",
@@ -4478,6 +4612,9 @@
       }
     },
     "Reset undone." : {
+
+    },
+    "Restore to camera %@" : {
 
     },
     "result.activeArea" : {
@@ -4817,6 +4954,9 @@
         }
       }
     },
+    "Screen-cycle model: %@ Hz · PWM and scan synchronization are not modeled." : {
+
+    },
     "Select" : {
       "comment" : "macOS film workbench",
       "localizations" : {
@@ -5112,6 +5252,57 @@
     "Shutter result is unavailable because the input is invalid." : {
 
     },
+    "shutter.candidate.difference" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ stops versus target"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "相对目标 %1$@ 档"
+          }
+        }
+      }
+    },
+    "shutter.candidate.scope" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Model candidates need test footage. Exposure differences assume other settings are unchanged."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "模型候选需实拍确认。曝光差按其他设置不变计算。"
+          }
+        }
+      }
+    },
+    "shutter.candidate.use" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "采用"
+          }
+        }
+      }
+    },
     "shutter.candidates" : {
       "localizations" : {
         "en" : {
@@ -5124,6 +5315,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "最近光源周期候选"
+          }
+        }
+      }
+    },
+    "shutter.clearTime" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear exposure time"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清除曝光时间"
           }
         }
       }
@@ -5241,18 +5449,36 @@
         }
       }
     },
-    "shutter.copyResult" : {
+    "shutter.copied" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Copy result"
+            "value" : "Copied"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "复制结果"
+            "value" : "已复制"
+          }
+        }
+      }
+    },
+    "shutter.copyResult" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copy settings"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "复制完整设置"
           }
         }
       }
@@ -5274,33 +5500,35 @@
       }
     },
     "shutter.direction.angleToTime" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Angle → time"
+            "value" : "Find time"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "角度 → 时间"
+            "value" : "求时间"
           }
         }
       }
     },
     "shutter.direction.timeToAngle" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Time → angle"
+            "value" : "Find angle"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "时间 → 角度"
+            "value" : "求角度"
           }
         }
       }
@@ -5664,13 +5892,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Time: 1 /"
+            "value" : "Exposure time"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "时间：1 /"
+            "value" : "曝光时间"
           }
         }
       }
@@ -5772,6 +6000,312 @@
         }
       }
     },
+    "shutter.library.cancel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancel"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "取消"
+          }
+        }
+      }
+    },
+    "shutter.library.checked" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Field check recorded by user"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用户已记录现场检查"
+          }
+        }
+      }
+    },
+    "shutter.library.checkScope" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "For a field check, describe the conditions. This records your observation for these settings, not automatic flicker detection or a guarantee for other conditions."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "记录现场检查时，请填写条件。这是你对这组设置的观察记录，不是自动频闪检测，也不代表其他条件同样适用。"
+          }
+        }
+      }
+    },
+    "shutter.library.conditions" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Light / screen, brightness, camera mode and notes"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "灯具或屏幕、亮度、相机模式及备注"
+          }
+        }
+      }
+    },
+    "shutter.library.delete" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove saved setup"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "移出常用方案"
+          }
+        }
+      }
+    },
+    "shutter.library.deleteQuestion" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove this saved setup? Recent records are kept."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "从常用移除此方案？最近记录会保留。"
+          }
+        }
+      }
+    },
+    "shutter.library.details" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Setup details"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "方案详情"
+          }
+        }
+      }
+    },
+    "shutter.library.done" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Done"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "完成"
+          }
+        }
+      }
+    },
+    "shutter.library.empty" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No setups yet"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "暂无方案"
+          }
+        }
+      }
+    },
+    "shutter.library.emptyHint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Complete a calculation or save the current setup."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "完成一次计算，或保存当前设置。"
+          }
+        }
+      }
+    },
+    "shutter.library.fieldCheck" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I checked this setup with test footage"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "我已通过实拍检查此设置"
+          }
+        }
+      }
+    },
+    "shutter.library.name" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Name (optional)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "名称（留空使用参数摘要）"
+          }
+        }
+      }
+    },
+    "shutter.library.recent" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recent calculations"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近计算"
+          }
+        }
+      }
+    },
+    "shutter.library.recorded" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recorded"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "记录时间"
+          }
+        }
+      }
+    },
+    "shutter.library.restore" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restore to camera %1$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "恢复至 %1$@ 机"
+          }
+        }
+      }
+    },
+    "shutter.library.save" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Save setup"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存方案"
+          }
+        }
+      }
+    },
+    "shutter.library.saved" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saved setups"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "常用方案"
+          }
+        }
+      }
+    },
+    "shutter.library.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Setups"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "方案"
+          }
+        }
+      }
+    },
     "shutter.light.custom" : {
       "localizations" : {
         "en" : {
@@ -5836,6 +6370,57 @@
         }
       }
     },
+    "shutter.lightModel.custom" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Light-pulse model: %1$@ Hz"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "光脉冲模型：%1$@ Hz"
+          }
+        }
+      }
+    },
+    "shutter.lightModel.displays" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Screen-cycle model: %1$@ Hz · PWM and scan synchronization are not modeled."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "屏幕周期模型：%1$@ Hz；未建模 PWM 与扫描同步。"
+          }
+        }
+      }
+    },
+    "shutter.lightModel.mains" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ Hz mains · assumes %2$@ Hz light pulses"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ Hz 市电 · 假设 %2$@ Hz 光脉冲"
+          }
+        }
+      }
+    },
     "shutter.match.angle" : {
       "localizations" : {
         "en" : {
@@ -5884,18 +6469,35 @@
         }
       }
     },
-    "shutter.mode.conversion" : {
+    "shutter.maximumAlternative" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Angle ↔ time"
+            "value" : "At the limit: %1$@° · %2$@\nExposure change: %3$@ stops versus target, with other exposure settings unchanged."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "快门换算"
+            "value" : "上限下可实现：%1$@° · %2$@\n其他曝光条件不变时，相对目标曝光量变化 %3$@ 档。"
+          }
+        }
+      }
+    },
+    "shutter.mode.conversion" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Convert"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "换算"
           }
         }
       }
@@ -5917,17 +6519,18 @@
       }
     },
     "shutter.mode.matching" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Over / undercrank"
+            "value" : "Frame rate"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "升格 / 降格"
+            "value" : "变帧率"
           }
         }
       }
@@ -6062,6 +6665,23 @@
         }
       }
     },
+    "shutter.primary.theoretical" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "THEORETICAL ANGLE"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "理论角度"
+          }
+        }
+      }
+    },
     "shutter.primary.time" : {
       "localizations" : {
         "en" : {
@@ -6094,7 +6714,144 @@
         }
       }
     },
+    "shutter.rig.camera" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Camera and recording mode"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "相机与录制模式"
+          }
+        }
+      }
+    },
+    "shutter.rig.configure" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Camera setup"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "机位设置"
+          }
+        }
+      }
+    },
+    "shutter.rig.context" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Camera %1$@: %2$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ 机：%2$@"
+          }
+        }
+      }
+    },
+    "shutter.rig.hint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A label for this camera setup. FPS and the user-set angle limit stay independent of the recording calculator."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此处为机位备注。帧率与用户设定角度上限仍独立于录制计算器。"
+          }
+        }
+      }
+    },
+    "shutter.rig.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Camera"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "机位"
+          }
+        }
+      }
+    },
+    "shutter.rig.unspecified" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Camera / mode not specified"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未填写相机或模式"
+          }
+        }
+      }
+    },
+    "shutter.rig.useRecording" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use recording calculator description"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用录制页相机信息"
+          }
+        }
+      }
+    },
+    "shutter.timeInputHint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1/50 s · 20 ms · 0.02 s; a bare number means 1/number s."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "支持 1/50 s、20 ms、0.02 s；纯数字表示分母。"
+          }
+        }
+      }
+    },
     "shutter.use180" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {

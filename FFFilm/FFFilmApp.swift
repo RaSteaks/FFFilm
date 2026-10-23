@@ -3,6 +3,14 @@ import SwiftUI
 @main
 struct FFFilmApp: App {
     init() {
+        #if DEBUG
+        // UI regression launches opt into a clean shutter memory; normal launches restore it.
+        if ProcessInfo.processInfo.environment["FFFILM_UI_RESET_SHUTTER"] == "1" {
+            UserDefaults.standard.removeObject(forKey: ShutterSettingsMemory.key)
+            UserDefaults.standard.removeObject(forKey: ShutterWorkspace.rigsKey)
+            UserDefaults.standard.removeObject(forKey: ShutterWorkspace.libraryKey)
+        }
+        #endif
         #if DEBUG && targetEnvironment(simulator)
         // Isolate language UI regressions without changing production launch behavior.
         if ProcessInfo.processInfo.environment["FFFILM_UI_RESET_LANGUAGE"] == "1" {

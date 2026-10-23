@@ -95,9 +95,28 @@ enum AppText {
         guard let exposure = calculation.exposure else {
             return resolve("copy.invalidShutterSummary", defaultValue: "Shutter result is unavailable because the input is invalid.", comment: "Clipboard text when shutter input is invalid.")
         }
-        let summary = resolve("copy.shutterSummary",
+        var summary = resolve("copy.shutterSummary",
                        defaultValue: "Mode: \(mode)\nAngle: \(DisplayFormat.shutterNumber(exposure.angle))°\nShutter time: \(DisplayFormat.shutterTime(exposure))\nExposure: \(DisplayFormat.exposureDuration(exposure))\nResult is a theoretical estimate; verify camera and lighting behavior with test footage.",
                        comment: "Readable shutter estimate copied to the clipboard.")
+        // Copied settings carry the input context and feasibility qualification, not just a number.
+        summary += "\n" + resolve("copy.shutterContext", defaultValue: "Capture FPS: \(DisplayFormat.shutterFrameRate(settings.sensorFps))\nUser-set maximum: \(DisplayFormat.shutterNumber(settings.maxAngle))°")
+        if settings.mode == .matching {
+            summary += "\n" + resolve("copy.shutterBaseline", defaultValue: "Baseline: \(DisplayFormat.shutterFrameRate(settings.projectFps)) fps · \(DisplayFormat.shutterNumber(settings.targetAngle))°\nGoal: \(resource(settings.match.label))")
+        }
+        if settings.mode == .flicker {
+            // Identical output angles can come from different creative targets; keep that context.
+            summary += "\n" + resolve("copy.shutterPreference", defaultValue: "Preferred angle: \(DisplayFormat.shutterNumber(settings.preferredAngle))°")
+        }
+        if settings.needsLight {
+            let frequency = settings.light == .displays ? settings.displayRefreshRates : DisplayFormat.shutterNumber(settings.lightHz)
+            summary += "\n" + resolve("copy.shutterLight", defaultValue: "Light model: \(resource(settings.light.label)) · \(frequency) Hz")
+        }
+        if calculation.status == .exceedsMaximum {
+            summary += "\n" + shutterOverLimit(settings.maxAngle)
+            if let alternative = calculation.maximumExposure, let stops = calculation.maximumExposureDifferenceStops {
+                summary += "\n" + shutterMaximumAlternative(alternative, stops: stops)
+            }
+        }
         guard let compromise = calculation.compromise else { return summary }
         // Copy the qualification and reference angle as well as the main exposure; in matching
         // mode these are different values and must not be mistaken for the target.
@@ -108,6 +127,39 @@ enum AppText {
             + "\n" + compromise.displays.map { displayCycleMatch($0) }.joined(separator: "\n")
             + "\n" + localized("shutter.compromise.method")
             + (compromise.approximateSearch ? "\n" + localized("shutter.compromise.approximate") : "")
+    }
+
+    static func shutterOverLimit(_ limit: Double) -> String {
+        resolve("shutter.overLimit", defaultValue: "Theoretical angle exceeds the \(DisplayFormat.shutterNumber(limit))° limit. Cannot realize this exposure within the limit.",
+                comment: "Shutter result exceeds the user-set angle limit.")
+    }
+
+    static func shutterRigContext(_ rig: ShutterRig) -> String {
+        let camera = rig.cameraLabel.isEmpty ? localized("shutter.rig.unspecified") : rig.cameraLabel
+        return resolve("shutter.rig.context", defaultValue: "Camera \(rig.id.rawValue): \(camera)")
+    }
+
+    static func shutterRestoreLabel(_ rig: ShutterRigID) -> String {
+        resolve("shutter.library.restore", defaultValue: "Restore to camera \(rig.rawValue)")
+    }
+
+    static func shutterCandidateDifference(_ stops: Double) -> String {
+        resolve("shutter.candidate.difference", defaultValue: "\(DisplayFormat.number(stops, decimals: 2)) stops versus target")
+    }
+
+    static func shutterLightModel(_ settings: ShutterSettings) -> String {
+        switch settings.light {
+        case .mains50, .mains60:
+            resolve("shutter.lightModel.mains", defaultValue: "\(settings.light == .mains50 ? "50" : "60") Hz mains · assumes \(DisplayFormat.shutterNumber(settings.lightHz)) Hz light pulses")
+        case .custom:
+            resolve("shutter.lightModel.custom", defaultValue: "Light-pulse model: \(DisplayFormat.shutterNumber(settings.customLightHz)) Hz")
+        case .displays:
+            resolve("shutter.lightModel.displays", defaultValue: "Screen-cycle model: \(settings.displayRefreshRates) Hz · PWM and scan synchronization are not modeled.")
+        }
+    }
+
+    static func shutterMaximumAlternative(_ exposure: ShutterExposure, stops: Double) -> String {
+        resolve("shutter.maximumAlternative", defaultValue: "At the limit: \(DisplayFormat.shutterNumber(exposure.angle))° · \(DisplayFormat.shutterTime(exposure))\nExposure change: \(DisplayFormat.number(stops, decimals: 2)) stops versus target, with other exposure settings unchanged.")
     }
 
     static func compromiseError(_ error: Double) -> String {

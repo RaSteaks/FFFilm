@@ -438,7 +438,10 @@ struct ShutterTests {
     @MainActor
     @Test("Cached shutter results track edits, invalid inputs, import, reset and undo")
     func cachedShutterResults() async throws {
-        let store = CalculatorStore()
+        let suite = "FFFilm.ShutterCache.\(UUID())"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = CalculatorStore(defaults: defaults)
         store.activeView = .shutter
         store.shutterSettings.mode = .flicker
         store.shutterSettings.light = .displays
@@ -504,8 +507,11 @@ struct ShutterTests {
 
     @MainActor
     @Test("RATE import is one-shot and reset restores all shutter defaults")
-    func importAndReset() {
-        let store = CalculatorStore()
+    func importAndReset() throws {
+        let suite = "FFFilm.ShutterImport.\(UUID())"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = CalculatorStore(defaults: defaults)
         store.settings.sensorFps = 47.952
         store.settings.projectFps = 23.976
         let rateBefore = store.settings

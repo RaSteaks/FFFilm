@@ -83,8 +83,12 @@ struct CalculatorStoreTests {
     }
 
     @Test("A shutter edit removes reset undo before it can replace the new input")
-    func shutterEditInvalidatesResetUndo() {
-        let store = CalculatorStore()
+    func shutterEditInvalidatesResetUndo() throws {
+        // Shutter preferences now persist; keep this regression independent of other tests.
+        let suite = "FFFilm.ShutterUndo.\(UUID())"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = CalculatorStore(defaults: defaults)
         store.setActiveView(.shutter)
         store.updateShutterSettings(172.8, at: \.angle)
         store.resetActiveView()

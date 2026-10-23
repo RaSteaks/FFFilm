@@ -127,7 +127,7 @@ actor FilmRenderer {
         preview = CIImage(cgImage: materialized, options: [.colorSpace: previewSpace])
         // Classify from the bounded, oriented preview; no full-resolution analysis copy.
         let (pixels, width, height) = previewPixels()
-        let frames = Self.frameRects(pixels: pixels, width: width, height: height)
+        let frames = FilmFrameDetection.frames(pixels: pixels, width: width, height: height)
         let layout = FilmScanAnalysis.layout(width: Int(oriented.extent.width), height: Int(oriented.extent.height),
             properties: properties, pixels: pixels, previewWidth: width, previewHeight: height, frames: frames)
         // A custom ICC can have no CGColorSpace name; retain its selected label then.
@@ -238,10 +238,10 @@ actor FilmRenderer {
         return result
     }
 
-    /// Detect sustained gaps across the center band; exclude sprockets near the strip edges.
+    /// Import and explicit detection share RGB/texture analysis of the untouched scan preview.
     func detectFrames() throws -> [FilmRect] {
         let (pixels, width, height) = previewPixels()
-        return Self.frameRects(pixels: pixels, width: width, height: height)
+        return FilmFrameDetection.frames(pixels: pixels, width: width, height: height)
     }
 
     /// Import classification and explicit gap detection use the same sampled pixels.
@@ -251,56 +251,6 @@ actor FilmRenderer {
         var pixels = [UInt8](repeating: 0, count: width * height * 4)
         context.render(preview, toBitmap: &pixels, rowBytes: width * 4, bounds: preview.extent, format: .RGBA8, colorSpace: Self.colorSpace("sRGB"))
         return (pixels, width, height)
-    }
-
-    private static func frameRects(pixels: [UInt8], width: Int, height: Int) -> [FilmRect] {
-        let horizontal = width >= height
-        let length = horizontal ? width : height, cross = horizontal ? height : width
-        guard length > 10, cross > 4 else { return [] }
-        var signal = [Double](repeating: 0, count: length)
-        for i in 0..<length {
-            var total = 0.0, count = 0.0
-            for j in (cross / 4)..<(cross * 3 / 4) {
-                let offset = horizontal ? (j * width + i) * 4 : (i * width + j) * 4
-                total += Double(pixels[offset]) + Double(pixels[offset + 1]) + Double(pixels[offset + 2]); count += 3
-            }
-            signal[i] = total / max(1, count)
-        }
-        return split(signal: signal, horizontal: horizontal)
-    }
-
-    static func split(signal: [Double], horizontal: Bool) -> [FilmRect] {
-        guard let low = signal.min(), let high = signal.max(), high - low > 12 else { return [] }
-        let count = signal.count
-        let threshold = (high - low) * 0.06
-        // Evaluate dark and clear gaps separately; combining both extrema would mark
-        // a two-tone test strip as one continuous gap.
-        var candidates: [[Int]] = []
-        for bright in [false, true] {
-            var gaps: [Int] = [], start: Int?
-            for i in 0...count {
-                let isGap = i < count && (bright ? signal[i] >= high - threshold : signal[i] <= low + threshold)
-                if isGap && start == nil { start = i }
-                if !isGap, let beginning = start {
-                    let span = i - beginning
-                    if span >= max(2, count / 500), span < count / 8, beginning > count / 50, i < count * 49 / 50 {
-                        gaps.append((beginning + i) / 2)
-                    }
-                    start = nil
-                }
-            }
-            candidates.append(gaps)
-        }
-        let gaps = candidates.max(by: { $0.count < $1.count }) ?? []
-        var boundaries = [0]
-        for gap in gaps where gap - boundaries.last! > max(4, count / 200) { boundaries.append(gap) }
-        boundaries.append(count)
-        guard boundaries.count > 2 else { return [] }
-        return zip(boundaries, boundaries.dropFirst()).compactMap { a, b in
-            guard b - a > max(3, count / 250) else { return nil }
-            let origin = Double(a) / Double(count), size = Double(b - a) / Double(count)
-            return horizontal ? FilmRect(x: origin, y: 0, width: size, height: 1) : FilmRect(x: 0, y: origin, width: 1, height: size)
-        }
     }
 
     func export(project: FilmProject, frame: FilmFrame?, to url: URL) throws {

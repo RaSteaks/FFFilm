@@ -87,10 +87,11 @@ final class NegativeUITests: XCTestCase {
         XCTAssertEqual(distance.label, "2")
         let resolution = app.descendants(matching: .any).matching(identifier: "negative-camera-resolution").firstMatch
         if !resolution.isHittable { app.swipeUp() }
-        resolution.tap(); app.buttons["1080p"].tap()
+        // The default is now Full HD; exercise an actual configuration change.
+        resolution.tap(); app.buttons["720p"].tap()
         let dimensions = app.staticTexts["negative-dimensions"]
         // Dimensions are localized (for example, 1,080 × 1,920 in English).
-        expectation(for: NSPredicate { _, _ in dimensions.label.filter(\.isNumber) == "10801920" }, evaluatedWith: dimensions)
+        expectation(for: NSPredicate { _, _ in dimensions.label.filter(\.isNumber) == "7201280" }, evaluatedWith: dimensions)
         waitForExpectations(timeout: 10)
         // Native menu pickers may be exposed as PopUpButton after a configuration update.
         let lens = app.descendants(matching: .any).matching(identifier: "negative-camera-lens").firstMatch
@@ -128,6 +129,43 @@ final class NegativeUITests: XCTestCase {
         if !reopen.isHittable { app.swipeUp() }
         reopen.tap()
         XCTAssertTrue(app.buttons["negative-camera-close"].waitForExistence(timeout: 5))
+    }
+
+    @MainActor func testLiveCameraZoomComparisonAndFreeze() {
+        let app = XCUIApplication()
+        app.launchEnvironment["NEGATIVE_UI_CAMERA"] = "1"
+        app.launchEnvironment["NEGATIVE_UI_CAMERA_STREAM"] = "1"
+        openNegative(app)
+        let image = app.descendants(matching: .any).matching(identifier: "negative-image").firstMatch
+        XCTAssertTrue(image.waitForExistence(timeout: 10))
+        // Inspection gestures must neither sample nor disable the live controls.
+        image.doubleTap()
+        XCTAssertFalse(app.buttons["negative-confirm-base"].exists)
+        XCTAssertTrue(app.buttons["negative-camera-settings"].isEnabled)
+        let zoom = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        zoom.name = "Live GPU preview zoomed"; zoom.lifetime = .keepAlways; add(zoom)
+        image.doubleTap()
+        app.buttons["negative-sample"].tap()
+        let confirm = app.buttons["negative-confirm-base"]
+        XCTAssertTrue(confirm.waitForExistence(timeout: 10))
+        expectation(for: NSPredicate(format: "enabled == true"), evaluatedWith: confirm)
+        waitForExpectations(timeout: 10)
+        confirm.tap()
+        let comparison = app.segmentedControls["negative-comparison"]
+        XCTAssertTrue(comparison.waitForExistence(timeout: 5))
+        for _ in 0..<3 {
+            comparison.buttons["Original"].tap(); comparison.buttons["Positive"].tap()
+        }
+        XCTAssertTrue(app.buttons["negative-export"].isEnabled)
+        let freeze = app.buttons["negative-camera-freeze"]
+        freeze.tap()
+        XCTAssertFalse(app.buttons["negative-camera-settings"].isEnabled)
+        XCTAssertTrue(app.buttons["negative-export"].isEnabled)
+        let frozen = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        frozen.name = "GPU positive frozen after comparison"; frozen.lifetime = .keepAlways; add(frozen)
+        freeze.tap()
+        XCTAssertTrue(app.buttons["negative-camera-settings"].isEnabled)
+        XCTAssertFalse(app.staticTexts["negative-error"].exists)
     }
 
     @MainActor func testCameraPermissionSettingsInBothWorkspaces() {

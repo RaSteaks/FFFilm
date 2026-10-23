@@ -19,6 +19,9 @@ nonisolated struct NegativePhoto: Transferable, Sendable {
 final class NegativeImageState {
     var original: CGImage?
     var positive: CGImage?
+    // Only the canvas observes full-rate camera sources; controls observe workflow changes.
+    var cameraImage: CIImage?
+    var loupe: CGImage?
 
     /// Memory pressure can cap a requested upgrade below the already displayed tier.
     /// Keep each comparison variant's best bitmap; equal tiers also avoid needless swaps.
@@ -164,7 +167,8 @@ final class NegativeStore {
                 let result = try await load()
                 guard !Task.isCancelled, revision == id else { return }
                 camera.stop(); cameraRevision = UUID()
-                asset = result; imageState.original = result.preview; latestCameraAsset = nil; positive = nil; base = nil; candidate = nil
+                asset = result; imageState.original = result.preview; imageState.cameraImage = nil
+                latestCameraAsset = nil; positive = nil; base = nil; candidate = nil
                 isCamera = false; live = false; paused = false; sampling = false; displayLimit = 1800; showsPositive = false
             } catch {
                 if revision == id && !Task.isCancelled { reportImportError(error) }
@@ -211,7 +215,8 @@ final class NegativeStore {
                     if self.asset?.width != frame.asset.width || self.asset?.height != frame.asset.height || self.asset?.fileURL != nil || frame.frozenForSampling {
                         self.asset = frame.asset
                     }
-                    self.imageState.original = frame.asset.preview; self.positive = frame.positive
+                    self.imageState.original = frame.asset.preview
+                    self.imageState.cameraImage = frame.asset.image
                     self.phase = nil
                     if frame.frozenForSampling { self.live = false; self.captureLocked = true; self.beginSampling() }
                 }
@@ -239,7 +244,11 @@ final class NegativeStore {
         if isCamera && live {
             phase = .locking
             camera.sampleWhenLocked()
-        } else { beginSampling() }
+        } else {
+            // Manual freeze and error recovery must sample the visible latest source.
+            if isCamera, let latestCameraAsset { asset = latestCameraAsset }
+            beginSampling()
+        }
     }
 
     private func beginSampling() {
@@ -259,8 +268,13 @@ final class NegativeStore {
         let id = UUID(); sampleRevision = id
         let selected = point
         candidate = nil; sampleError = nil; candidateBusy = true
+        imageState.loupe = nil
         sampleTask = Task {
             do {
+                // Render just the source region, including when no CPU preview bitmap exists.
+                let loupe = try await renderer.loupe(asset, point: selected)
+                guard !Task.isCancelled, sampleRevision == id, sampling else { return }
+                imageState.loupe = loupe
                 let value = try await renderer.sample(asset, point: selected)
                 guard !Task.isCancelled, sampleRevision == id, sampling else { return }
                 candidate = value
@@ -281,7 +295,8 @@ final class NegativeStore {
         phase = .rendering
         operation = Task {
             do {
-                let result = try await renderer.render(asset, base: candidate, limit: displayLimit)
+                // Live and frozen camera comparison is evaluated directly by the GPU surface.
+                let result = isCamera ? nil : try await renderer.render(asset, base: candidate, limit: displayLimit)
                 guard revision == id, !Task.isCancelled else { return }
                 base = candidate; positive = result; sampling = false; showsPositive = true
                 needsCameraResampling = false
@@ -336,7 +351,7 @@ final class NegativeStore {
     func cancelSampling() {
         let shouldResume = sampling && isCamera && beforeSamplingLive && !paused
         sampleTask?.cancel(); sampleRevision = UUID(); candidateBusy = false
-        sampling = false; candidate = nil; sampleError = nil
+        sampling = false; candidate = nil; sampleError = nil; imageState.loupe = nil
         if shouldResume { live = true; camera.freeze(false) }
     }
 
@@ -361,6 +376,11 @@ final class NegativeStore {
             do { try await Task.sleep(for: .seconds(1.5)) } catch { return }
             self?.focusPoint = nil
         }
+    }
+    func cameraDisplayFailed() {
+        guard isCamera else { return }
+        suspend()
+        error = AppText.localized("negative.error.render")
     }
     func setCameraLens(_ id: String) {
         guard canAdjustCamera, cameraConfiguration?.lenses.contains(where: { $0.id == id }) == true, id != cameraSettings.lensID else { return }

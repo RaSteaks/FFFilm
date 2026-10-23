@@ -29,12 +29,13 @@ nonisolated struct NegativeBase: Sendable, Equatable {
 /// A source owns a private file copy until every preview/export job releases it.
 nonisolated final class NegativeAsset: @unchecked Sendable {
     let image: CIImage
-    let preview: CGImage
+    // Live camera sources stay in native pixel buffers; only files/sampling need a bitmap.
+    let preview: CGImage?
     let width: Int, height: Int
     let assumesSRGB: Bool
     let fileURL: URL?
     let filePixels: NegativeFilePixels?
-    init(image: CIImage, preview: CGImage, assumesSRGB: Bool = false, fileURL: URL? = nil, filePixels: NegativeFilePixels? = nil) {
+    init(image: CIImage, preview: CGImage? = nil, assumesSRGB: Bool = false, fileURL: URL? = nil, filePixels: NegativeFilePixels? = nil) {
         self.image = image; self.preview = preview
         width = Int(image.extent.width); height = Int(image.extent.height)
         self.assumesSRGB = assumesSRGB; self.fileURL = fileURL; self.filePixels = filePixels
@@ -335,6 +336,20 @@ actor NegativeRenderer {
         // Sample the source region at its native precision; crop-local center avoids a second coordinate transform.
         let crop = asset.region(rect).transformed(by: CGAffineTransform(translationX: -rect.minX, y: -rect.minY))
         return try NegativePixels.sample(crop, point: CGPoint(x: 0.5, y: 0.5), context: context, entireRegion: true)
+    }
+
+    /// A small source-resolution loupe also works for frozen GPU-only camera frames.
+    func loupe(_ asset: NegativeAsset, point: CGPoint) throws -> CGImage {
+        try Task.checkCancellation()
+        let extent = asset.image.extent
+        let side = min(extent.width, extent.height) * 0.12
+        let rect = CGRect(x: extent.minX + point.x * extent.width - side / 2,
+                          y: extent.minY + (1 - point.y) * extent.height - side / 2,
+                          width: side, height: side).integral
+        // Pad outside the source instead of shifting the loupe's center away from the crosshair.
+        let crop = asset.region(rect.intersection(extent))
+            .composited(over: CIImage(color: .black).cropped(to: rect)).cropped(to: rect)
+        return try NegativePixels.preview(crop, context: context, limit: 360)
     }
 
     /// The original file preview at a zoom-demanded display tier; camera assets have no file pixels.

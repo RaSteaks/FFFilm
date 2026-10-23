@@ -63,17 +63,6 @@ struct FilmTests {
         #expect(FilmCanvas.edge(at: CGPoint(x: 30, y: 500), of: full, in: size) == nil)
     }
 
-    @Test func gapDetectionAndUniformFallback() async {
-        var signal = [Double](repeating: 100, count: 600)
-        for index in 196..<204 { signal[index] = 250 }
-        for index in 396..<404 { signal[index] = 250 }
-        let frames = FilmRenderer.split(signal: signal, horizontal: true)
-        #expect(frames.count == 3)
-        #expect(frames.allSatisfy { $0.valid })
-        let uniform = FilmRenderer.split(signal: Array(repeating: 100, count: 600), horizontal: false)
-        #expect(uniform.isEmpty)
-    }
-
     @Test func previewPreservesWideGamutBeforeDisplayConversion() async throws {
         let input = FileManager.default.temporaryDirectory.appending(path: "FilmP3-\(UUID()).tiff")
         defer { try? FileManager.default.removeItem(at: input) }

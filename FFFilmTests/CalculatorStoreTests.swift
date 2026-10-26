@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 import Testing
 @testable import FFFilm
 
@@ -129,6 +130,65 @@ struct CalculatorStoreTests {
         #expect(relaunched.settings.codecId == before.codecId)
         #expect(relaunched.settings.sensorFps == before.sensorFps)
         #expect(relaunched.settings.sensorOverdrive == before.sensorOverdrive)
+    }
+
+    @Test("Undo availability remains observable when reset is created, consumed or invalidated")
+    func resetUndoObservation() async throws {
+        let suite = "FFFilm.ResetObservation.\(UUID())"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = CalculatorStore(defaults: defaults)
+        store.setShootHours(4.5)
+
+        await confirmation("Reset enables undo") { changed in
+            withObservationTracking { _ = store.resetUndoAvailable } onChange: { changed() }
+            store.resetActiveView()
+        }
+        #expect(store.resetUndoAvailable)
+        await confirmation("Undo consumes the snapshot") { changed in
+            withObservationTracking { _ = store.resetUndoAvailable } onChange: { changed() }
+            store.undoReset()
+        }
+        #expect(!store.resetUndoAvailable)
+        #expect(store.settings.shootHours == 4.5)
+
+        store.resetActiveView()
+        await confirmation("A new edit invalidates undo") { changed in
+            withObservationTracking { _ = store.resetUndoAvailable } onChange: { changed() }
+            store.setShootHours(2)
+        }
+        #expect(!store.resetUndoAvailable)
+        store.undoReset()
+        #expect(store.settings.shootHours == 2)
+    }
+
+    @Test("Reset undo restores only the camera memory it replaced, preserving another window's edits")
+    func resetUndoMergesCameraMemory() throws {
+        let suite = "FFFilm.ResetMemory.\(UUID())"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let first = CalculatorStore(defaults: defaults)
+        let defaultID = first.settings.cameraId
+        first.selectSensorFps(48)
+        let defaultMemory = first.settings
+        first.selectCamera("venice2")
+        first.setShootHours(2.5)
+        let beforeReset = first.settings
+        first.resetActiveView()
+
+        let second = CalculatorStore(defaults: defaults)
+        second.selectCamera("venice2")
+        second.selectSensorFps(60)
+        let otherWindowMemory = second.settings
+        first.undoReset()
+        #expect(first.settings == beforeReset)
+
+        let reopened = CalculatorStore(defaults: defaults)
+        #expect(reopened.settings.cameraId == defaultID)
+        #expect(reopened.settings.sensorFps == defaultMemory.sensorFps)
+        reopened.selectCamera("venice2")
+        #expect(reopened.settings.sensorFps == otherWindowMemory.sensorFps)
+        #expect(second.settings == otherWindowMemory)
     }
 
     @Test("Comparison snapshots deduplicate identical settings and stop at four")

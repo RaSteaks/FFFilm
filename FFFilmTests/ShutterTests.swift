@@ -3,6 +3,8 @@ import Observation
 import Testing
 @testable import FFFilm
 
+// The application models use main-actor isolation; assertions share that contract.
+@MainActor
 struct ShutterTests {
     private var engine: CalculatorEngine { CalculatorEngine(catalog: .bundled) }
 
@@ -240,7 +242,6 @@ struct ShutterTests {
         }
     }
 
-    @MainActor
     @Test("Multiple displays share complete refresh cycles and retain nearest-angle ranking")
     func displayCandidates() throws {
         var settings = ShutterSettings.default
@@ -261,7 +262,6 @@ struct ShutterTests {
         #expect(engine.calculateShutter(settings: settings).compromise != nil)
     }
 
-    @MainActor
     @Test("Decimal display rates are exact, order-independent and never merged by rounding")
     func decimalDisplays() throws {
         var settings = ShutterSettings.default
@@ -278,7 +278,6 @@ struct ShutterTests {
         #expect(engine.calculateShutter(settings: settings).candidates.count == 3)
     }
 
-    @MainActor
     @Test("Malformed refresh lists invalidate active results and are ignored when inactive")
     func invalidDisplays() {
         for text in ["", "60", "60,", "60,,120", "0,60", "-60,120", "nan,120", "inf,60",
@@ -295,7 +294,6 @@ struct ShutterTests {
         }
     }
 
-    @MainActor
     @Test("Display matching checks every device without changing target exposure")
     func displayMatching() {
         var settings = ShutterSettings.default
@@ -326,7 +324,6 @@ struct ShutterTests {
         }
     }
 
-    @MainActor
     @Test("Compromise minimizes the worst positive-cycle deviation, not a near-zero exposure")
     func compromiseOptimum() throws {
         var settings = ShutterSettings.default
@@ -361,7 +358,6 @@ struct ShutterTests {
         #expect(engine.calculateShutter(settings: settings).status == .numericalLimit)
     }
 
-    @MainActor
     @Test("Common compromise beats an independent dense search across the permitted exposure range")
     func compromiseOracle() throws {
         for rates in [[50.0, 60], [60, 144], [50, 60, 144], [59.94, 60], [25, 144, 240]] {
@@ -386,7 +382,6 @@ struct ShutterTests {
         }
     }
 
-    @MainActor
     @Test("Analytical compromises match an independent piecewise-linear vertex oracle")
     func analyticalCompromiseOracle() throws {
         let cases: [[Double]] = [
@@ -435,17 +430,16 @@ struct ShutterTests {
         }
     }
 
-    @MainActor
     @Test("Cached shutter results track edits, invalid inputs, import, reset and undo")
     func cachedShutterResults() async throws {
         let suite = "FFFilm.ShutterCache.\(UUID())"
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let store = CalculatorStore(defaults: defaults)
-        store.activeView = .shutter
-        store.shutterSettings.mode = .flicker
-        store.shutterSettings.light = .displays
-        store.shutterSettings.displayRefreshRates = "50, 60"
+        store.setActiveView(.shutter)
+        store.updateShutterSettings(ShutterMode.flicker, at: \.mode)
+        store.updateShutterSettings(ShutterLight.displays, at: \.light)
+        store.updateShutterSettings("50, 60", at: \.displayRefreshRates)
         let original = store.shutterCalculation
         #expect(store.shutterCalculation == original)
 
@@ -457,16 +451,16 @@ struct ShutterTests {
             } onChange: {
                 changed()
             }
-            store.settings.sensorFps = 60
+            store.selectSensorFps(60)
             #expect(store.shutterCalculation == original)
-            store.shutterSettings.maxAngle = 90
+            store.updateShutterSettings(90.0, at: \.maxAngle)
         }
         #expect(store.shutterCalculation == engine.calculateShutter(settings: store.shutterSettings))
         #expect(store.shutterCalculation != original)
-        store.shutterSettings.displayRefreshRates = "60,"
+        store.updateShutterSettings("60,", at: \.displayRefreshRates)
         #expect(store.shutterCalculation.status == .invalidDisplays)
         #expect(store.shutterCalculation.exposure == nil)
-        store.shutterSettings.displayRefreshRates = "59.94, 60"
+        store.updateShutterSettings("59.94, 60", at: \.displayRefreshRates)
         store.importShutterFrameRates()
         let imported = store.shutterCalculation
         #expect(imported == engine.calculateShutter(settings: store.shutterSettings))
@@ -474,12 +468,11 @@ struct ShutterTests {
         #expect(store.shutterCalculation == engine.calculateShutter(settings: .default))
         store.undoReset()
         #expect(store.shutterCalculation == imported)
-        store.shutterSettings.mode = .matching
-        store.shutterSettings.checksFlicker = true
+        store.updateShutterSettings(ShutterMode.matching, at: \.mode)
+        store.updateShutterSettings(true, at: \.checksFlicker)
         #expect(store.shutterCalculation == engine.calculateShutter(settings: store.shutterSettings))
     }
 
-    @MainActor
     @Test("Extreme inputs use bounded search, and matching preserves its original exposure and copy qualification")
     func compromiseMatchingAndLimits() throws {
         var settings = ShutterSettings.default
@@ -505,29 +498,29 @@ struct ShutterTests {
         #expect(high.exposure.angle > 0 && high.exposure.angle <= settings.maxAngle + 1e-9)
     }
 
-    @MainActor
     @Test("RATE import is one-shot and reset restores all shutter defaults")
     func importAndReset() throws {
         let suite = "FFFilm.ShutterImport.\(UUID())"
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let store = CalculatorStore(defaults: defaults)
-        store.settings.sensorFps = 47.952
-        store.settings.projectFps = 23.976
+        // Use a catalog-supported recording cadence; manual shutter decimals are tested separately.
+        store.selectSensorFps(59.94)
+        store.selectProjectFps(23.976)
         let rateBefore = store.settings
-        store.shutterSettings.mode = .matching
-        store.shutterSettings.targetAngle = 172.8
-        store.shutterSettings.light = .mains60
-        store.shutterSettings.displayRefreshRates = "50, 100, 150"
+        store.updateShutterSettings(ShutterMode.matching, at: \.mode)
+        store.updateShutterSettings(172.8, at: \.targetAngle)
+        store.updateShutterSettings(ShutterLight.mains60, at: \.light)
+        store.updateShutterSettings("50, 100, 150", at: \.displayRefreshRates)
         store.importShutterFrameRates()
-        #expect(store.shutterSettings.sensorFps == 47.952)
+        #expect(store.shutterSettings.sensorFps == 59.94)
         #expect(store.shutterSettings.projectFps == 23.976)
         #expect(store.shutterSettings.targetAngle == 172.8)
         #expect(store.shutterSettings.light == .mains60)
         #expect(store.shutterSettings.displayRefreshRates == "50, 100, 150")
-        store.shutterSettings.sensorFps = 120
+        store.updateShutterSettings(120.0, at: \.sensorFps)
         #expect(store.settings == rateBefore)
-        store.activeView = .shutter
+        store.setActiveView(.shutter)
         store.resetActiveView()
         #expect(store.shutterSettings == .default)
         #expect(store.settings == rateBefore)

@@ -1,12 +1,10 @@
 import Foundation
 import Observation
 
-private struct ResetUndoSnapshot {
-    let settings: CaptureSettings
-    let shutterSettings: ShutterSettings
-    let rememberedShutterSettings: ShutterSettings
-    let cameraMemories: [String: CameraSettingsMemory]
-    let view: CalculatorView
+private enum ResetUndoSnapshot {
+    // Each reset owns only the state it changes, including the persisted value it replaces.
+    case rate(settings: CaptureSettings, defaultCameraMemory: CameraSettingsMemory?)
+    case shutter(settings: ShutterSettings, rememberedSettings: ShutterSettings)
 }
 
 @Observable
@@ -14,7 +12,7 @@ final class CalculatorStore {
     @ObservationIgnored private let engine: CalculatorEngine
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private var cameraMemories: [String: CameraSettingsMemory]
-    @ObservationIgnored private var resetUndoSnapshot: ResetUndoSnapshot?
+    private var resetUndoSnapshot: ResetUndoSnapshot?
     // One window-local entry bounds memory and avoids repeating the multi-frequency search.
     @ObservationIgnored private var shutterCache: (settings: ShutterSettings, result: ShutterCalculation)?
     @ObservationIgnored private var rememberedShutterSettings: ShutterSettings
@@ -23,19 +21,21 @@ final class CalculatorStore {
     let shutterWorkspace: ShutterWorkspace
 
     let catalog: CatalogData
-    var settings: CaptureSettings
-    var shutterSettings: ShutterSettings
-    var shutterInputRevision = 0
+    // Writes must pass through the workflow methods to keep normalization,
+    // persistence and reset invalidation consistent with the visible inputs.
+    private(set) var settings: CaptureSettings
+    private(set) var shutterSettings: ShutterSettings
+    private(set) var shutterInputRevision = 0
     var activeView: CalculatorView = .rate
     // Window-local task selection never changes the shared camera format or planning inputs.
     var recordingTask: RecordingTask = .capacity
-    var pinnedSetups: [PinnedSetup] = []
-    var quickStartCameraIds: [String]
+    private(set) var pinnedSetups: [PinnedSetup] = []
+    private(set) var quickStartCameraIds: [String]
 
     /// The banner is deliberately modelled as state instead of a transient
     /// toast so VoiceOver and keyboard users can discover important changes.
     var feedbackMessage: String?
-    var resetUndoAvailable = false
+    var resetUndoAvailable: Bool { resetUndoSnapshot != nil }
 
     private static let quickStartKey = "fffilm.quick-start-camera-ids"
     private static let cameraMemoryKey = "fffilm.camera-settings-memory"
@@ -73,7 +73,7 @@ final class CalculatorStore {
 
     var calculation: Calculation { engine.calculate(settings: settings) }
     var shutterCalculation: ShutterCalculation {
-        // Read observed inputs even on cache hits, so views still update after direct edits,
+        // Read observed inputs even on cache hits, so views still update after input edits,
         // import, reset or undo. Cache writes themselves must not trigger view invalidation.
         let inputs = shutterSettings
         if let shutterCache, shutterCache.settings == inputs { return shutterCache.result }
@@ -289,21 +289,16 @@ final class CalculatorStore {
         // The film workbench owns its document lifecycle; calculator reset does not apply.
         guard activeView != .film else { return }
         #endif
-        cameraMemories = Self.loadCameraMemories(defaults: defaults, catalog: catalog)
-        resetUndoSnapshot = ResetUndoSnapshot(
-            settings: settings,
-            shutterSettings: shutterSettings,
-            rememberedShutterSettings: rememberedShutterSettings,
-            cameraMemories: cameraMemories,
-            view: activeView
-        )
-        resetUndoAvailable = true
         feedbackMessage = AppText.reset
 
         if activeView == .rate {
-            settings = engine.normalized(.default)
+            let resetSettings = engine.normalized(.default)
+            cameraMemories = Self.loadCameraMemories(defaults: defaults, catalog: catalog)
+            resetUndoSnapshot = .rate(settings: settings, defaultCameraMemory: cameraMemories[resetSettings.cameraId])
+            settings = resetSettings
             rememberCurrentCamera()
         } else {
+            resetUndoSnapshot = .shutter(settings: shutterSettings, rememberedSettings: rememberedShutterSettings)
             shutterSettings = .default
             persistShutterSettings()
             shutterInputRevision += 1
@@ -312,23 +307,22 @@ final class CalculatorStore {
 
     func undoReset() {
         guard let snapshot = resetUndoSnapshot else { return }
-        settings = snapshot.settings
-        shutterSettings = snapshot.shutterSettings
-        if snapshot.view == .shutter {
+        switch snapshot {
+        case .shutter(let previous, let remembered):
+            shutterSettings = previous
             // Undoing a reset during an invalid draft also restores its last usable launch value.
-            rememberedShutterSettings = snapshot.rememberedShutterSettings
+            rememberedShutterSettings = remembered
             persistShutterSettings()
-        }
-        if snapshot.view == .rate {
+        case .rate(let previous, let defaultCameraMemory):
+            settings = previous
             // Undo only the default camera record reset changed; keep other
             // windows' later edits to unrelated cameras.
             cameraMemories = Self.loadCameraMemories(defaults: defaults, catalog: catalog)
             let defaultCameraID = engine.normalized(.default).cameraId
-            cameraMemories[defaultCameraID] = snapshot.cameraMemories[defaultCameraID]
+            cameraMemories[defaultCameraID] = defaultCameraMemory
             persistCameraMemories()
         }
         resetUndoSnapshot = nil
-        resetUndoAvailable = false
         feedbackMessage = AppText.resetUndone
     }
 
@@ -365,7 +359,6 @@ final class CalculatorStore {
     func clearTransientState() {
         feedbackMessage = nil
         resetUndoSnapshot = nil
-        resetUndoAvailable = false
     }
 
     func addQuickStart(cameraID: String) {

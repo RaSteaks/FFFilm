@@ -68,8 +68,8 @@ struct DITShutterTests {
         // Existing windows keep their own editor state; only newly created stores restore memory.
         restored.updateShutterSettings(25.0, at: \.sensorFps)
         #expect(store.shutterSettings.sensorFps.isNaN)
-        restored.settings.sensorFps = 48
-        restored.settings.projectFps = 24
+        restored.selectSensorFps(48)
+        restored.selectProjectFps(24)
         restored.importShutterFrameRates()
         #expect(CalculatorStore(defaults: defaults).shutterSettings.sensorFps == 48)
         restored.setActiveView(.shutter)

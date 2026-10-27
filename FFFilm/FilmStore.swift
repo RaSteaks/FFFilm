@@ -17,7 +17,7 @@ import UniformTypeIdentifiers
     }
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         let documents = Self.stores.allObjects.filter { $0.window != nil }
-        guard !documents.contains(where: { $0.busy || $0.exporting || $0.presentingSheet }) else { NSSound.beep(); return .terminateCancel }
+        guard !documents.contains(where: { $0.busy || $0.exporting || $0.hasPresentedSheet }) else { NSSound.beep(); return .terminateCancel }
         guard documents.contains(where: \.dirty) else { return .terminateNow }
         guard !checkingQuit else { return .terminateCancel }
         checkingQuit = true
@@ -48,23 +48,29 @@ final class FilmStore {
             refresh()
         }
     }
-    // The canvas tool and export scope live here, not in the view's @State:
+    // The canvas tool lives here, not in the view's @State:
     // switching workbench tabs removes the film view, which would reset them.
     var drawMode = 0
-    var exportScope = 0
     var busy = false
-    var exporting = false
+    var exporting: Bool { exportController.isRunning }
+    let exportController: FilmExportController
+    var detecting = false
+    private(set) var detectionOptions = FilmDetectionOptions()
     var presentingSheet = false
     var sourceGeneration = 0
     var progress = ""
-    var failedExports: [FilmFrame?] = []
-    var failedExportProject: FilmProject?
     var error: String?
     var notice = ""
     var projectURL: URL?
     var savedProject = FilmProject()
-    var undoStack: [FilmProject] = []
-    var redoStack: [FilmProject] = []
+    /// Automatic geometry must travel with the project: comparing an undone crop
+    /// against newer detection provenance would misclassify it as a manual edit.
+    struct HistoryEntry: Equatable {
+        let project: FilmProject
+        let automaticFrames: [UUID: FilmFrameCandidate]
+    }
+    var undoStack: [HistoryEntry] = []
+    var redoStack: [HistoryEntry] = []
     // Each canvas mode retains its zoom/region across frame and workbench-tab switches.
     private var stripZoom = 1.0
     private var frameZoom = 1.0
@@ -80,16 +86,21 @@ final class FilmStore {
     @ObservationIgnored private var displayLongSide: CGFloat?
     @ObservationIgnored private var displayedLimit: CGFloat = 0
     @ObservationIgnored weak var window: NSWindow?
-    @ObservationIgnored let renderer = FilmRenderer()
+    @ObservationIgnored let renderer: FilmRenderer
     @ObservationIgnored var renderTask: Task<Void, Never>?
-    @ObservationIgnored var exportTask: Task<Void, Never>?
+    @ObservationIgnored private var automaticFrames: [UUID: FilmFrameCandidate] = [:]
+    @ObservationIgnored private var automaticSource: UUID?
+    @ObservationIgnored private var detectionTask: Task<Void, Never>?
+    @ObservationIgnored private var detectionRevision = 0
+    @ObservationIgnored private var frameRevision = 0
     @ObservationIgnored private var renderRevision = 0
     @ObservationIgnored private var displayedProject: FilmProject?
     @ObservationIgnored private var displayedFrameID: UUID?
     @ObservationIgnored private var editStart: FilmProject?
     var dirty: Bool { project != savedProject }
-    var canImportScan: Bool { !busy && !exporting && !presentingSheet }
-    var canZoom: Bool { info != nil && canImportScan }
+    var hasPresentedSheet: Bool { presentingSheet || exportController.blocksDocument }
+    var canImportScan: Bool { !busy && !exporting && !hasPresentedSheet }
+    var canZoom: Bool { info != nil && !busy && !hasPresentedSheet }
     var canvasCenter: CGPoint { showStrip ? stripCenter : frameCenter }
     var canvasSize: CGSize {
         guard let info else { return .zero }
@@ -112,11 +123,16 @@ final class FilmStore {
     }
 
     init() {
+        let renderer = FilmRenderer()
+        self.renderer = renderer
+        exportController = FilmExportController(renderer: renderer)
+        exportController.document = self
         // Slicing does not read or mutate the retired curve preset library.
         FilmAppDelegate.stores.add(self)
     }
 
     func select(_ id: UUID) {
+        guard !busy, !hasPresentedSheet else { return }
         if selected != id && !showStrip { displayLongSide = nil }
         selected = id; refresh()
     }
@@ -146,14 +162,17 @@ final class FilmStore {
         editStart = nil
     }
     private func record(_ previous: FilmProject) {
-        undoStack.append(previous)
+        undoStack.append(HistoryEntry(project: previous, automaticFrames: automaticFrames))
         if undoStack.count > 80 { undoStack.removeFirst() }
         redoStack.removeAll()
     }
     func change(_ body: (inout FilmProject) -> Void) {
+        // Detection commits while busy; exports and modal editing still block changes.
+        guard !exporting, !hasPresentedSheet else { return }
         let previous = project
         body(&project)
         guard project.valid else { project = previous; return }
+        if previous.frames != project.frames { frameRevision += 1 }
         if previous != project && editStart == nil { record(previous) }
         refresh()
     }
@@ -162,14 +181,18 @@ final class FilmStore {
         change { body(&$0.frames[index]) }
     }
     func undo() {
-        guard !busy, !exporting, !presentingSheet else { return }
+        guard canImportScan else { return }
         guard let previous = undoStack.popLast() else { return }
-        redoStack.append(project); project = previous; reconcile(); refresh()
+        redoStack.append(HistoryEntry(project: project, automaticFrames: automaticFrames))
+        project = previous.project; automaticFrames = previous.automaticFrames
+        frameRevision += 1; reconcile(); refresh()
     }
     func redo() {
-        guard !busy, !exporting, !presentingSheet else { return }
+        guard canImportScan else { return }
         guard let next = redoStack.popLast() else { return }
-        undoStack.append(project); project = next; reconcile(); refresh()
+        undoStack.append(HistoryEntry(project: project, automaticFrames: automaticFrames))
+        project = next.project; automaticFrames = next.automaticFrames
+        frameRevision += 1; reconcile(); refresh()
     }
     private func reconcile() {
         if !project.frames.contains(where: { $0.id == selected }) { selected = project.frames.first?.id }
@@ -207,7 +230,7 @@ final class FilmStore {
 
     /// A single presentation gate covers every file panel and unsaved-work prompt.
     private func present(_ panel: NSSavePanel, completion: @escaping (NSApplication.ModalResponse) -> Void) {
-        guard !presentingSheet else { completion(.cancel); return }
+        guard !hasPresentedSheet else { completion(.cancel); return }
         presentingSheet = true
         let finished: (NSApplication.ModalResponse) -> Void = { response in
             // AppKit can invoke this handler while the file sheet is still onscreen.
@@ -221,7 +244,7 @@ final class FilmStore {
     }
 
     func requestDiscard(_ completion: @escaping (Bool) -> Void) {
-        guard !presentingSheet else { completion(false); return }
+        guard !hasPresentedSheet else { completion(false); return }
         guard dirty else { completion(true); return }
         guard let window else { completion(false); return }
         presentingSheet = true
@@ -244,7 +267,7 @@ final class FilmStore {
     }
 
     func openScan() {
-        guard !busy, !exporting, !presentingSheet else { return }
+        guard !busy, !exporting, !hasPresentedSheet else { return }
         requestDiscard { accepted in
             guard accepted else { return }
             let panel = NSOpenPanel()
@@ -286,6 +309,11 @@ final class FilmStore {
     }
 
     func loadSource(_ url: URL, restoring: FilmProject?) {
+        guard !exporting, !hasPresentedSheet else { return }
+        // A new renderer source invalidates every pending/failed export from the
+        // previous scan, even when the new import ultimately fails.
+        exportController.clearJob()
+        detectionTask?.cancel(); detectionRevision += 1; detecting = false
         busy = true
         renderTask?.cancel(); renderRevision += 1
         // Acquire before leaving the drop callback, then retain through probe/profile/load.
@@ -350,13 +378,16 @@ final class FilmStore {
                 let base = try await renderer.render(project: FilmProject(), frame: nil)
                 let initial = next.frames.contains(where: { $0.rotation != 0 })
                     ? try await renderer.render(project: next, frame: nil) : base
-                failedExports = []; failedExportProject = nil
+                exportController.resetSource(project: next, size: CGSize(width: decoded.width, height: decoded.height),
+                                             identifier: await renderer.sourceIdentifier)
                 // A newly imported scan is an unsaved document even before geometry edits.
                 project = next; info = decoded; savedProject = restoring == nil ? FilmProject() : next
                 sourceGeneration += 1
+                automaticFrames.removeAll(); automaticSource = nil
+                detectionOptions = FilmDetectionOptions()
                 if restoring == nil { projectURL = nil }
                 undoStack.removeAll(); redoStack.removeAll(); selection.removeAll()
-                selected = next.frames.first?.id; showStrip = true; stripZoom = 1; frameZoom = 1; drawMode = 0; exportScope = 0
+                selected = next.frames.first?.id; showStrip = true; stripZoom = 1; frameZoom = 1; drawMode = 0
                 stripCenter = CGPoint(x: 0.5, y: 0.5); frameCenter = stripCenter
                 displayLongSide = nil; displayedLimit = CGFloat(max(initial.width, initial.height))
                 // Both views share the untouched scan preview until edits require compositing.
@@ -377,39 +408,136 @@ final class FilmStore {
         }
     }
 
-    func detect() {
-        busy = true
-        Task {
+    func detect() { runDetection(.automatic) }
+    func sampleFilmBase(at point: CGPoint) { runDetection(.sample(point)) }
+    func clearFilmBase() { runDetection(.clearBase) }
+    func calibrateCurrentFrame() {
+        guard let frame else { return }
+        runDetection(.calibrate(frame.crop, frame.rotation))
+    }
+    func cancelDetection() { detectionTask?.cancel() }
+
+    func unresolvedEdges(for frame: FilmFrame) -> [FilmCropEdge] {
+        guard let candidate = automaticFrames[frame.id], candidate.crop == frame.crop, frame.rotation == 0 else { return [] }
+        return FilmCropEdge.allCases.filter { candidate.edges[$0] != .reliable }
+    }
+
+    private enum DetectionAction {
+        case automatic, sample(CGPoint), clearBase, calibrate(FilmRect, Double)
+    }
+
+    private func runDetection(_ action: DetectionAction) {
+        guard !busy, !exporting, !hasPresentedSheet else { return }
+        busy = true; detecting = true; detectionRevision += 1
+        let revision = detectionRevision, geometry = frameRevision, generation = sourceGeneration
+        progress = filmText("正在分析画面边界…", "Analyzing frame boundaries…")
+        detectionTask = Task {
+            defer {
+                if revision == detectionRevision {
+                    busy = false; detecting = false; progress = ""; detectionTask = nil; refresh()
+                }
+            }
             do {
-                let rectangles = try await renderer.detectFrames()
-                if rectangles.isEmpty { notice = filmText("未找到可靠帧间隙，请手动框选或调整现有裁切框。", "No reliable frame gaps found. Draw frames or edit the existing crop.") }
-                else if exceedsFrameLimit(adding: rectangles.count) {
-                    // change() reverts the whole mutation when the project turns invalid,
-                    // so an over-limit detection result must be refused up front.
-                    notice = frameLimitNotice
+                let source = await renderer.sourceIdentifier
+                var options = automaticSource == source ? detectionOptions : FilmDetectionOptions()
+                switch action {
+                case .automatic: break
+                case .sample(let point): options.base = try await renderer.sampleFilmBase(at: point)
+                case .clearBase: options.base = nil
+                case .calibrate(let crop, let angle): options.calibration = crop; options.calibrationAngle = angle
                 }
-                else {
-                    change { project in
-                        // Preserve prior edits: detection adds candidates instead of replacing existing frames.
-                        if project.hasPlaceholderFrame {
-                            project.frames.removeAll()
-                        }
-                        // Manual and detected frames use the same numbering after deletions.
-                        for rectangle in rectangles {
-                            project.frames.append(FilmFrame(name: project.nextFrameName, crop: rectangle))
-                        }
-                    }
-                    selected = project.frames.first?.id
-                    notice = filmText("已生成候选帧，请检查并修正边界。", "Candidate frames added. Check and refine their boundaries.")
+                let result = try await renderer.refineFrames(options: options) { update in
+                    await self.detectionProgress(update, revision: revision)
                 }
-            } catch { self.error = error.localizedDescription }
-            busy = false; refresh()
+                try Task.checkCancellation()
+                guard generation == sourceGeneration, revision == detectionRevision,
+                      source == (await renderer.sourceIdentifier), geometry == frameRevision else { return }
+                if automaticSource != source { automaticFrames.removeAll(); automaticSource = source }
+                detectionOptions = options
+                applyDetection(result)
+            } catch is CancellationError {
+                if revision == detectionRevision { notice = filmText("已取消框选，原有画面框已保留。", "Detection cancelled. Existing frames were kept.") }
+            } catch {
+                if revision == detectionRevision { self.error = error.localizedDescription }
+            }
+        }
+    }
+
+    private func detectionProgress(_ update: FilmDetectionProgress, revision: Int) {
+        guard revision == detectionRevision else { return }
+        let label: String
+        switch update.phase {
+        case .segments: label = filmText("检测帧间隙", "Finding frame gaps")
+        case .base: label = filmText("分析片基", "Analyzing film base")
+        case .edges: label = filmText("精修画面边界", "Refining frame edges")
+        }
+        progress = update.total > 0 ? "\(label) · \(update.completed) / \(update.total)" : label
+    }
+
+    private func applyDetection(_ result: FilmDetectionResult) {
+        guard !result.candidates.isEmpty else {
+            notice = filmText("未找到可靠帧间隙，请手动框选或调整现有裁切框。", "No reliable frame gaps found. Draw frames or edit the existing crop.")
+            return
+        }
+        var matched = Set<UUID>()
+        let updates = result.candidates.map { candidate in
+            // Refined gap coordinates can move. Match transport intervals by overlap instead
+            // of exact float equality, while reserving each existing frame for at most one candidate.
+            let previous = project.frames.filter { !matched.contains($0.id) }.compactMap { frame -> (FilmFrame, Double)? in
+                guard let old = automaticFrames[frame.id] else { return nil }
+                let intersection = old.slot.cgRect.intersection(candidate.slot.cgRect)
+                let area = intersection.isNull ? 0 : Double(intersection.width * intersection.height)
+                let union = old.slot.width * old.slot.height + candidate.slot.width * candidate.slot.height - area
+                let overlap = area / max(union, 0.000001)
+                return overlap >= 0.5 ? (frame, overlap) : nil
+            }.max { $0.1 < $1.1 }?.0
+            if let previous { matched.insert(previous.id) }
+            return (candidate, previous)
+        }
+        let retired = Set(project.frames.filter { frame in
+            guard let previous = automaticFrames[frame.id] else { return false }
+            return !matched.contains(frame.id) && frame.crop == previous.crop && frame.rotation == 0
+        }.map(\.id))
+        guard !exceedsFrameLimit(adding: updates.filter { $0.1 == nil }.count, removing: retired.count) else {
+            notice = frameLimitNotice
+            return
+        }
+        var applied: [UUID: FilmFrameCandidate] = [:]
+        change { project in
+            if project.hasPlaceholderFrame { project.frames.removeAll() }
+            else { project.frames.removeAll { retired.contains($0.id) } }
+            for (candidate, previous) in updates {
+                if let previous {
+                    // Names are user metadata; only untouched geometry is eligible for refinement.
+                    guard previous.crop == automaticFrames[previous.id]?.crop, previous.rotation == 0,
+                          let index = project.frames.firstIndex(where: { $0.id == previous.id }) else { continue }
+                    project.frames[index].crop = candidate.crop
+                    applied[previous.id] = candidate
+                } else {
+                    let frame = FilmFrame(name: project.nextFrameName, crop: candidate.crop)
+                    project.frames.append(frame)
+                    applied[frame.id] = candidate
+                }
+            }
+        }
+        automaticFrames.merge(applied) { _, new in new }
+        // History entries retain their own provenance, including retired frames.
+        let retained = Set(project.frames.map(\.id))
+        automaticFrames = automaticFrames.filter { retained.contains($0.key) }
+        reconcile(); if selected == nil { selected = project.frames.first?.id }
+        let unresolved = project.frames.filter { !unresolvedEdges(for: $0).isEmpty }.count
+        notice = unresolved > 0
+            ? String(format: filmText("已框选画面，%d 帧仍有边界需要检查。", "Frames detected; %d frames have edges to check."), unresolved)
+            : filmText("已框选画面，请核对后导出。", "Frames detected. Review before exporting.")
+        if result.candidates.contains(where: { $0.edges.values.contains(.inferred) }) {
+            notice += " " + filmText("部分边界按帧间距推测，已保留重叠区域，请核对。",
+                                      "Some boundaries are estimated from frame spacing. Overlapping regions were kept; please review them.")
         }
     }
     /// The untouched placeholder frame is replaced, not appended to.
-    private func exceedsFrameLimit(adding count: Int) -> Bool {
+    private func exceedsFrameLimit(adding count: Int, removing: Int = 0) -> Bool {
         let replacing = project.hasPlaceholderFrame
-        return (replacing ? 0 : project.frames.count) + count > FilmProject.maximumFrames
+        return (replacing ? 0 : project.frames.count - removing) + count > FilmProject.maximumFrames
     }
     private var frameLimitNotice: String {
         String(format: filmText("添加帧会超过 %d 帧上限，未添加。", "Adding frames would exceed the %d-frame project limit; none were added."), FilmProject.maximumFrames)
@@ -428,7 +556,16 @@ final class FilmStore {
             guard rect.valid else { return }
             crop = rect
         } else if let info {
-            guard let next = info.layout.nextCrop(after: replacing ? nil : project.frames.last?.crop,
+            var previous = replacing ? nil : project.frames.last?.crop
+            if !replacing, let frame = project.frames.last, let automatic = automaticFrames[frame.id],
+               frame.crop == automatic.crop, frame.rotation == 0 {
+                // Removing base changes the visible crop, not the film's transport pitch.
+                // Keep measured along-strip intervals while inheriting the trimmed cross-axis bounds.
+                previous = info.layout.horizontal
+                    ? FilmRect(x: automatic.slot.x, y: frame.crop.y, width: automatic.slot.width, height: frame.crop.height)
+                    : FilmRect(x: frame.crop.x, y: automatic.slot.y, width: frame.crop.width, height: automatic.slot.height)
+            }
+            guard let next = info.layout.nextCrop(after: previous,
                 width: info.width, height: info.height, override: project.filmFormat) else {
                 notice = filmText("扫描剩余长度不足以添加完整帧，请调整上一帧边界或手动框选。", "Not enough scan remains for a full frame. Adjust the previous boundary or draw a frame.")
                 return
@@ -449,15 +586,17 @@ final class FilmStore {
         reconcile(); selected = frame.id; refresh()
     }
     func removeFrame() {
+        guard canImportScan else { return }
         let ids = targets
         change { $0.frames.removeAll { ids.contains($0.id) } }; reconcile(); refresh()
     }
     func moveFrame(_ offset: Int) {
+        guard canImportScan else { return }
         guard let index = project.frames.firstIndex(where: { $0.id == selected }), project.frames.indices.contains(index + offset) else { return }
         change { $0.frames.swapAt(index, index + offset) }
     }
     func saveProject(asNew: Bool = false, completion: @escaping (Bool) -> Void = { _ in }) {
-        guard !busy, !exporting, !presentingSheet else { completion(false); return }
+        guard !busy, !exporting, !hasPresentedSheet else { completion(false); return }
         // A failed import can leave unsaved project data without a decoded source.
         // Never let the close/quit confirmation treat that state as a successful save.
         guard info != nil else { completion(!dirty); return }
@@ -479,7 +618,7 @@ final class FilmStore {
         } catch { self.error = error.localizedDescription; return false }
     }
     func openProject() {
-        guard !busy, !exporting, !presentingSheet else { return }
+        guard !busy, !exporting, !hasPresentedSheet else { return }
         requestDiscard { accepted in
             guard accepted else { return }
             let panel = NSOpenPanel(); panel.allowedContentTypes = [UTType(exportedAs: "com.rasteaks.fffilm-project", conformingTo: .json)]
@@ -512,48 +651,14 @@ final class FilmStore {
         } catch { self.error = error.localizedDescription }
     }
 
-    func export(scope: Int) {
-        guard !busy, !exporting, !presentingSheet else { return }
-        let panel = NSOpenPanel(); panel.canChooseDirectories = true; panel.canChooseFiles = false; panel.canCreateDirectories = true
-        present(panel) { response in
-            guard response == .OK, let directory = panel.url else { return }
-            self.export(scope: scope, directory: directory)
-        }
+    func openExportSettings() {
+        guard canImportScan, info != nil else { return }
+        exportController.open(project: project, selected: selected, checked: selection)
     }
-    func export(scope: Int, directory: URL) {
-        guard !busy, !exporting, !presentingSheet else { return }
-        let snapshot = scope == 4 ? failedExportProject ?? project : project
-        let frames: [FilmFrame?] = scope == 4 ? failedExports : scope == 3 ? [nil] : scope == 2 ? project.frames.map(Optional.some) : scope == 1 ? project.frames.filter { targets.contains($0.id) }.map(Optional.some) : [frame].compactMap { $0 }.map(Optional.some)
-        guard !frames.isEmpty else { return }
-        exporting = true
-        failedExports = []; failedExportProject = snapshot
-        exportTask = Task {
-            let access = directory.startAccessingSecurityScopedResource()
-            defer { if access { directory.stopAccessingSecurityScopedResource() }; exporting = false }
-            var failures: [String] = [], completed = 0
-            for (index, frame) in frames.enumerated() {
-                if Task.isCancelled { break }
-                progress = "\(index + 1) / \(frames.count)"
-                let number = frame.flatMap { target in snapshot.frames.firstIndex { $0.id == target.id } }.map { String(format: "%02d", $0 + 1) } ?? "strip"
-                let stem = URL(fileURLWithPath: snapshot.sourcePath).deletingPathExtension().lastPathComponent + "_" + number
-                let ext = snapshot.exportJPEG ? "jpg" : "tiff"
-                var url = directory.appendingPathComponent(stem).appendingPathExtension(ext), suffix = 2
-                while FileManager.default.fileExists(atPath: url.path) { url = directory.appendingPathComponent("\(stem)_\(suffix)").appendingPathExtension(ext); suffix += 1 }
-                // Write to a disposable temporary file, then publish only complete images.
-                let temporary = directory.appendingPathComponent(".\(UUID().uuidString).\(ext)")
-                do {
-                    try await renderer.export(project: snapshot, frame: frame, to: temporary)
-                    try Task.checkCancellation()
-                    try FileManager.default.moveItem(at: temporary, to: url); completed += 1
-                } catch {
-                    try? FileManager.default.removeItem(at: temporary)
-                    if !(error is CancellationError) { failures.append("\(number): \(error.localizedDescription)"); failedExports.append(frame) }
-                }
-            }
-            progress = ""
-            notice = filmText("已导出 \(completed) 张", "Exported \(completed) images") + (Task.isCancelled ? filmText("（已取消）", " (cancelled)") : "")
-            if !failures.isEmpty { error = failures.joined(separator: "\n") }
-        }
+
+    func setFrameChecked(_ id: UUID, checked: Bool) {
+        guard canImportScan else { return }
+        if checked { selection.insert(id) } else { selection.remove(id) }
     }
 }
 #endif

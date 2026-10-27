@@ -55,21 +55,20 @@ struct ContentView: View {
                     }
                 }
             #else
-            Group {
+            VStack(spacing: 0) {
                 if store.activeView == .film {
                     FilmWorkbenchView(store: filmStore)
                 } else {
                     CalculatorWorkbench(store: store, view: store.activeView, showsCameras: $showsCameras)
                 }
-            }
-            .frame(minWidth: store.activeView == .film ? FilmWorkbenchView.minimumWindowWidth : 760, minHeight: 560)
-            // All desktop workbenches share a footer below their scroll and canvas content.
-            .safeAreaInset(edge: .bottom, spacing: 0) {
+                // HSplitView's AppKit children do not consistently consume an inherited
+                // safe-area inset. Reserve real layout space so bottom controls stay reachable.
                 AppCopyrightFooter()
                     .padding(.horizontal, Layout.pageGutter)
                     .padding(.vertical, 8)
                     .background(Palette.background)
             }
+            .frame(minWidth: store.activeView == .film ? FilmWorkbenchView.minimumWindowWidth : 760, minHeight: 560)
             .toolbar { MacWorkbenchToolbar(store: store) }
             .focusedSceneValue(\.calculatorStore, store)
             // Protect unsaved film documents even when another workbench is selected.

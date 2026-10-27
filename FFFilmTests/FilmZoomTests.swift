@@ -42,8 +42,10 @@ struct FilmZoomTests {
         #expect(store.zoom == 4)
         store.busy = false; store.presentingSheet = true; store.zoomIn()
         #expect(store.zoom == 4)
-        store.presentingSheet = false; store.exporting = true; store.fitCanvas()
-        #expect(store.zoom == 4)
+        store.presentingSheet = false; store.fitCanvas()
+        #expect(store.zoom == 1)
+        // Real in-flight export zoom is covered by FilmExportTests; exporting is
+        // derived from the job now, rather than a mutable presentation flag.
         #expect(store.project == project && store.undoStack.isEmpty)
         #expect(FilmZoom.clamped(.nan) == 1 && FilmZoom.clamped(100) == 8)
     }
@@ -161,8 +163,8 @@ struct FilmZoomTests {
 
     /// Alternating source pixels cannot survive an 1800px resize: dimensions alone cannot prove real detail.
     @Test func sharperPreviewReadsSourcePixelsAndCropsBeforeDownsampling() async throws {
-        let input = FileManager.default.temporaryDirectory.appending(path: "FilmZoomPixels-\(UUID()).tiff")
-        let output = FileManager.default.temporaryDirectory.appending(path: "FilmZoomExport-\(UUID()).tiff")
+        let input = try FilmTestFiles.directory().appending(path: "FilmZoomPixels-\(UUID()).tiff")
+        let output = try FilmTestFiles.directory().appending(path: "FilmZoomExport-\(UUID()).tiff")
         defer { try? FileManager.default.removeItem(at: input); try? FileManager.default.removeItem(at: output) }
         try Self.writeScan(to: input)
         let renderer = FilmRenderer()
@@ -194,7 +196,7 @@ struct FilmZoomTests {
 
     /// Zoom-out preserves quality; import cancels an old demand and resets both modes even for equal-size files.
     @Test @MainActor func displayDemandAndImportReset() async throws {
-        let input = FileManager.default.temporaryDirectory.appending(path: "FilmZoomStore-\(UUID()).tiff")
+        let input = try FilmTestFiles.directory().appending(path: "FilmZoomStore-\(UUID()).tiff")
         defer { try? FileManager.default.removeItem(at: input) }
         try Self.writeScan(to: input)
         let store = FilmStore()

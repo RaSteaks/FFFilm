@@ -151,7 +151,7 @@ struct FilmFormatTests {
     }
 
     @Test @MainActor func invalidDropsAndBusyActionsPreserveCurrentWork() throws {
-        let directory = FileManager.default.temporaryDirectory.appending(path: "FilmDrop-\(UUID()).tiff")
+        let directory = try FilmTestFiles.directory().appending(path: "FilmDrop-\(UUID()).tiff")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: directory) }
         let store = FilmStore()
@@ -163,7 +163,8 @@ struct FilmFormatTests {
             #expect(!store.importDroppedScans(urls))
             #expect(store.project == previous && store.selected == selected && !store.busy)
         }
-        for gate in [\FilmStore.busy, \FilmStore.exporting, \FilmStore.presentingSheet] {
+        // Export gating now uses a real running task in FilmExportTests.
+        for gate in [\FilmStore.busy, \FilmStore.presentingSheet] {
             store[keyPath: gate] = true
             #expect(!store.importDroppedScans([directory]))
             store.addFrame()
@@ -195,7 +196,7 @@ struct FilmFormatTests {
 
     /// Tagged, neutral pixels exercise import without requiring native profile sheets.
     private func scan(width: Int, height: Int, dpiX: Double, dpiY: Double, orientation: Int = 1) throws -> URL {
-        let url = FileManager.default.temporaryDirectory.appending(path: "FilmFormat-\(UUID()).tiff")
+        let url = try FilmTestFiles.directory().appending(path: "FilmFormat-\(UUID()).tiff")
         let image = CIImage(color: CIColor(red: 0.3, green: 0.4, blue: 0.5))
             .cropped(to: CGRect(x: 0, y: 0, width: width, height: height))
         let cg = try #require(CIContext().createCGImage(image, from: image.extent, format: .RGBA8,

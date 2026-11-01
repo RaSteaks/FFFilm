@@ -1,16 +1,19 @@
 /* ============================================================
    FFFilm support — "film datasheet"
    The support site is set like a vintage film-stock datasheet:
-   warm paper, two-ink print (ink + amber), an
-   engineering title block, spec tables, and a 35mm sprocket
-   rail as the signature element. Sharp geometry, printed feel.
+   neutral gray paper, one-ink print, an engineering title block,
+   spec tables, and a 35mm sprocket rail as the signature element.
+   Sharp geometry, printed feel.
+
+   Color rule: everything is neutral gray except the film itself.
+   Only the film base carries a hue; nothing off the film does.
 
    One rule holds the pages together: each page runs exactly one
    dark strip of film, and that strip carries the page's point —
    the destinations, the search, or the policy's conclusion.
 
-   The dark theme is the darkroom: the sheet goes black, the film
-   shows its orange base, and amber is the safelight.
+   The dark theme is the darkroom: the sheet goes black and the
+   film base is the only light left in the room.
    ============================================================ */
 
 /* Noto Serif SC (SIL OFL 1.1), subset to the glyphs set in display type.
@@ -35,25 +38,30 @@
 
 :root {
   color-scheme: light;
-  --paper: #f3efe4;
-  --paper-deep: #eae3d1;
-  --paper-lift: #faf7ee;
-  --ink: #1d1a12;
-  --ink-2: #57503c;
-  --ink-3: #675f47;
-  --amber: #7f5600;
-  --amber-deep: #634300;
-  --amber-bright: #d9a521;
-  --amber-wash: rgba(217, 165, 33, 0.16);
-  --rule: rgba(29, 26, 18, 0.16);
-  --rule-strong: rgba(29, 26, 18, 0.42);
-  --film: #1d1a12;
-  --on-film: #faf7ee;
-  --on-film-2: rgba(243, 239, 228, 0.72);
-  --on-film-rule: rgba(243, 239, 228, 0.28);
-  --film-amber: #d9a521;
-  --on-amber: #1d1a12;
-  --focus: #7f5600;
+  --paper: #f2f2f2;
+  --paper-deep: #e4e4e4;
+  --paper-lift: #fafafa;
+  --ink: #141414;
+  --ink-2: #4a4a4a;
+  --ink-3: #5c5c5c;
+  --tone: #3a3a3a;
+  --tone-strong: #000000;
+  --key: #141414;
+  --on-key: #f2f2f2;
+  --wash: rgba(0, 0, 0, 0.07);
+  --rule: rgba(0, 0, 0, 0.16);
+  --rule-strong: rgba(0, 0, 0, 0.42);
+  --film: #d3a24a; /* the film base: the only hue on the site */
+  --on-film: #141414;
+  --on-film-2: rgba(20, 20, 20, 0.74);
+  --on-film-rule: rgba(20, 20, 20, 0.3);
+  --solid: #1c1c1c;
+  --on-solid: #f7f7f7;
+  --on-solid-2: rgba(247, 247, 247, 0.74);
+  --band: #1c1c1c;
+  --on-band: #f2f2f2;
+  --on-band-2: rgba(242, 242, 242, 0.72);
+  --focus: #141414;
   --grain: 0.05;
   --grain-blend: multiply;
   --page-lift: 64px; /* width of the sprocket rail */
@@ -71,24 +79,30 @@
 @media screen and (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --paper: #14110b;
-    --paper-deep: #1d1810;
-    --paper-lift: #1c1810;
-    --ink: #f0e9d8;
-    --ink-2: #c6bba2;
-    --ink-3: #a99d83;
-    --amber: #e3b13c;
-    --amber-deep: #f1d083;
-    --amber-bright: #e3b13c;
-    --amber-wash: rgba(227, 177, 60, 0.14);
-    --rule: rgba(240, 233, 216, 0.14);
-    --rule-strong: rgba(240, 233, 216, 0.36);
-    --film: #33210e;
-    --on-film: #f8ecd2;
-    --on-film-2: rgba(248, 236, 210, 0.76);
-    --on-film-rule: rgba(248, 236, 210, 0.3);
-    --film-amber: #e9bb4d;
-    --focus: #e3b13c;
+    --paper: #141414;
+    --paper-deep: #1e1e1e;
+    --paper-lift: #1d1d1d;
+    --ink: #efefef;
+    --ink-2: #c4c4c4;
+    --ink-3: #a6a6a6;
+    --tone: #d6d6d6;
+    --tone-strong: #ffffff;
+    --key: #efefef;
+    --on-key: #141414;
+    --wash: rgba(255, 255, 255, 0.1);
+    --rule: rgba(255, 255, 255, 0.14);
+    --rule-strong: rgba(255, 255, 255, 0.36);
+    --film: #c9974a;
+    --on-film: #141414;
+    --on-film-2: rgba(20, 20, 20, 0.82);
+    --on-film-rule: rgba(20, 20, 20, 0.32);
+    --solid: #e8e8e8;
+    --on-solid: #141414;
+    --on-solid-2: rgba(20, 20, 20, 0.72);
+    --band: #0c0c0c;
+    --on-band: #e8e8e8;
+    --on-band-2: rgba(232, 232, 232, 0.72);
+    --focus: #efefef;
     --grain: 0.06;
     --grain-blend: screen;
   }
@@ -97,24 +111,30 @@
 @media screen {
   :root[data-theme="dark"] {
     color-scheme: dark;
-    --paper: #14110b;
-    --paper-deep: #1d1810;
-    --paper-lift: #1c1810;
-    --ink: #f0e9d8;
-    --ink-2: #c6bba2;
-    --ink-3: #a99d83;
-    --amber: #e3b13c;
-    --amber-deep: #f1d083;
-    --amber-bright: #e3b13c;
-    --amber-wash: rgba(227, 177, 60, 0.14);
-    --rule: rgba(240, 233, 216, 0.14);
-    --rule-strong: rgba(240, 233, 216, 0.36);
-    --film: #33210e;
-    --on-film: #f8ecd2;
-    --on-film-2: rgba(248, 236, 210, 0.76);
-    --on-film-rule: rgba(248, 236, 210, 0.3);
-    --film-amber: #e9bb4d;
-    --focus: #e3b13c;
+    --paper: #141414;
+    --paper-deep: #1e1e1e;
+    --paper-lift: #1d1d1d;
+    --ink: #efefef;
+    --ink-2: #c4c4c4;
+    --ink-3: #a6a6a6;
+    --tone: #d6d6d6;
+    --tone-strong: #ffffff;
+    --key: #efefef;
+    --on-key: #141414;
+    --wash: rgba(255, 255, 255, 0.1);
+    --rule: rgba(255, 255, 255, 0.14);
+    --rule-strong: rgba(255, 255, 255, 0.36);
+    --film: #c9974a;
+    --on-film: #141414;
+    --on-film-2: rgba(20, 20, 20, 0.82);
+    --on-film-rule: rgba(20, 20, 20, 0.32);
+    --solid: #e8e8e8;
+    --on-solid: #141414;
+    --on-solid-2: rgba(20, 20, 20, 0.72);
+    --band: #0c0c0c;
+    --on-band: #e8e8e8;
+    --on-band-2: rgba(232, 232, 232, 0.72);
+    --focus: #efefef;
     --grain: 0.06;
     --grain-blend: screen;
   }
@@ -160,8 +180,8 @@ body::after {
 }
 
 ::selection {
-  color: var(--on-amber);
-  background: #e7c063;
+  color: #141414;
+  background: #c8c8c8;
 }
 
 /* Script-only controls never appear when they would do nothing. */
@@ -182,17 +202,17 @@ html[data-js] .no-script {
 }
 
 a {
-  color: var(--amber);
+  color: var(--tone);
   text-decoration: underline;
   text-decoration-thickness: 1px;
   text-underline-offset: 0.18em;
-  text-decoration-color: color-mix(in srgb, var(--amber) 45%, transparent);
+  text-decoration-color: color-mix(in srgb, var(--tone) 45%, transparent);
   transition: color 140ms ease, background-color 140ms ease;
 }
 
 a:hover {
-  color: var(--amber-deep);
-  background-color: var(--amber-wash);
+  color: var(--tone-strong);
+  background-color: var(--wash);
 }
 
 a:focus-visible,
@@ -274,10 +294,11 @@ button {
   background: color-mix(in srgb, var(--on-film) 9%, transparent);
 }
 
+/* Exposure darkens a negative, so read frames print in ink. */
 .rail-frame::after {
   position: absolute;
   inset: 0;
-  background: var(--film-amber);
+  background: var(--on-film);
   content: "";
   opacity: 0.82;
   transform: scaleY(var(--read, 0));
@@ -385,7 +406,7 @@ main {
   bottom: -2px;
   left: 0;
   height: 2px;
-  background: var(--amber-bright);
+  background: var(--key);
   content: "";
   transform: scaleX(0);
   transform-origin: left;
@@ -435,9 +456,9 @@ main {
 }
 
 .theme-toggle[aria-pressed="true"] .theme-lamp {
-  background: var(--amber-bright);
-  border-color: var(--amber-bright);
-  box-shadow: 0 1px 8px 1px color-mix(in srgb, var(--amber-bright) 60%, transparent);
+  background: var(--key);
+  border-color: var(--key);
+  box-shadow: 0 1px 8px 1px color-mix(in srgb, var(--key) 60%, transparent);
 }
 
 /* ------------------------------------------------------------
@@ -516,7 +537,7 @@ h1 {
    ------------------------------------------------------------ */
 
 .strip {
-  --focus: var(--film-amber);
+  --focus: var(--on-film);
   padding: 0.5rem 1.3rem;
   background: var(--film);
   color: var(--on-film);
@@ -594,8 +615,8 @@ h1 {
   width: 0.62em;
   height: 0.62em;
   background:
-    linear-gradient(45deg, transparent calc(50% - 0.75px), var(--film-amber) calc(50% - 0.75px) calc(50% + 0.75px), transparent calc(50% + 0.75px)),
-    linear-gradient(-45deg, transparent calc(50% - 0.75px), var(--film-amber) calc(50% - 0.75px) calc(50% + 0.75px), transparent calc(50% + 0.75px));
+    linear-gradient(45deg, transparent calc(50% - 0.75px), var(--on-film) calc(50% - 0.75px) calc(50% + 0.75px), transparent calc(50% + 0.75px)),
+    linear-gradient(-45deg, transparent calc(50% - 0.75px), var(--on-film) calc(50% - 0.75px) calc(50% + 0.75px), transparent calc(50% + 0.75px));
   content: "";
 }
 
@@ -613,7 +634,7 @@ h1 {
 }
 
 .finder-field:focus-within {
-  border-bottom-color: var(--film-amber);
+  border-bottom-color: var(--on-film);
 }
 
 .finder-icon {
@@ -621,7 +642,7 @@ h1 {
   width: 1.3rem;
   height: 1.3rem;
   fill: none;
-  stroke: var(--film-amber);
+  stroke: var(--on-film);
   stroke-width: 1.6;
 }
 
@@ -633,7 +654,7 @@ h1 {
   background: none;
   border: 0;
   outline: 0;
-  caret-color: var(--film-amber);
+  caret-color: var(--on-film);
   font: inherit;
   font-size: 1.2rem;
   -webkit-appearance: none;
@@ -738,9 +759,9 @@ h1 {
 }
 
 .chip[aria-pressed="true"] {
-  color: var(--on-amber);
-  background: var(--film-amber);
-  border-color: var(--film-amber);
+  color: var(--on-key);
+  background: var(--key);
+  border-color: var(--key);
 }
 
 .strip .chip {
@@ -754,8 +775,9 @@ h1 {
 }
 
 .strip .chip[aria-pressed="true"] {
-  color: var(--on-amber);
-  border-color: var(--film-amber);
+  color: var(--film);
+  background: var(--on-film);
+  border-color: var(--on-film);
 }
 
 /* ------------------------------------------------------------
@@ -800,8 +822,8 @@ h1 {
 .section-index a[aria-current="location"] {
   color: var(--ink);
   font-weight: 600;
-  border-bottom-color: var(--amber-bright);
-  box-shadow: 0 1px 0 var(--amber-bright);
+  border-bottom-color: var(--key);
+  box-shadow: 0 1px 0 var(--key);
 }
 
 .content {
@@ -868,7 +890,7 @@ h3 {
 }
 
 .content li::marker {
-  color: var(--amber);
+  color: var(--tone);
 }
 
 .content li + li {
@@ -949,15 +971,15 @@ h3 {
   flex: 0 0 auto;
   width: 0.7rem;
   height: 0.7rem;
-  border: 1.5px solid var(--amber);
+  border: 1.5px solid var(--tone);
 }
 
 .swatch-device {
-  background: var(--amber);
+  background: var(--tone);
 }
 
 .swatch-saved {
-  background: repeating-linear-gradient(135deg, var(--amber) 0 1.5px, transparent 1.5px 3.5px);
+  background: repeating-linear-gradient(135deg, var(--tone) 0 1.5px, transparent 1.5px 3.5px);
 }
 
 .swatch-sent {
@@ -966,16 +988,16 @@ h3 {
 }
 
 .chip[aria-pressed="true"] .swatch {
-  border-color: var(--on-amber);
+  border-color: var(--on-key);
 }
 
 .chip[aria-pressed="true"] .swatch-device,
 .chip[aria-pressed="true"] .swatch-sent {
-  background: var(--on-amber);
+  background: var(--on-key);
 }
 
 .chip[aria-pressed="true"] .swatch-saved {
-  background: repeating-linear-gradient(135deg, var(--on-amber) 0 1.5px, transparent 1.5px 3.5px);
+  background: repeating-linear-gradient(135deg, var(--on-key) 0 1.5px, transparent 1.5px 3.5px);
 }
 
 /* ------------------------------------------------------------
@@ -993,7 +1015,7 @@ h3 {
 }
 
 .faq:target {
-  background: var(--amber-wash);
+  background: var(--wash);
 }
 
 .faq summary {
@@ -1009,7 +1031,7 @@ h3 {
 }
 
 .faq summary:hover {
-  color: var(--amber-deep);
+  color: var(--tone-strong);
 }
 
 .faq summary::-webkit-details-marker {
@@ -1018,7 +1040,7 @@ h3 {
 
 .faq summary::before {
   flex: 0 0 auto;
-  color: var(--amber);
+  color: var(--tone);
   font-family: var(--font-mono);
   font-size: 0.74rem;
   font-weight: 700;
@@ -1034,8 +1056,8 @@ h3 {
   height: 0.8rem;
   margin-left: auto;
   background:
-    linear-gradient(var(--amber), var(--amber)) center / 100% 1.5px no-repeat,
-    linear-gradient(var(--amber), var(--amber)) center / 1.5px 100% no-repeat;
+    linear-gradient(var(--tone), var(--tone)) center / 100% 1.5px no-repeat,
+    linear-gradient(var(--tone), var(--tone)) center / 1.5px 100% no-repeat;
   content: "";
   transition: background-size 160ms ease;
 }
@@ -1051,8 +1073,8 @@ h3 {
 }
 
 ::highlight(faq-hit) {
-  color: var(--on-amber);
-  background-color: var(--amber-bright);
+  color: var(--on-key);
+  background-color: var(--key);
 }
 
 .faq-empty {
@@ -1077,9 +1099,9 @@ h3 {
   justify-content: center;
   min-height: 2.75rem;
   padding: 0 1.15rem;
-  color: var(--on-film);
-  background: var(--film);
-  border: 1px solid var(--film);
+  color: var(--on-solid);
+  background: var(--solid);
+  border: 1px solid var(--solid);
   font-size: 0.94rem;
   font-weight: 600;
   line-height: 1;
@@ -1089,9 +1111,9 @@ h3 {
 }
 
 .button:hover {
-  color: var(--on-amber);
-  background: var(--film-amber);
-  border-color: var(--film-amber);
+  color: var(--on-key);
+  background: var(--tone);
+  border-color: var(--tone);
 }
 
 .button:active {
@@ -1106,8 +1128,8 @@ h3 {
 
 .button-quiet:hover {
   color: var(--ink);
-  background: var(--amber-wash);
-  border-color: var(--amber);
+  background: var(--wash);
+  border-color: var(--tone);
 }
 
 /* ------------------------------------------------------------
@@ -1172,7 +1194,7 @@ fieldset.field > .choices {
   border-bottom: 1px solid var(--rule-strong);
   border-radius: 0;
   outline: 0;
-  caret-color: var(--amber);
+  caret-color: var(--tone);
   font: inherit;
   font-size: 1rem;
   line-height: 1.7;
@@ -1184,13 +1206,13 @@ fieldset.field > .choices {
 
 .field input[type="text"]:focus,
 .field textarea:focus {
-  border-bottom-color: var(--amber);
-  box-shadow: 0 1px 0 var(--amber);
+  border-bottom-color: var(--tone);
+  box-shadow: 0 1px 0 var(--tone);
 }
 
 .field [aria-invalid="true"] {
-  border-bottom-color: #b3361f;
-  box-shadow: 0 1px 0 #b3361f;
+  border-bottom-color: var(--key);
+  box-shadow: 0 1px 0 var(--key);
 }
 
 .content .field-hint,
@@ -1206,26 +1228,8 @@ fieldset.field > .choices {
 }
 
 .content .field-error {
-  color: #a62f19;
+  color: var(--ink);
   font-weight: 600;
-}
-
-:root[data-theme="dark"] .content .field-error,
-:root[data-theme="dark"] .field [aria-invalid="true"] {
-  --error: #f08a6e;
-  color: var(--error);
-  border-bottom-color: var(--error);
-}
-
-@media screen and (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .content .field-error {
-    color: #f08a6e;
-  }
-
-  :root:not([data-theme="light"]) .field [aria-invalid="true"] {
-    border-bottom-color: #f08a6e;
-    box-shadow: 0 1px 0 #f08a6e;
-  }
 }
 
 .choices {
@@ -1266,9 +1270,9 @@ fieldset.field > .choices {
 }
 
 .choice input:checked + span {
-  color: var(--on-amber);
-  background: var(--film-amber);
-  border-color: var(--film-amber);
+  color: var(--on-key);
+  background: var(--key);
+  border-color: var(--key);
 }
 
 .choice input:focus-visible + span {
@@ -1338,11 +1342,11 @@ fieldset.field > .choices {
   min-height: 2.75rem;
   margin: 0;
   padding: 0.25rem 0.9rem;
-  background: var(--film);
+  background: var(--solid);
 }
 
 .email-chip a {
-  color: var(--film-amber);
+  color: var(--on-solid);
   font-family: var(--font-mono);
   font-size: 0.95em;
   text-decoration: none;
@@ -1350,7 +1354,7 @@ fieldset.field > .choices {
 }
 
 .email-chip a:hover {
-  color: #f0d99d;
+  color: var(--on-solid-2);
   background: none;
 }
 
@@ -1374,7 +1378,7 @@ fieldset.field > .choices {
   color: var(--ink);
   background: var(--paper-lift);
   transform: translateY(-3px);
-  box-shadow: inset 0 0 0 1px var(--paper), inset 0 0 0 2px var(--amber-bright);
+  box-shadow: inset 0 0 0 1px var(--paper), inset 0 0 0 2px var(--key);
 }
 
 .frame-title {
@@ -1396,7 +1400,7 @@ fieldset.field > .choices {
   margin-top: auto;
   align-self: flex-end;
   fill: none;
-  stroke: var(--amber);
+  stroke: var(--tone);
   stroke-width: 1.5;
   transition: transform 180ms ease;
 }
@@ -1413,8 +1417,7 @@ fieldset.field > .choices {
   position: relative;
   z-index: 41; /* closes over the rail's foot */
   margin-top: 4rem;
-  background: var(--film);
-  border-top: 3px solid var(--film-amber);
+  background: var(--band);
 }
 
 .site-footer .wrap {
@@ -1427,16 +1430,16 @@ fieldset.field > .choices {
 
 .site-footer p {
   margin: 0;
-  color: var(--on-film-2);
+  color: var(--on-band-2);
   font-size: 0.78rem;
 }
 
 .site-footer a {
-  color: var(--film-amber);
+  color: var(--on-band);
 }
 
 .site-footer a:hover {
-  color: #f0d99d;
+  color: var(--on-band-2);
   background: none;
 }
 

@@ -20,7 +20,7 @@ const isDark = () => (root.dataset.theme ?? (systemDark.matches ? "dark" : "ligh
 function reflectTheme() {
   const dark = isDark();
   themeToggle.setAttribute("aria-pressed", String(dark));
-  themeColors.forEach((meta) => meta.setAttribute("content", dark ? "#14110b" : "#f3efe4"));
+  themeColors.forEach((meta) => meta.setAttribute("content", dark ? "#141414" : "#f2f2f2"));
 }
 
 function setTheme(theme) {

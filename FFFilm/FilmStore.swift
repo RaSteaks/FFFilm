@@ -48,9 +48,10 @@ final class FilmStore {
             refresh()
         }
     }
-    // The canvas tool lives here, not in the view's @State:
-    // switching workbench tabs removes the film view, which would reset them.
+    // Canvas tool settings live here so removing the film view during a
+    // workbench-tab switch does not reset them. They are not project edits.
     var drawMode = 0
+    var batchDrawing = false
     var busy = false
     var exporting: Bool { exportController.isRunning }
     let exportController: FilmExportController
@@ -541,6 +542,12 @@ final class FilmStore {
     }
     private var frameLimitNotice: String {
         String(format: filmText("添加帧会超过 %d 帧上限，未添加。", "Adding frames would exceed the %d-frame project limit; none were added."), FilmProject.maximumFrames)
+    }
+
+    func drawFrame(_ rect: FilmRect) {
+        addFrame(rect)
+        // Each drag is a separate edit; only batch drawing keeps the tool active.
+        if !batchDrawing { drawMode = 0 }
     }
 
     func addFrame(_ rect: FilmRect? = nil) {

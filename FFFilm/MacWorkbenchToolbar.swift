@@ -5,6 +5,14 @@ extension FocusedValues {
     @Entry var calculatorStore: CalculatorStore?
 }
 
+/// The thumb and the page share one spring so a workbench switch reads as a single movement.
+enum WorkbenchMotion {
+    static let travel = Animation.spring(response: 0.3, dampingFraction: 1)
+    static let fade = Animation.easeInOut(duration: 0.15)
+    static let pageExit = Animation.easeOut(duration: 0.12)
+    static let pageTravel: CGFloat = 20
+}
+
 /// Native titlebar controls avoid nesting AppKit button bezels around custom capsule backgrounds.
 struct MacWorkbenchToolbar: ToolbarContent {
     @Bindable var store: CalculatorStore
@@ -14,16 +22,9 @@ struct MacWorkbenchToolbar: ToolbarContent {
 
     var body: some ToolbarContent {
         ToolbarItem(placement: .principal) {
-            Picker("nav.workbench", selection: $store.activeView) {
-                ForEach(CalculatorView.allCases) { view in
-                    Text(view.label).tag(view)
-                }
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .frame(width: 260)
-            .help(Text("Rate ⌘1 · Shutter ⌘2 · Film ⌘3"))
-            .accessibilityIdentifier("calculator-view-picker")
+            WorkbenchSwitcher(selection: $store.activeView)
+                .help(Text("Rate ⌘1 · Shutter ⌘2 · Film ⌘3"))
+                .accessibilityIdentifier("calculator-view-picker")
         }
         ToolbarItemGroup(placement: .primaryAction) {
             SettingsButton()
@@ -46,6 +47,8 @@ struct MacWorkbenchToolbar: ToolbarContent {
             // Both calculator tabs expose Copy after the in-content header is removed.
             if store.activeView != .film {
                 Button {
+                    // Keyboard and toolbar copies participate in the same bounded shutter history.
+                    if store.activeView == .shutter { store.rememberShutterResult() }
                     let summary = store.activeView == .rate
                         ? store.readableRecordingSummary(storageUnit: unit)
                         : store.readableShutterSummary()
@@ -87,6 +90,57 @@ struct MacWorkbenchToolbar: ToolbarContent {
                 }
                 .accessibilityIdentifier("more-action")
             }
+        }
+    }
+}
+
+/// NSSegmentedControl swaps its selection in place, so the thumb is drawn here to travel between segments.
+private struct WorkbenchSwitcher: View {
+    @Binding var selection: CalculatorView
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private static let inset: CGFloat = 2
+    private static let cornerRadius: CGFloat = 7
+    private static let segmentWidth = (260 - inset * 2) / CGFloat(CalculatorView.allCases.count)
+
+    private var selectedIndex: Int {
+        CalculatorView.allCases.firstIndex(of: selection) ?? 0
+    }
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(CalculatorView.allCases) { view in
+                Button {
+                    selection = view
+                } label: {
+                    Text(view.label)
+                        .font(.system(size: 13))
+                        .foregroundStyle(selection == view ? Palette.text : Palette.muted)
+                        .frame(width: Self.segmentWidth, height: 24)
+                }
+                .buttonStyle(WorkbenchPressStyle())
+            }
+        }
+        // One persistent thumb moves between stops; per-segment fills would cross-fade instead.
+        .background(alignment: .leading) {
+            RoundedRectangle(cornerRadius: Self.cornerRadius - Self.inset)
+                // Matches the roughly 25% lift of the native segmented selections in the page.
+                .fill(Palette.text.opacity(0.25))
+                .frame(width: Self.segmentWidth)
+                .offset(x: Self.segmentWidth * CGFloat(selectedIndex))
+        }
+        // Value-scoped, so ⌘1/2/3 slide too while the swapped workbench content stays unanimated.
+        .animation(reduceMotion ? nil : WorkbenchMotion.travel, value: selection)
+        .padding(Self.inset)
+        .background(Palette.controlSurface, in: RoundedRectangle(cornerRadius: Self.cornerRadius))
+        .accessibilityRepresentation {
+            Picker("nav.workbench", selection: $selection) {
+                ForEach(CalculatorView.allCases) { view in
+                    Text(view.label).tag(view)
+                }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
         }
     }
 }

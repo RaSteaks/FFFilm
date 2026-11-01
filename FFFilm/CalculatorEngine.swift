@@ -237,6 +237,9 @@ struct CalculatorEngine {
         // Preserve an impossible theoretical result rather than clamping it to a different exposure.
         let exceeds = exposure.angle > settings.maxAngle && !shutterClose(exposure.angle, settings.maxAngle)
         var result = ShutterCalculation(status: exceeds ? .exceedsMaximum : .valid, exposure: exposure)
+        if exceeds {
+            result.maximumExposure = shutterExposure(seconds: settings.maxAngle / (360 * fps), fps: fps)
+        }
         if settings.mode == .matching {
             result.playbackSpeed = settings.projectFps / fps
             result.durationMultiplier = fps / settings.projectFps

@@ -22,7 +22,8 @@ nonisolated enum NegativeResolution: String, CaseIterable, Identifiable, Sendabl
 
 nonisolated struct NegativeCameraSettings: Equatable, Sendable {
     var lensID: String?
-    var resolution: NegativeResolution = .hd
+    // Full HD preserves more grain/focus detail; discovery still falls back on older lenses.
+    var resolution: NegativeResolution = .fullHD
 }
 
 nonisolated struct NegativeCameraConfiguration: Sendable {

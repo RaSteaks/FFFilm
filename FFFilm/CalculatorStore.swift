@@ -1,11 +1,10 @@
 import Foundation
 import Observation
 
-private struct ResetUndoSnapshot {
-    let settings: CaptureSettings
-    let shutterSettings: ShutterSettings
-    let cameraMemories: [String: CameraSettingsMemory]
-    let view: CalculatorView
+private enum ResetUndoSnapshot {
+    // Each reset owns only the state it changes, including the persisted value it replaces.
+    case rate(settings: CaptureSettings, defaultCameraMemory: CameraSettingsMemory?)
+    case shutter(settings: ShutterSettings, rememberedSettings: ShutterSettings)
 }
 
 @Observable
@@ -13,24 +12,30 @@ final class CalculatorStore {
     @ObservationIgnored private let engine: CalculatorEngine
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private var cameraMemories: [String: CameraSettingsMemory]
-    @ObservationIgnored private var resetUndoSnapshot: ResetUndoSnapshot?
+    private var resetUndoSnapshot: ResetUndoSnapshot?
     // One window-local entry bounds memory and avoids repeating the multi-frequency search.
     @ObservationIgnored private var shutterCache: (settings: ShutterSettings, result: ShutterCalculation)?
+    @ObservationIgnored private var rememberedShutterSettings: ShutterSettings
+    // Invalid numeric drafts may live in a window, but never enter persisted rig snapshots.
+    @ObservationIgnored private var shutterRigDrafts: [ShutterRigID: ShutterSettings] = [:]
+    let shutterWorkspace: ShutterWorkspace
 
     let catalog: CatalogData
-    var settings: CaptureSettings
-    var shutterSettings: ShutterSettings
-    var shutterInputRevision = 0
+    // Writes must pass through the workflow methods to keep normalization,
+    // persistence and reset invalidation consistent with the visible inputs.
+    private(set) var settings: CaptureSettings
+    private(set) var shutterSettings: ShutterSettings
+    private(set) var shutterInputRevision = 0
     var activeView: CalculatorView = .rate
     // Window-local task selection never changes the shared camera format or planning inputs.
     var recordingTask: RecordingTask = .capacity
-    var pinnedSetups: [PinnedSetup] = []
-    var quickStartCameraIds: [String]
+    private(set) var pinnedSetups: [PinnedSetup] = []
+    private(set) var quickStartCameraIds: [String]
 
     /// The banner is deliberately modelled as state instead of a transient
     /// toast so VoiceOver and keyboard users can discover important changes.
     var feedbackMessage: String?
-    var resetUndoAvailable = false
+    var resetUndoAvailable: Bool { resetUndoSnapshot != nil }
 
     private static let quickStartKey = "fffilm.quick-start-camera-ids"
     private static let cameraMemoryKey = "fffilm.camera-settings-memory"
@@ -43,7 +48,13 @@ final class CalculatorStore {
         self.defaults = defaults
         self.cameraMemories = Self.loadCameraMemories(defaults: defaults, catalog: catalog)
         self.settings = .default
-        self.shutterSettings = .default
+        let memory = defaults.data(forKey: ShutterSettingsMemory.key)
+            .flatMap { try? JSONDecoder().decode(ShutterSettingsMemory.self, from: $0) }
+        let restored = memory.flatMap { $0.isValid ? $0.settings : nil } ?? ShutterSettings.default
+        let workspace = ShutterWorkspace(defaults: defaults, migrating: restored)
+        self.shutterWorkspace = workspace
+        self.shutterSettings = workspace.active.settings
+        self.rememberedShutterSettings = workspace.active.settings
 
         let stored = defaults.stringArray(forKey: Self.quickStartKey) ?? Self.defaultQuickStarts
         let validIDs = stored.filter { id in
@@ -62,7 +73,7 @@ final class CalculatorStore {
 
     var calculation: Calculation { engine.calculate(settings: settings) }
     var shutterCalculation: ShutterCalculation {
-        // Read observed inputs even on cache hits, so views still update after direct edits,
+        // Read observed inputs even on cache hits, so views still update after input edits,
         // import, reset or undo. Cache writes themselves must not trigger view invalidation.
         let inputs = shutterSettings
         if let shutterCache, shutterCache.settings == inputs { return shutterCache.result }
@@ -121,7 +132,66 @@ final class CalculatorStore {
     }
 
     func readableShutterSummary() -> String {
-        AppText.shutterSummary(settings: shutterSettings, calculation: shutterCalculation)
+        AppText.shutterRigContext(shutterWorkspace.active)
+            + "\n" + AppText.shutterSummary(settings: shutterSettings, calculation: shutterCalculation)
+    }
+
+    func selectShutterRig(_ id: ShutterRigID) {
+        guard id != shutterWorkspace.selectedRig else { return }
+        rememberShutterResult()
+        shutterRigDrafts[shutterWorkspace.selectedRig] = shutterSettings
+        clearTransientState()
+        shutterWorkspace.select(id)
+        rememberedShutterSettings = shutterWorkspace.active.settings
+        shutterSettings = shutterRigDrafts[id] ?? rememberedShutterSettings
+    }
+
+    func configureShutterRig(cameraLabel: String) {
+        shutterWorkspace.update(settings: rememberedShutterSettings, cameraLabel: cameraLabel)
+    }
+
+    /// Called at semantic edit boundaries, not on every keystroke. Pending/no-result input
+    /// is excluded; inactive drafts use the last valid values already retained for launch.
+    func currentShutterRecord() -> ShutterRecord? {
+        guard let exposure = shutterCalculation.exposure else { return nil }
+        let rig = shutterWorkspace.active
+        return ShutterRecord(id: UUID(), rig: rig.id,
+            title: "\(DisplayFormat.shutterFrameRate(shutterSettings.sensorFps)) fps · \(DisplayFormat.shutterNumber(exposure.angle))°",
+            cameraLabel: rig.cameraLabel, settings: restorableShutterSettings, date: .now)
+    }
+
+    func rememberShutterResult() {
+        if let record = currentShutterRecord() { shutterWorkspace.remember(record) }
+    }
+
+    func restoreShutterRecord(_ record: ShutterRecord) {
+        guard record.isValid else { return }
+        rememberShutterResult()
+        shutterRigDrafts[shutterWorkspace.selectedRig] = shutterSettings
+        clearTransientState()
+        shutterWorkspace.select(record.rig)
+        shutterSettings = record.settings
+        rememberedShutterSettings = record.settings
+        shutterRigDrafts[record.rig] = nil
+        shutterWorkspace.update(settings: record.settings, cameraLabel: record.cameraLabel)
+        persistShutterSettings()
+        // Explicit restoration replaces the destination editor's drafts, not other rigs' drafts.
+        shutterInputRevision += 1
+        shutterWorkspace.remember(record)
+    }
+
+    func summary(for record: ShutterRecord) -> String {
+        AppText.shutterRigContext(ShutterRig(id: record.rig, cameraLabel: record.cameraLabel, settings: record.settings))
+            + "\n" + AppText.shutterSummary(settings: record.settings, calculation: engine.calculateShutter(settings: record.settings))
+            + (record.conditions.isEmpty ? "" : "\n" + record.conditions)
+            + (record.fieldChecked ? "\n" + AppText.localized("shutter.library.checked") + " · " + record.date.formatted() : "")
+    }
+
+    func chooseShutterCandidate(_ candidate: ShutterCandidate) {
+        // Selection is explicit and limited to the current candidate set. Matching keeps its target.
+        guard shutterSettings.mode == .flicker, shutterCalculation.candidates.contains(candidate) else { return }
+        updateShutterSettings(candidate.exposure.angle, at: \.preferredAngle)
+        rememberShutterResult()
     }
 
     func setActiveView(_ view: CalculatorView) {
@@ -192,6 +262,26 @@ final class CalculatorStore {
     func updateShutterSettings<Value>(_ value: Value, at keyPath: WritableKeyPath<ShutterSettings, Value>) {
         clearTransientState()
         shutterSettings[keyPath: keyPath] = value
+        persistShutterSettings()
+    }
+
+    /// Save valid values independently so a pending draft cannot erase the last usable
+    /// parameter, or prevent a task/direction change from being remembered on relaunch.
+    private func persistShutterSettings() {
+        let next = restorableShutterSettings
+        guard let data = try? JSONEncoder().encode(ShutterSettingsMemory(settings: next)) else { return }
+        rememberedShutterSettings = next
+        defaults.set(data, forKey: ShutterSettingsMemory.key)
+        shutterWorkspace.update(settings: next)
+    }
+
+    private var restorableShutterSettings: ShutterSettings {
+        var next = shutterSettings
+        for field in ShutterInputField.allCases where field.error(for: next[keyPath: field.keyPath]) != nil {
+            next[keyPath: field.keyPath] = rememberedShutterSettings[keyPath: field.keyPath]
+        }
+        if next.displayRefreshMilliHz == nil { next.displayRefreshRates = rememberedShutterSettings.displayRefreshRates }
+        return next
     }
 
     func resetActiveView() {
@@ -199,39 +289,40 @@ final class CalculatorStore {
         // The film workbench owns its document lifecycle; calculator reset does not apply.
         guard activeView != .film else { return }
         #endif
-        cameraMemories = Self.loadCameraMemories(defaults: defaults, catalog: catalog)
-        resetUndoSnapshot = ResetUndoSnapshot(
-            settings: settings,
-            shutterSettings: shutterSettings,
-            cameraMemories: cameraMemories,
-            view: activeView
-        )
-        resetUndoAvailable = true
         feedbackMessage = AppText.reset
 
         if activeView == .rate {
-            settings = engine.normalized(.default)
+            let resetSettings = engine.normalized(.default)
+            cameraMemories = Self.loadCameraMemories(defaults: defaults, catalog: catalog)
+            resetUndoSnapshot = .rate(settings: settings, defaultCameraMemory: cameraMemories[resetSettings.cameraId])
+            settings = resetSettings
             rememberCurrentCamera()
         } else {
+            resetUndoSnapshot = .shutter(settings: shutterSettings, rememberedSettings: rememberedShutterSettings)
             shutterSettings = .default
+            persistShutterSettings()
             shutterInputRevision += 1
         }
     }
 
     func undoReset() {
         guard let snapshot = resetUndoSnapshot else { return }
-        settings = snapshot.settings
-        shutterSettings = snapshot.shutterSettings
-        if snapshot.view == .rate {
+        switch snapshot {
+        case .shutter(let previous, let remembered):
+            shutterSettings = previous
+            // Undoing a reset during an invalid draft also restores its last usable launch value.
+            rememberedShutterSettings = remembered
+            persistShutterSettings()
+        case .rate(let previous, let defaultCameraMemory):
+            settings = previous
             // Undo only the default camera record reset changed; keep other
             // windows' later edits to unrelated cameras.
             cameraMemories = Self.loadCameraMemories(defaults: defaults, catalog: catalog)
             let defaultCameraID = engine.normalized(.default).cameraId
-            cameraMemories[defaultCameraID] = snapshot.cameraMemories[defaultCameraID]
+            cameraMemories[defaultCameraID] = defaultCameraMemory
             persistCameraMemories()
         }
         resetUndoSnapshot = nil
-        resetUndoAvailable = false
         feedbackMessage = AppText.resetUndone
     }
 
@@ -241,6 +332,8 @@ final class CalculatorStore {
         clearTransientState()
         shutterSettings.sensorFps = settings.sensorFps
         shutterSettings.projectFps = settings.projectFps
+        persistShutterSettings()
+        rememberShutterResult()
         return (settings.sensorFps, settings.projectFps)
     }
 
@@ -266,7 +359,6 @@ final class CalculatorStore {
     func clearTransientState() {
         feedbackMessage = nil
         resetUndoSnapshot = nil
-        resetUndoAvailable = false
     }
 
     func addQuickStart(cameraID: String) {

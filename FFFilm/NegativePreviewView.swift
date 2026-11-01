@@ -2,6 +2,7 @@
 import SwiftUI
 import PhotosUI
 import UniformTypeIdentifiers
+import CoreImage
 
 struct NegativePreviewView: View {
     @Bindable var store: NegativeStore
@@ -446,29 +447,26 @@ private struct NegativeImagePanel: View {
     var cornerRadius: CGFloat = 12
     var body: some View {
         ZStack(alignment: .topTrailing) {
-            if let image = store.displayed {
-                // Tap intent is explicit: focusing must never unexpectedly enter film-base sampling.
-                NegativeCanvas(image: image, sourceURL: store.asset?.fileURL,
+            if store.imageState.cameraImage != nil || store.displayed != nil {
+                // Camera pixels go straight to Metal; file bitmaps keep their existing tier cache.
+                NegativeCanvas(image: store.displayed, cameraImage: store.imageState.cameraImage,
+                               base: !store.sampling && store.showsPositive ? store.base : nil,
+                               sourceURL: store.asset?.fileURL,
                                sampling: store.sampling || store.focusPoint != nil,
                                point: store.sampling || store.phase == .locking ? store.point : store.focusPoint ?? CGPoint(x: 0.5, y: 0.5),
-                               displayNeed: { store.displayNeeds($0) }) { point in
+                               displayNeed: { store.displayNeeds($0) }, failed: { store.cameraDisplayFailed() }) { point in
                     guard store.busy == nil else { return }
                     if store.sampling { store.selectSamplePoint(point) }
                     else { store.focus(point) }
                 }
                 .accessibilityIdentifier("negative-image")
             }
-            if store.sampling, let image = store.asset?.preview {
-                // Magnifier uses the original preview for positioning only, never for sampling.
-                let side = CGFloat(min(image.width, image.height)) * 0.12
-                let rect = CGRect(x: store.point.x * CGFloat(image.width) - side / 2,
-                                  y: store.point.y * CGFloat(image.height) - side / 2, width: side, height: side)
-                if let crop = image.cropping(to: rect) {
-                    Image(decorative: crop, scale: 1).resizable().scaledToFit()
-                        .frame(width: 90, height: 90).overlay { Rectangle().stroke(.white, lineWidth: 1) }
-                        .overlay { Image(systemName: "plus").foregroundStyle(.white).shadow(radius: 1) }
-                        .padding(8).allowsHitTesting(false)
-                }
+            if store.sampling, let image = store.imageState.loupe {
+                // This bounded source crop stays sharp even when the display uses a smaller tier.
+                Image(decorative: image, scale: 1).resizable().scaledToFit()
+                    .frame(width: 90, height: 90).overlay { Rectangle().stroke(.white, lineWidth: 1) }
+                    .overlay { Image(systemName: "plus").foregroundStyle(.white).shadow(radius: 1) }
+                    .padding(8).allowsHitTesting(false)
             }
         }
         .background(.black)
@@ -488,19 +486,26 @@ private struct NegativeShareSheet: UIViewControllerRepresentable {
 }
 
 private struct NegativeCanvas: UIViewRepresentable {
-    let image: CGImage
+    let image: CGImage?
+    let cameraImage: CIImage?
+    let base: NegativeBase?
     let sourceURL: URL?
     let sampling: Bool
     let point: CGPoint
     var displayNeed: ((CGFloat) -> Void)? = nil
+    let failed: () -> Void
     let selected: (CGPoint) -> Void
     func makeUIView(context: Context) -> NegativeZoomView { NegativeZoomView() }
     func updateUIView(_ view: NegativeZoomView, context: Context) {
         // Refresh UIKit accessibility text without recreating its zoom/pan state.
-        view.accessibilityLabel = AppText.localized("negative.image")
+        view.updateAccessibility()
         view.selected = selected
         view.displayNeed = displayNeed
-        view.setImage(image, sourceURL: sourceURL, sampling: sampling, point: point)
+        if let cameraImage {
+            view.setCameraImage(cameraImage, base: base, sampling: sampling, point: point, failed: failed)
+        } else if let image {
+            view.setImage(image, sourceURL: sourceURL, sampling: sampling, point: point)
+        }
     }
 }
 
@@ -519,6 +524,9 @@ final class NegativeZoomView: UIScrollView, UIScrollViewDelegate {
     private var sampling = false
     private var fitLongPoints: CGFloat = 0
     private var pendingViewport: (zoom: CGFloat, center: CGPoint)?
+    private var lastViewport: (zoom: CGFloat, center: CGPoint)?
+    private var arranging = false
+    private var metalView: NegativeMetalView?
     private weak var previousImage: CGImage?
 
     init() {
@@ -534,30 +542,65 @@ final class NegativeZoomView: UIScrollView, UIScrollViewDelegate {
         marker.shadowColor = UIColor.black.cgColor; marker.shadowOpacity = 1; marker.shadowRadius = 1
         centerDot.fillColor = UIColor.white.cgColor
         centerDot.shadowColor = UIColor.black.cgColor; centerDot.shadowOpacity = 1; centerDot.shadowRadius = 1
-        addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(tapped(_:))))
+        let tap = UITapGestureRecognizer(target: self, action: #selector(tapped(_:)))
+        let doubleTap = UITapGestureRecognizer(target: self, action: #selector(doubleTapped(_:)))
+        doubleTap.numberOfTapsRequired = 2
+        tap.require(toFail: doubleTap)
+        addGestureRecognizer(tap); addGestureRecognizer(doubleTap)
         isAccessibilityElement = true
-        accessibilityLabel = AppText.localized("negative.image", comment: "Preview image")
+        updateAccessibility()
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+    func updateAccessibility() {
+        let label = AppText.localized("negative.image")
+        // Video updates need not reallocate unchanged VoiceOver actions every frame.
+        guard accessibilityLabel != label else { return }
+        accessibilityLabel = label
+        accessibilityCustomActions = [
+            UIAccessibilityCustomAction(name: AppText.localized("negative.zoomIn"), target: self, selector: #selector(zoomIn)),
+            UIAccessibilityCustomAction(name: AppText.localized("negative.fit"), target: self, selector: #selector(fitImage))
+        ]
+    }
     func setImage(_ image: CGImage, sourceURL: URL?, sampling: Bool, point: CGPoint) {
+        metalView?.removeFromSuperview(); metalView = nil
         if previousImage !== image { imageView.image = UIImage(cgImage: image); previousImage = image }
-        let size = CGSize(width: image.width, height: image.height)
+        setSource(size: CGSize(width: image.width, height: image.height), sourceURL: sourceURL, sampling: sampling, point: point)
+    }
+    func setCameraImage(_ image: CIImage, base: NegativeBase?, sampling: Bool, point: CGPoint, failed: @escaping () -> Void) {
+        if metalView == nil {
+            let surface = NegativeMetalView()
+            // Insert below the source-coordinate reticle layers.
+            imageView.insertSubview(surface, at: 0)
+            metalView = surface
+            imageView.image = nil; previousImage = nil
+        }
+        metalView?.failed = failed
+        metalView?.show(image, base: base)
+        setSource(size: image.extent.size, sourceURL: nil, sampling: sampling, point: point)
+        updateCameraResolution()
+    }
+    private func setSource(size: CGSize, sourceURL: URL?, sampling: Bool, point: CGPoint) {
         let sourceChanged = self.sourceURL != sourceURL
         self.sourceURL = sourceURL
         if sourceChanged || imageSize != size {
-            // The owned file URL stays stable across tiers/comparison. A new file must
-            // reset even when its preview dimensions match the previous source.
             pendingViewport = !sourceChanged && imageSize.width > 0 && bounds.width > 0 ? viewport() : nil
+            if sourceChanged { lastViewport = nil }
             imageSize = size; lastBounds = .zero; setNeedsLayout()
         }
-        self.sampling = sampling; self.point = point
-        updateMarker()
+        // Most frames only change the texture; don't rebuild marker paths at video cadence.
+        if self.sampling != sampling || self.point != point {
+            self.sampling = sampling; self.point = point
+            updateMarker()
+        }
     }
     override func layoutSubviews() {
+        arranging = true
+        defer { arranging = false; if imageSize.width > 0 { lastViewport = viewport() } }
         super.layoutSubviews()
         if lastBounds != bounds.size, imageSize.width > 0, bounds.width > 0 {
+            // Resize and rotation preserve the viewed source region, just like sharper file tiers.
+            let restore = pendingViewport ?? (lastBounds != .zero ? lastViewport : nil)
             lastBounds = bounds.size
-            let restore = pendingViewport
             pendingViewport = nil
             setZoomScale(1, animated: false)
             let factor = min(bounds.width / imageSize.width, bounds.height / imageSize.height)
@@ -577,20 +620,29 @@ final class NegativeZoomView: UIScrollView, UIScrollViewDelegate {
                 contentOffset = CGPoint(x: -contentInset.left, y: -contentInset.top)
             }
         }
-        centerImage(); updateMarker()
+        centerImage(); updateMarker(); updateCameraResolution()
+    }
+    private func updateCameraResolution() {
+        guard let metalView else { return }
+        metalView.frame = imageView.bounds
+        metalView.updateResolution(zoom: zoomScale, displayScale: traitCollection.displayScale)
+    }
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        if !arranging, imageSize.width > 0 { lastViewport = viewport() }
     }
     func viewForZooming(in scrollView: UIScrollView) -> UIView? { imageView }
     func scrollViewDidZoom(_ scrollView: UIScrollView) {
-        centerImage(); updateMarker()
-        guard let displayNeed, fitLongPoints > 0, zoomScale > 1.01 else { return }
+        centerImage(); updateMarker(); updateCameraResolution()
+        if !arranging { lastViewport = viewport() }
+        guard !arranging, let displayNeed, fitLongPoints > 0, zoomScale > 1.01 else { return }
         // Screen pixels covering the fitted long side at this zoom; more than the current
         // bitmap resolution means the preview is being stretched on screen.
         displayNeed((fitLongPoints * zoomScale * max(1, traitCollection.displayScale)).rounded(.up))
     }
     /// The visible content center in normalized coordinates plus the current visual zoom.
     private func viewport() -> (zoom: CGFloat, center: CGPoint) {
-        let x = (contentOffset.x + bounds.width / 2 - contentInset.left) / max(contentSize.width, 1)
-        let y = (contentOffset.y + bounds.height / 2 - contentInset.top) / max(contentSize.height, 1)
+        let x = (contentOffset.x + bounds.width / 2) / max(contentSize.width, 1)
+        let y = (contentOffset.y + bounds.height / 2) / max(contentSize.height, 1)
         return (zoomScale, CGPoint(x: min(1, max(0, x)), y: min(1, max(0, y))))
     }
     private func centerImage() {
@@ -618,6 +670,27 @@ final class NegativeZoomView: UIScrollView, UIScrollViewDelegate {
         centerDot.path = UIBezierPath(ovalIn: CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2)).cgPath
         marker.lineWidth = 1 / zoomScale
         CATransaction.commit()
+    }
+    /// Double-tap is inspection only; it cannot accidentally move focus or the sample point.
+    @objc private func doubleTapped(_ gesture: UITapGestureRecognizer) {
+        guard imageView.bounds.contains(gesture.location(in: imageView)) else { return }
+        if zoomScale > 1.01 { _ = fitImage() }
+        else { zoom(to: gesture.location(in: imageView), scale: 2) }
+    }
+    private func zoom(to point: CGPoint, scale: CGFloat) {
+        let size = CGSize(width: bounds.width / scale, height: bounds.height / scale)
+        zoom(to: CGRect(x: point.x - size.width / 2, y: point.y - size.height / 2,
+                        width: size.width, height: size.height), animated: !UIAccessibility.isReduceMotionEnabled)
+    }
+    @objc func zoomIn() -> Bool {
+        let center = viewport().center
+        zoom(to: CGPoint(x: center.x * imageView.bounds.width, y: center.y * imageView.bounds.height),
+             scale: min(maximumZoomScale, zoomScale * 2))
+        return true
+    }
+    @objc func fitImage() -> Bool {
+        setZoomScale(1, animated: !UIAccessibility.isReduceMotionEnabled)
+        return true
     }
     @objc private func tapped(_ gesture: UITapGestureRecognizer) {
         let p = gesture.location(in: imageView)

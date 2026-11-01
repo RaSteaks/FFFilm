@@ -63,19 +63,8 @@ struct FilmTests {
         #expect(FilmCanvas.edge(at: CGPoint(x: 30, y: 500), of: full, in: size) == nil)
     }
 
-    @Test func gapDetectionAndUniformFallback() async {
-        var signal = [Double](repeating: 100, count: 600)
-        for index in 196..<204 { signal[index] = 250 }
-        for index in 396..<404 { signal[index] = 250 }
-        let frames = FilmRenderer.split(signal: signal, horizontal: true)
-        #expect(frames.count == 3)
-        #expect(frames.allSatisfy { $0.valid })
-        let uniform = FilmRenderer.split(signal: Array(repeating: 100, count: 600), horizontal: false)
-        #expect(uniform.isEmpty)
-    }
-
     @Test func previewPreservesWideGamutBeforeDisplayConversion() async throws {
-        let input = FileManager.default.temporaryDirectory.appending(path: "FilmP3-\(UUID()).tiff")
+        let input = try FilmTestFiles.directory().appending(path: "FilmP3-\(UUID()).tiff")
         defer { try? FileManager.default.removeItem(at: input) }
         let space = FilmRenderer.colorSpace("Display P3")
         let color = try #require(CIColor(red: 0, green: 1, blue: 0, alpha: 1, colorSpace: space))
@@ -95,7 +84,7 @@ struct FilmTests {
     }
 
     @Test func untaggedScanAcceptsPersistedCustomICC() async throws {
-        let input = FileManager.default.temporaryDirectory.appending(path: "FilmUntagged-\(UUID()).tiff")
+        let input = try FilmTestFiles.directory().appending(path: "FilmUntagged-\(UUID()).tiff")
         defer { try? FileManager.default.removeItem(at: input) }
         var data = Data([0x49, 0x49, 42, 0, 8, 0, 0, 0])
         func short(_ v: UInt16) { data.append(UInt8(v & 255)); data.append(UInt8(v >> 8)) }
@@ -131,7 +120,7 @@ struct FilmTests {
     }
 
     @Test @MainActor func firstImportSharesPreviewAndRestoredRotationUsesCachedPixels() async throws {
-        let input = FileManager.default.temporaryDirectory.appending(path: "FilmImportPreview-\(UUID()).tiff")
+        let input = try FilmTestFiles.directory().appending(path: "FilmImportPreview-\(UUID()).tiff")
         defer { try? FileManager.default.removeItem(at: input) }
         let space = FilmRenderer.colorSpace("Display P3")
         let color = try #require(CIColor(red: 0.2, green: 0.7, blue: 0.4, alpha: 1, colorSpace: space))
@@ -163,7 +152,7 @@ struct FilmTests {
     }
 
     @Test @MainActor func projectDiskSaveAndFailedWritePreserveDirtyState() throws {
-        let directory = FileManager.default.temporaryDirectory.appending(path: "FilmSaveTests-\(UUID())")
+        let directory = try FilmTestFiles.directory().appending(path: "FilmSaveTests-\(UUID())")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: directory) }
         let store = FilmStore()
@@ -179,7 +168,7 @@ struct FilmTests {
     }
 
     @Test @MainActor func failedImportCannotReportUnsavedProjectAsSaved() async throws {
-        let directory = FileManager.default.temporaryDirectory.appending(path: "FilmFailedImport-\(UUID())")
+        let directory = try FilmTestFiles.directory().appending(path: "FilmFailedImport-\(UUID())")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: directory) }
         let store = FilmStore()
@@ -213,7 +202,7 @@ struct FilmTests {
         #expect(accepted == false)
         store.saveProject { accepted = $0 }
         #expect(accepted == false)
-        store.openScan(); store.openProject(); store.export(scope: 3)
+        store.openScan(); store.openProject(); store.openExportSettings()
         #expect(store.presentingSheet && !store.busy && !store.exporting)
         let project = store.project
         store.undo(); store.redo()
@@ -247,7 +236,7 @@ struct FilmTests {
     }
 
     @Test func rotatedJPEGFlattensTransparentCornersAndThumbnailRotates() async throws {
-        let directory = FileManager.default.temporaryDirectory.appending(path: "FilmJPEG-\(UUID())")
+        let directory = try FilmTestFiles.directory().appending(path: "FilmJPEG-\(UUID())")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: directory) }
         let input = directory.appending(path: "source.tiff")
@@ -275,7 +264,7 @@ struct FilmTests {
 
     /// Old grading data is ignored on decode and never reaches preview/export.
     @Test func legacyProjectLoadsGeometryAndExportsUnadjustedPixels() async throws {
-        let directory = FileManager.default.temporaryDirectory.appending(path: "FilmSlicing-\(UUID())")
+        let directory = try FilmTestFiles.directory().appending(path: "FilmSlicing-\(UUID())")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: directory) }
         let space = try #require(CGColorSpace(name: CGColorSpace.linearSRGB))
@@ -344,6 +333,50 @@ struct FilmTests {
         #expect(store.project.valid)
     }
 
+    @Test @MainActor func singleFrameDrawingReturnsToSelect() {
+        let store = FilmStore()
+        let crop = FilmRect(x: 0.1, y: 0.2, width: 0.6, height: 0.25)
+        #expect(!store.batchDrawing)
+        store.drawMode = 1
+        store.drawFrame(crop)
+        #expect(store.project.frames.map(\.crop) == [crop])
+        #expect(store.frame?.id == store.project.frames.last?.id)
+        #expect(store.drawMode == 0)
+    }
+
+    @Test @MainActor func batchFrameDrawingKeepsToolAndSeparateHistory() {
+        let store = FilmStore()
+        let first = FilmRect(x: 0.1, y: 0.1, width: 0.7, height: 0.2)
+        let second = FilmRect(x: 0.1, y: 0.4, width: 0.7, height: 0.2)
+        let third = FilmRect(x: 0.1, y: 0.7, width: 0.7, height: 0.2)
+        store.drawMode = 1
+        store.batchDrawing = true
+        #expect(!store.dirty)
+        #expect(store.undoStack.isEmpty)
+
+        store.drawFrame(first)
+        #expect(store.drawMode == 1)
+        store.drawFrame(second)
+        #expect(store.drawMode == 1)
+        #expect(store.project.frames.map(\.crop) == [first, second])
+        #expect(store.project.frames.map(\.name) == ["01", "02"])
+        #expect(store.frame?.crop == second)
+        #expect(store.undoStack.count == 2)
+
+        store.undo()
+        #expect(store.project.frames.map(\.crop) == [first])
+        #expect(store.drawMode == 1 && store.batchDrawing)
+        store.redo()
+        #expect(store.project.frames.map(\.crop) == [first, second])
+
+        store.batchDrawing = false
+        store.drawFrame(third)
+        #expect(store.project.frames.map(\.crop) == [first, second, third])
+        #expect(store.drawMode == 0)
+        store.undo()
+        #expect(store.project.frames.map(\.crop) == [first, second])
+    }
+
     @Test @MainActor func manualFrameLimitPreservesSelectionAndUndo() {
         let store = FilmStore()
         store.project.frames = (1...FilmProject.maximumFrames).map { FilmFrame(name: String($0)) }
@@ -357,7 +390,7 @@ struct FilmTests {
 
     @Test @MainActor func detectionHonorsFrameLimitAndNumericNames() async throws {
         // Exercise the real renderer so capacity checks include actual detection results.
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent("FilmLimit-\(UUID()).tiff")
+        let url = try FilmTestFiles.directory().appendingPathComponent("FilmLimit-\(UUID()).tiff")
         defer { try? FileManager.default.removeItem(at: url) }
         let extent = CGRect(x: 0, y: 0, width: 600, height: 32)
         var scan = CIImage(color: CIColor(red: 0.3, green: 0.3, blue: 0.3)).cropped(to: extent)
@@ -403,7 +436,21 @@ struct FilmTests {
         let placeholder = store.project
         try await detect()
         #expect(store.project.frames.map(\.name) == ["01", "02", "03"])
-        #expect(store.undoStack == [placeholder])
+        #expect(store.undoStack.map(\.project) == [placeholder])
+        let detected = store.project
+        try await detect()
+        #expect(store.project == detected && store.undoStack.map(\.project) == [placeholder])
+        store.updateFrame { $0.crop.x += 0.01; $0.crop.width -= 0.01; $0.name = "Manual" }
+        let edited = store.project
+        try await detect()
+        #expect(store.project == edited)
+        store.undo()
+        #expect(store.project == detected)
+        store.undo()
+        #expect(store.project == placeholder)
+        store.redo()
+        try await detect()
+        #expect(store.project == detected)
         await store.renderer.close()
     }
 

@@ -1,7 +1,7 @@
 /* ============================================================
    FFFilm support — "film datasheet"
    The support site is set like a vintage film-stock datasheet:
-   warm paper, two-ink print (ink + edge-code amber), an
+   warm paper, two-ink print (ink + amber), an
    engineering title block, spec tables, and a 35mm sprocket
    rail as the signature element. Sharp geometry, printed feel.
    ============================================================ */
@@ -13,14 +13,17 @@
   --paper-lift: #faf7ee;
   --ink: #1d1a12;
   --ink-2: #57503c;
-  --ink-3: #7a7157;
-  --amber: #9c6b00;
-  --amber-deep: #7a5300;
+  --ink-3: #675f47;
+  --amber: #7f5600;
+  --amber-deep: #634300;
   --amber-bright: #d9a521;
   --amber-wash: rgba(217, 165, 33, 0.16);
   --rule: rgba(29, 26, 18, 0.16);
   --rule-strong: rgba(29, 26, 18, 0.42);
   --page-lift: 64px; /* width of the sprocket rail */
+  /* 35mm perforations: rounded rectangles punched through to the paper. */
+  --perf-v: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='16'%3E%3Crect x='1.5' y='4.5' width='9' height='7' rx='1.6' fill='%23f3efe4'/%3E%3C/svg%3E");
+  --perf-h: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='12'%3E%3Crect x='4.5' y='1.5' width='7' height='9' rx='1.6' fill='%23f3efe4'/%3E%3C/svg%3E");
   --font-display: "Songti SC", "Noto Serif SC", "SimSun", "Source Han Serif SC", serif;
   --font-body: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI", sans-serif;
   --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Courier New", monospace;
@@ -34,6 +37,7 @@ html {
   background: var(--paper);
   scroll-behavior: smooth;
   scroll-padding-top: 5rem;
+  scrollbar-color: var(--ink-3) var(--paper-deep);
 }
 
 body {
@@ -69,7 +73,7 @@ a {
   text-decoration: underline;
   text-decoration-thickness: 1px;
   text-underline-offset: 0.18em;
-  text-decoration-color: rgba(156, 107, 0, 0.45);
+  text-decoration-color: rgba(127, 86, 0, 0.45);
   transition: color 140ms ease, background-color 140ms ease;
 }
 
@@ -127,8 +131,8 @@ summary:focus-visible,
   top: 0;
   bottom: 0;
   width: 12px;
-  background-image: radial-gradient(circle, var(--paper) 0 3.5px, rgba(243, 239, 228, 0) 4.2px);
-  background-size: 12px 22px;
+  background-image: var(--perf-v);
+  background-size: 12px 16px;
   background-repeat: repeat-y;
   background-position: center top;
 }
@@ -139,19 +143,6 @@ summary:focus-visible,
 
 .rail::after {
   right: 6px;
-}
-
-.rail-code {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  color: var(--amber-bright);
-  font-family: var(--font-mono);
-  font-size: 0.58rem;
-  letter-spacing: 0.22em;
-  white-space: nowrap;
-  writing-mode: vertical-rl;
-  transform: translate(-50%, -50%);
 }
 
 /* The page sheet sits right of the rail. */
@@ -278,32 +269,14 @@ summary:focus-visible,
   border-bottom: 1px solid var(--rule-strong);
 }
 
-.eyebrow {
-  margin: 0;
-  color: var(--amber);
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
-  font-weight: 600;
-  letter-spacing: 0.18em;
-}
-
-.eyebrow::before {
-  margin-right: 0.6rem;
-  color: var(--amber-bright);
-  content: "▸";
-}
-
 h1 {
-  margin: 1.1rem 0 0;
+  margin: 0;
   font-family: var(--font-display);
   font-size: clamp(2.9rem, 7vw, 5rem);
   font-weight: 800;
   letter-spacing: 0.01em;
   line-height: 1.02;
-}
-
-.title-mark {
-  color: var(--amber);
+  text-wrap: balance;
 }
 
 .lede {
@@ -320,20 +293,9 @@ h1 {
   background: var(--paper-lift);
 }
 
-.meta-head {
-  margin: 0;
-  padding: 0.5rem 0.9rem;
-  background: var(--ink);
-  color: var(--paper);
-  font-family: var(--font-mono);
-  font-size: 0.62rem;
-  font-weight: 600;
-  letter-spacing: 0.22em;
-}
-
 .meta-block dl {
   margin: 0;
-  padding: 0.4rem 0.9rem 0.6rem;
+  padding: 0.3rem 0.9rem;
 }
 
 .meta-block dl > div {
@@ -366,15 +328,6 @@ h1 {
   text-align: right;
 }
 
-.status-dot {
-  display: inline-block;
-  width: 0.5rem;
-  height: 0.5rem;
-  margin-right: 0.45rem;
-  background: var(--amber-bright);
-  box-shadow: 0 0 0 2px var(--amber-wash);
-}
-
 /* ------------------------------------------------------------
    Content layout
    ------------------------------------------------------------ */
@@ -390,15 +343,6 @@ h1 {
 .section-index {
   position: sticky;
   top: 5.6rem;
-}
-
-.index-label {
-  margin: 0 0 1rem;
-  color: var(--ink-3);
-  font-family: var(--font-mono);
-  font-size: 0.62rem;
-  font-weight: 600;
-  letter-spacing: 0.2em;
 }
 
 .section-index ol {
@@ -430,6 +374,15 @@ h1 {
   background: none;
 }
 
+/* Only the sticky index stays in view while reading. */
+@media (min-width: 861px) {
+  .section-index a[aria-current="location"] {
+    color: var(--ink);
+    border-bottom-color: var(--amber-bright);
+    box-shadow: 0 1px 0 var(--amber-bright);
+  }
+}
+
 .content {
   min-width: 0;
   max-width: 44em;
@@ -448,27 +401,8 @@ h1 {
   border-bottom: 0;
 }
 
-.section-label {
-  display: flex;
-  gap: 0.6rem;
-  align-items: center;
-  margin: 0;
-  color: var(--amber);
-  font-family: var(--font-mono);
-  font-size: 0.66rem;
-  font-weight: 600;
-  letter-spacing: 0.18em;
-}
-
-.section-label::before {
-  width: 0.5rem;
-  height: 0.5rem;
-  background: var(--amber-bright);
-  content: "";
-}
-
 h2 {
-  margin: 0.8rem 0 0;
+  margin: 0;
   font-family: var(--font-display);
   font-size: clamp(1.55rem, 2.6vw, 2.05rem);
   font-weight: 700;
@@ -485,15 +419,21 @@ h3 {
 .content p {
   margin: 1rem 0 0;
   color: var(--ink-2);
+  text-wrap: pretty;
 }
 
 .content ul {
   margin: 1.1rem 0 0;
   padding-left: 1.2rem;
+  list-style-type: square;
 }
 
 .content li {
   color: var(--ink-2);
+}
+
+.content li::marker {
+  color: var(--amber);
 }
 
 .content li + li {
@@ -505,6 +445,16 @@ h3 {
   font-weight: 600;
 }
 
+/* A direct answer set ahead of the paragraph that explains it. */
+.verdict {
+  margin-right: 0.15em;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 1.3em;
+  font-weight: 700;
+  line-height: 1;
+}
+
 /* Spec table — heavy top rule, hairline rows, like a datasheet. */
 .data-table {
   margin: 1.6rem 0 0;
@@ -513,51 +463,56 @@ h3 {
 
 .data-row {
   display: grid;
-  grid-template-columns: minmax(7.5rem, 10rem) 1fr;
+  grid-template-columns: minmax(7.5rem, 12.5rem) 1fr;
   gap: 1.6rem;
   padding: 1rem 0;
   border-bottom: 1px solid var(--rule);
 }
 
 .data-row dt {
-  color: var(--amber);
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  line-height: 1.6;
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.7;
 }
 
 .data-row dd {
   margin: 0;
   color: var(--ink-2);
   font-size: 0.95rem;
+  line-height: 1.8;
 }
 
-/* Callout — the datasheet's printed notice. */
+/* Callout — one frame of negative: the sheet's single conclusion,
+   printed dark between two rows of perforations. */
 .callout {
   margin-top: 1.7rem;
-  padding: 1.05rem 1.25rem 1.15rem;
-  border: 1px solid var(--rule-strong);
-  border-left: 4px solid var(--amber-bright);
-  background: var(--paper-deep);
+  padding: 0.55rem 1.4rem;
+  background: var(--ink);
 }
 
-.callout-label {
-  margin: 0 0 0.35rem;
-  color: var(--amber);
-  font-family: var(--font-mono);
-  font-size: 0.6rem;
-  font-weight: 700;
-  letter-spacing: 0.22em;
+.callout::before,
+.callout::after {
+  display: block;
+  height: 12px;
+  margin-inline: -0.95rem;
+  background-image: var(--perf-h);
+  background-repeat: repeat-x;
+  background-size: 16px 12px;
+  content: "";
+}
+
+.callout::before {
+  margin-bottom: 1rem;
+}
+
+.callout::after {
+  margin-top: 1.1rem;
 }
 
 .callout p {
   margin: 0;
-}
-
-.callout strong {
-  color: var(--ink);
+  color: var(--paper-lift);
 }
 
 /* ------------------------------------------------------------
@@ -583,6 +538,11 @@ h3 {
   cursor: pointer;
   font-weight: 600;
   list-style: none;
+  transition: color 140ms ease;
+}
+
+.faq summary:hover {
+  color: var(--amber-deep);
 }
 
 .faq summary::-webkit-details-marker {
@@ -602,17 +562,19 @@ h3 {
 
 .faq summary::after {
   flex: 0 0 auto;
+  align-self: center;
+  width: 0.8rem;
+  height: 0.8rem;
   margin-left: auto;
-  color: var(--amber-bright);
-  content: "+";
-  font-family: var(--font-mono);
-  font-size: 1.15rem;
-  font-weight: 400;
-  transition: transform 160ms ease;
+  background:
+    linear-gradient(var(--amber), var(--amber)) center / 100% 1.5px no-repeat,
+    linear-gradient(var(--amber), var(--amber)) center / 1.5px 100% no-repeat;
+  content: "";
+  transition: background-size 160ms ease;
 }
 
 .faq[open] summary::after {
-  content: "−";
+  background-size: 100% 1.5px, 1.5px 0;
 }
 
 .faq p {
@@ -630,12 +592,7 @@ h3 {
   border: 1px solid var(--rule-strong);
   background: var(--paper-lift);
   box-shadow: inset 0 0 0 1px var(--paper), inset 0 0 0 2px var(--rule);
-}
-
-.contact-card .meta-head {
-  background: none;
-  padding: 1rem 1.3rem 0;
-  color: var(--amber);
+  padding-top: 0.7rem;
 }
 
 .contact-card p {
@@ -646,21 +603,23 @@ h3 {
   margin-bottom: 1.25rem;
 }
 
-.email-placeholder {
+.contact-card .email-chip {
   display: inline-block;
-  margin-top: 0.6rem;
-  padding: 0.35rem 0.6rem;
+  margin-top: 0.7rem;
+  margin-bottom: 0.3rem;
+  padding: 0.5rem 0.8rem;
   background: var(--ink);
 }
 
-.email-placeholder a {
+.email-chip a {
   color: var(--amber-bright);
   font-family: var(--font-mono);
-  font-size: 0.92em;
+  font-size: 0.95em;
   text-decoration: none;
+  overflow-wrap: anywhere;
 }
 
-.email-placeholder a:hover {
+.email-chip a:hover {
   color: #f0d99d;
   background: none;
 }
@@ -680,8 +639,8 @@ h3 {
   content: "";
   display: block;
   height: 12px;
-  background-image: radial-gradient(circle, var(--paper) 0 3.5px, rgba(243, 239, 228, 0) 4.2px);
-  background-size: 22px 12px;
+  background-image: var(--perf-h);
+  background-size: 16px 12px;
   background-repeat: repeat-x;
   background-position: left center;
 }
@@ -699,7 +658,7 @@ h3 {
 
 .frame-card {
   display: flex;
-  min-height: 11rem;
+  min-height: 8.5rem;
   flex-direction: column;
   padding: 1.3rem 1.4rem;
   background: var(--paper-lift);
@@ -715,17 +674,7 @@ h3 {
   box-shadow: inset 0 0 0 1px var(--paper), inset 0 0 0 2px var(--amber-bright);
 }
 
-.frame-tag {
-  margin: 0;
-  color: var(--amber);
-  font-family: var(--font-mono);
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-}
-
 .frame-title {
-  margin-top: 0.7rem;
   font-family: var(--font-display);
   font-size: 1.7rem;
   font-weight: 700;
@@ -741,7 +690,7 @@ h3 {
 .frame-arrow {
   margin-top: auto;
   align-self: flex-end;
-  color: var(--amber-bright);
+  color: var(--amber);
   font-family: var(--font-mono);
   font-size: 1.1rem;
   transition: transform 180ms ease;
@@ -751,12 +700,8 @@ h3 {
   transform: translate(3px, -3px);
 }
 
-.home-note {
-  margin: 3.2rem 0 0;
-}
-
 /* ------------------------------------------------------------
-   Footer — dark edge-code band, the bookend to the rail
+   Footer — dark band, the bookend to the rail
    ------------------------------------------------------------ */
 
 .site-footer {
@@ -771,14 +716,6 @@ h3 {
   justify-content: space-between;
   gap: 1.5rem;
   padding: 1.35rem 0 1.6rem;
-}
-
-.edge-code {
-  margin: 0;
-  color: var(--amber-bright);
-  font-family: var(--font-mono);
-  font-size: 0.64rem;
-  letter-spacing: 0.16em;
 }
 
 .site-footer p {
@@ -815,10 +752,6 @@ h3 {
     animation-delay: 0.07s;
   }
 
-  .title-copy > :nth-child(3) {
-    animation-delay: 0.14s;
-  }
-
   .meta-block {
     animation: settle 0.55s 0.2s cubic-bezier(0.2, 0.7, 0.2, 1) both;
   }
@@ -837,7 +770,7 @@ h3 {
 
   @keyframes advance {
     from {
-      background-position: center -22px;
+      background-position: center -16px;
     }
   }
 }
@@ -867,30 +800,32 @@ h3 {
 
   /* The rail becomes a short horizontal strip above the sheet. */
   .rail {
-    position: static;
+    position: relative;
     width: auto;
-    height: 30px;
+    height: 34px;
   }
 
   .rail::before,
   .rail::after {
-    top: 0;
-    bottom: 0;
-    left: 0;
     right: 0;
+    left: 0;
     width: auto;
-    height: 30px;
-    background-size: 22px 30px;
+    height: 12px;
+    background-image: var(--perf-h);
+    background-size: 16px 12px;
     background-repeat: repeat-x;
-    background-position: 0 4px;
+    background-position: left center;
+    animation: none;
+  }
+
+  .rail::before {
+    top: 2px;
+    bottom: auto;
   }
 
   .rail::after {
-    background-position: 0 22px;
-  }
-
-  .rail-code {
-    display: none;
+    top: auto;
+    bottom: 2px;
   }
 
   .title-block {
@@ -949,13 +884,86 @@ h3 {
     grid-template-columns: 1fr;
   }
 
-  .section-index ol {
-    grid-template-columns: 1fr;
+  /* The datasheet folds to two columns so the first screen reaches the text. */
+  .meta-block dl {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 1.2rem;
+  }
+
+  .meta-block dl > div {
+    display: block;
+  }
+
+  .meta-block dl > div:nth-last-child(2) {
+    border-bottom: 0;
+  }
+
+  .meta-block dd {
+    text-align: left;
   }
 
   .site-footer .wrap {
     flex-direction: column;
     align-items: flex-start;
     gap: 0.5rem;
+  }
+}
+
+/* ------------------------------------------------------------
+   Print — the policy on plain paper
+   ------------------------------------------------------------ */
+
+@media print {
+  html,
+  body {
+    background: none;
+  }
+
+  body::after,
+  .rail,
+  .skip-link,
+  .site-header,
+  .section-index,
+  .site-footer,
+  .callout::before,
+  .callout::after {
+    display: none;
+  }
+
+  .page {
+    margin-left: 0;
+  }
+
+  .content-layout {
+    display: block;
+  }
+
+  .content {
+    max-width: none;
+  }
+
+  .title-copy > *,
+  .meta-block {
+    animation: none;
+  }
+
+  .data-row {
+    break-inside: avoid;
+  }
+
+  /* Printers drop backgrounds, so dark-ground text returns to ink. */
+  .callout p,
+  .email-chip a {
+    color: var(--ink);
+  }
+
+  .callout {
+    padding: 0.9rem 1.2rem;
+    border: 1px solid var(--rule-strong);
+  }
+
+  .contact-card .email-chip {
+    padding: 0;
   }
 }

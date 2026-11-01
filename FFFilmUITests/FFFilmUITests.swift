@@ -485,6 +485,9 @@ final class FFFilmUITests: XCTestCase {
     @MainActor
     private func shutterApp() -> XCUIApplication {
         let app = XCUIApplication()
+        // Each workflow starts clean; the relaunch test explicitly removes this opt-in.
+        app.launchEnvironment["FFFILM_UI_RESET_SHUTTER"] = "1"
+        app.launchEnvironment["FFFILM_UI_RESET_LANGUAGE"] = "1"
         // Stable English labels make these interaction tests independent of the host test-plan locale.
         app.launchArguments += ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()
@@ -530,6 +533,14 @@ final class FFFilmUITests: XCTestCase {
         field.tap()
         // Keyboard insets and the app's focus-centering task must settle before selecting text.
         Thread.sleep(forTimeInterval: 0.6)
+        if field.identifier == "shutter-shutterDenominator" {
+            // Exercise the expression field's visible clear action instead of token-selection gestures.
+            let clear = app.buttons["shutter-clear-time"]
+            if clear.isEnabled { clear.tap() }
+            if !text.isEmpty { field.typeText(text) }
+            XCTAssertEqual(field.value as? String ?? "", text.isEmpty ? field.placeholderValue ?? "" : text)
+            return
+        }
         #if os(macOS)
         field.typeKey("a", modifierFlags: .command)
         field.typeText(text)
@@ -647,6 +658,12 @@ final class FFFilmUITests: XCTestCase {
     @MainActor
     private func choose(_ label: String, picker: String, in app: XCUIApplication) {
         finishEditing(app)
+        let segmented = app.segmentedControls[picker]
+        if segmented.exists {
+            reveal(segmented, in: app)
+            segmented.buttons[label].tap()
+            return
+        }
         let control = app.descendants(matching: .any).matching(identifier: picker).firstMatch
         reveal(control, in: app)
         control.tap()
@@ -662,6 +679,152 @@ final class FFFilmUITests: XCTestCase {
         #else
         app.buttons[label].firstMatch.tap()
         #endif
+    }
+
+    @MainActor
+    func testDITRigSwitchSaveAndRestore() throws {
+        let app = shutterApp()
+        func rig(_ name: String) {
+            let picker = app.segmentedControls["shutter-rig"]
+            reveal(picker, in: app); picker.buttons[name].tap()
+        }
+        let quick50 = app.buttons["shutter-quick-sensorFps-50.0"]
+        reveal(quick50, in: app); quick50.tap()
+        rig("B")
+        XCTAssertEqual(app.textFields["shutter-sensorFps"].value as? String, "24")
+        let quick60 = app.buttons["shutter-quick-sensorFps-60.0"]
+        reveal(quick60, in: app); quick60.tap()
+        rig("A")
+        XCTAssertEqual(app.textFields["shutter-sensorFps"].value as? String, "50")
+        let configure = app.buttons["shutter-rig-configure"]
+        reveal(configure, in: app); configure.tap()
+        let camera = app.descendants(matching: .any).matching(identifier: "shutter-rig-camera").firstMatch
+        XCTAssertTrue(camera.waitForExistence(timeout: 3))
+        camera.tap(); camera.typeText("UI fixture camera A")
+        app.buttons["shutter-rig-save"].tap()
+        XCTAssertTrue(app.staticTexts["UI fixture camera A"].waitForExistence(timeout: 3))
+        // An unfinished decimal must remain pending on its own rig after a round trip.
+        enter("23.", field: "sensorFps", in: app)
+        finishEditing(app)
+        rig("B")
+        XCTAssertEqual(app.textFields["shutter-sensorFps"].value as? String, "60")
+        rig("A")
+        XCTAssertEqual(app.textFields["shutter-sensorFps"].value as? String, "23.")
+        XCTAssertFalse(app.staticTexts["shutter-time-primary"].exists)
+        reveal(quick50, in: app); quick50.tap()
+        let save = app.buttons["shutter-save-setup"]
+        reveal(save, in: app); save.tap()
+        let name = app.textFields["shutter-record-name"]
+        XCTAssertTrue(name.waitForExistence(timeout: 3))
+        name.tap(); name.typeText("DIT A setup")
+        let check = app.switches["shutter-record-checked"]
+        #if os(iOS)
+        // Native Form toggles expose the whole labeled row; only the trailing switch toggles.
+        check.coordinate(withNormalizedOffset: CGVector(dx: 0.93, dy: 0.5)).tap()
+        #else
+        check.tap()
+        #endif
+        let disabledSave = XCTNSPredicateExpectation(predicate: NSPredicate(format: "enabled == false"),
+                                                    object: app.buttons["shutter-record-save"])
+        XCTAssertEqual(XCTWaiter.wait(for: [disabledSave], timeout: 3), .completed)
+        let notes = app.descendants(matching: .any).matching(identifier: "shutter-record-conditions").firstMatch
+        notes.tap(); notes.typeText("Synthetic UI fixture; no physical lighting test")
+        app.buttons["shutter-record-save"].tap()
+        XCTAssertTrue(app.segmentedControls["shutter-rig"].waitForExistence(timeout: 3))
+        rig("B")
+        let library = app.buttons["shutter-library"]
+        reveal(library, in: app); library.tap()
+        let saved = app.staticTexts["DIT A setup"].firstMatch
+        XCTAssertTrue(saved.waitForExistence(timeout: 3))
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "DIT saved setup and recent calculations"
+        screenshot.lifetime = .keepAlways; add(screenshot)
+        let info = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "shutter-record-info-")).firstMatch
+        info.tap()
+        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "Synthetic UI fixture")).firstMatch.waitForExistence(timeout: 3))
+        app.buttons["Restore to camera A"].tap()
+        XCTAssertTrue(app.segmentedControls["shutter-rig"].waitForExistence(timeout: 3))
+        rig("B")
+        reveal(library, in: app); library.tap()
+        XCTAssertTrue(saved.waitForExistence(timeout: 3))
+        // The primary row action also restores without visiting the details screen.
+        saved.tap()
+        XCTAssertTrue(app.segmentedControls["shutter-rig"].waitForExistence(timeout: 3))
+        XCTAssertEqual(app.textFields["shutter-sensorFps"].value as? String, "50")
+        XCTAssertTrue(app.segmentedControls["shutter-rig"].buttons["A"].isSelected)
+        XCTAssertTrue(app.staticTexts["UI fixture camera A"].exists)
+        rig("B")
+        XCTAssertEqual(app.textFields["shutter-sensorFps"].value as? String, "60")
+    }
+
+    @MainActor
+    func testDITFlickerCandidateCanBeSelectedDirectly() throws {
+        let app = shutterApp()
+        choose("Flicker reference", picker: "shutter-mode", in: app)
+        let candidate = app.buttons["shutter-candidate-1.0"]
+        reveal(candidate, in: app); candidate.tap()
+        XCTAssertEqual(app.staticTexts["shutter-angle-output"].label, "86.4°")
+        XCTAssertEqual(app.textFields["shutter-preferredAngle"].value as? String, "86.4")
+        let result = app.descendants(matching: .any).matching(identifier: "shutter-results").firstMatch
+        reveal(result, in: app)
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "DIT selectable flicker candidates and model assumptions"
+        screenshot.lifetime = .keepAlways; add(screenshot)
+    }
+
+    @MainActor
+    func testDITShutterTimeInputQuickPresetsAndRelaunch() throws {
+        let app = shutterApp()
+        choose("Find angle", picker: "shutter-direction", in: app)
+        for expression in ["1/50", "20 ms", "0.02 s"] {
+            enter(expression, field: "shutterDenominator", in: app)
+            finishEditing(app)
+            XCTAssertEqual(app.staticTexts["shutter-angle-output"].label, "172.8°")
+        }
+        let rational = app.buttons.matching(identifier: "shutter-quick-sensorFps-23.976023976023978").firstMatch
+        reveal(rational, in: app)
+        rational.tap()
+        XCTAssertEqual(app.staticTexts["shutter-angle-output"].label, "172.627373°")
+        // Changing tasks keeps the unfinished editor owner and all unrelated settings alive.
+        choose("Frame rate", picker: "shutter-mode", in: app)
+        choose("Convert", picker: "shutter-mode", in: app)
+        XCTAssertEqual(app.textFields["shutter-shutterDenominator"].value as? String, "0.02 s")
+        let copy = app.buttons["shutter-copy-action"]
+        reveal(copy, in: app); copy.tap()
+        XCTAssertEqual(copy.label, "Copied")
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "DIT shutter exact cadence and direct time input"
+        screenshot.lifetime = .keepAlways; add(screenshot)
+        app.terminate()
+        app.launchEnvironment.removeValue(forKey: "FFFILM_UI_RESET_SHUTTER")
+        app.launch()
+        #if os(macOS)
+        app.typeKey("2", modifierFlags: .command)
+        #else
+        selectTab("shutter", in: app)
+        #endif
+        XCTAssertTrue(app.staticTexts["shutter-angle-output"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.staticTexts["shutter-angle-output"].label, "172.627373°")
+        XCTAssertEqual(app.textFields["shutter-shutterDenominator"].value as? String, "1/50 s")
+    }
+
+    @MainActor
+    func testDITShutterLimitIsVisibleWithoutOpeningDetails() throws {
+        let app = shutterApp()
+        choose("Frame rate", picker: "shutter-mode", in: app)
+        enter("60", field: "sensorFps", in: app)
+        finishEditing(app)
+        let warning = app.descendants(matching: .any).matching(identifier: "shutter-over-limit").firstMatch
+        XCTAssertTrue(warning.exists)
+        let alternative = app.staticTexts["shutter-maximum-alternative"]
+        XCTAssertTrue(alternative.label.contains("360°"))
+        XCTAssertTrue(alternative.label.contains("1/60 s"))
+        XCTAssertEqual(app.staticTexts["shutter-angle-output"].label, "450°")
+        XCTAssertFalse(app.staticTexts["shutter-playback-output"].exists)
+        reveal(warning, in: app)
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "DIT shutter theoretical and achievable results"
+        screenshot.lifetime = .keepAlways; add(screenshot)
     }
 
     @MainActor
@@ -699,7 +862,7 @@ final class FFFilmUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["shutter-time-primary"].label.contains("1/100 s"))
 
         // The new capture preset must not leak into the delivery/project-rate menu.
-        choose("Over / undercrank", picker: "shutter-mode", in: app)
+        choose("Frame rate", picker: "shutter-mode", in: app)
         let projectPresets = app.buttons["shutter-presets-projectFps"].firstMatch
         reveal(projectPresets, in: app)
         projectPresets.tap()
@@ -734,7 +897,7 @@ final class FFFilmUITests: XCTestCase {
         enter("120", field: "sensorFps", in: app)
         finishEditing(app)
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "shutter-no-candidates").firstMatch.exists)
-        choose("Over / undercrank", picker: "shutter-mode", in: app)
+        choose("Frame rate", picker: "shutter-mode", in: app)
         enter("60", field: "sensorFps", in: app)
         finishEditing(app)
         XCTAssertEqual(app.staticTexts["shutter-angle-output"].label, "450°")
@@ -754,6 +917,36 @@ final class FFFilmUITests: XCTestCase {
         reveal(app.staticTexts["shutter-angle-output"], in: app)
         let attachment = XCTAttachment(screenshot: app.screenshot())
         attachment.name = "Shutter matching with light check"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+
+    @MainActor
+    func testDisplayRefreshHistoryRecordsOnlyCompletedEdits() throws {
+        let app = shutterApp()
+        choose("Flicker reference", picker: "shutter-mode", in: app)
+        choose("Multiple displays", picker: "shutter-light-source", in: app)
+        let library = app.buttons["shutter-library"]
+        let records = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "shutter-record-info-"))
+        reveal(library, in: app); library.tap()
+        XCTAssertTrue(records.firstMatch.waitForExistence(timeout: 3))
+        let initialCount = records.count
+        app.buttons["Done"].firstMatch.tap()
+
+        // Each valid prefix used to enter history before the operator submitted the list.
+        enter("60, 1200", field: "display-rates", in: app)
+        app.textFields["shutter-display-rates"].typeText("\n")
+        // Leave an invalid draft before opening the library, so its own remember action
+        // cannot hide a missing submit/blur record for the preceding completed edit.
+        enter("60,", field: "display-rates", in: app)
+        finishEditing(app)
+        reveal(library, in: app); library.tap()
+        XCTAssertTrue(records.firstMatch.waitForExistence(timeout: 3))
+        XCTAssertEqual(records.count, initialCount + 1, "Only the completed refresh-rate list should enter history")
+        records.firstMatch.tap()
+        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "60, 1200")).firstMatch.waitForExistence(timeout: 3))
+        let attachment = XCTAttachment(screenshot: app.screenshot())
+        attachment.name = "Completed display refresh-rate history record"
         attachment.lifetime = .keepAlways
         add(attachment)
     }

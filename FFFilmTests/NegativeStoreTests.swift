@@ -176,6 +176,60 @@ struct NegativeStoreTests {
         }
     }
 
+    @Test func letterboxedZoomRetainsSourceCenterAcrossTiersAndResize() throws {
+        let context = NegativePixels.context()
+        let source = CIImage(color: .white).cropped(to: CGRect(x: 0, y: 0, width: 1200, height: 600))
+        let view = NegativeZoomView()
+        view.frame = CGRect(x: 0, y: 0, width: 300, height: 500)
+        let url = URL(fileURLWithPath: "/tmp/letterboxed-negative.tiff")
+        view.setImage(try NegativePixels.preview(source, context: context, limit: 400), sourceURL: url,
+                      sampling: false, point: .zero)
+        view.layoutIfNeeded(); view.setZoomScale(2, animated: false)
+        view.contentOffset = CGPoint(x: 80, y: -100)
+        func center() -> CGPoint {
+            CGPoint(x: (view.contentOffset.x + view.bounds.width / 2) / view.contentSize.width,
+                    y: (view.contentOffset.y + view.bounds.height / 2) / view.contentSize.height)
+        }
+        let expected = center()
+        view.setImage(try NegativePixels.preview(source, context: context, limit: 800), sourceURL: url,
+                      sampling: false, point: .zero)
+        view.layoutIfNeeded()
+        #expect(abs(center().x - expected.x) < 0.001 && abs(center().y - expected.y) < 0.001)
+        // Resizing a split-view window must preserve both zoom and the inspected source center.
+        view.frame = CGRect(x: 0, y: 0, width: 500, height: 300)
+        view.layoutIfNeeded()
+        #expect(abs(view.zoomScale - 2) < 0.001)
+        #expect(abs(center().x - expected.x) < 0.001 && abs(center().y - expected.y) < 0.001)
+        #expect(view.accessibilityCustomActions?.count == 2)
+    }
+
+    @Test func gpuOnlyCameraFrameCanFreezeSampleCompareAndExport() async throws {
+        let camera = StubNegativeCamera(), store = NegativeStore(camera: camera)
+        let source = CIImage(color: CIColor(red: 0.6, green: 0.4, blue: 0.3, alpha: 1,
+                                            colorSpace: NegativePixels.linear)!).cropped(to: CGRect(x: 0, y: 0, width: 192, height: 128))
+        let frame = NegativeAsset(image: source)
+        #expect(frame.preview == nil)
+        store.startCamera(); try await waitFor { camera.hasStarted }
+        camera.deliver(frame); try await waitFor { store.imageState.cameraImage === source }
+        store.freeze(); store.selectBase()
+        try await waitFor { store.candidate != nil }
+        #expect(store.imageState.loupe != nil && !store.live)
+        #expect(abs(try #require(store.candidate).red - 0.6) < 0.001)
+        store.confirmBase(); try await waitUntilIdle(store)
+        #expect(store.showsPositive && store.canExport && store.imageState.positive == nil)
+        store.showsPositive = false; store.export(.png)
+        try await waitUntilIdle(store)
+        let url = try #require(store.share?.url)
+        let exported = try #require(CGImageSourceCreateWithURL(url as CFURL, nil))
+        let cg = try #require(CGImageSourceCreateImageAtIndex(exported, 0, nil))
+        #expect(cg.width == 192 && cg.height == 128)
+        var pixel = [UInt8](repeating: 255, count: 4)
+        NegativePixels.context().render(CIImage(cgImage: cg), toBitmap: &pixel, rowBytes: 4,
+            bounds: CGRect(x: 50, y: 50, width: 1, height: 1), format: .RGBA8, colorSpace: NegativePixels.display)
+        #expect(pixel[0] < 3 && pixel[1] < 3 && pixel[2] < 3)
+        store.share = nil; store.suspend()
+    }
+
     @Test func automaticLensSwitchRequiresNewCalibrationInBothDirections() async throws {
         let camera = StubNegativeCamera(), store = NegativeStore(camera: camera)
         let image = CIImage(color: CIColor(red: 0.6, green: 0.4, blue: 0.3, alpha: 1,
@@ -256,8 +310,11 @@ struct NegativeStoreTests {
         store.setCameraLens("missing")
         store.setCameraResolution(.ultraHD)
         #expect(camera.startCount == starts)
+        // Re-selecting the Full HD default preserves calibration; an actual edit invalidates it.
         store.setCameraResolution(.fullHD)
-        try await waitFor { camera.lastSettings.resolution == .fullHD }
+        #expect(store.base != nil && store.canExport)
+        store.setCameraResolution(.hd)
+        try await waitFor { camera.lastSettings.resolution == .hd }
         // A committed settings change invalidates calibration and requires re-sampling.
         #expect(store.base == nil && !store.canExport && !store.captureLocked)
         camera.deliver(asset)
@@ -266,7 +323,7 @@ struct NegativeStoreTests {
         try await waitFor { camera.lastSettings.lensID == "ultra" }
         store.suspend()
         let stoppedSettings = store.cameraSettings
-        store.setCameraResolution(.hd)
+        store.setCameraResolution(.fullHD)
         #expect(store.cameraSettings == stoppedSettings)
     }
 
@@ -302,7 +359,8 @@ struct NegativeStoreTests {
         try await waitUntilIdle(store)
         #expect(store.showsPositive && store.live && !store.sampling)
         #expect(camera.storedBase == store.base && store.base != nil)
-        #expect(store.imageState.positive != nil)
+        // Camera positives are displayed from source pixels without a CPU bitmap.
+        #expect(store.imageState.cameraImage != nil && store.base != nil)
         // Re-sampling is provisional, and camera restart clears the temporary calibration.
         let committed = store.base
         store.selectBase()
@@ -527,7 +585,7 @@ nonisolated private final class StubNegativeCamera: NegativeCameraCapture, @unch
             if calibrationInvalidated { calibrationID = UUID() }
             return (frameHandler, calibrationID)
         }
-        handler?(NegativeCameraFrame(asset: asset, positive: nil, frozenForSampling: frozenForSampling,
+        handler?(NegativeCameraFrame(asset: asset, frozenForSampling: frozenForSampling,
             isMacro: isMacro, calibrationID: generation), {})
     }
     func fail() {

@@ -1,5 +1,12 @@
 # FFFilm
 
+## macOS 工作台切换器滑动选中（2026-11-01）
+
+- 原生 `.segmented` 由 NSSegmentedControl 绘制，选中态只能原地切换，因此 `MacWorkbenchToolbar.swift` 改用自绘 `WorkbenchSwitcher`：单个常驻滑块 + `offset`，弹簧 response 0.3、damping 1；未用 `matchedGeometryEffect`，避免条件视图交叉淡化。动画绑定 `selection` 值，⌘1/2/3 同样滑动，工作台内容不被带动。
+- 无障碍继续以原生分段 Picker 表达（`accessibilityRepresentation`，标识符 `calculator-view-picker` 不变）；Reduce Motion 下直接跳转。本轮仅做 macOS 15，macOS 26 Liquid Glass 暂不适配。
+- 内容页过渡：`ContentView` 用 `ZStack` + `.id(store.activeView)` 给三个工作台独立身份，新页沿滑块方向平移 20pt 并淡入（与滑块共用 `WorkbenchMotion.travel`），旧页 0.12s 原地淡出以避免表单重影；Reduce Motion 只保留 0.15s 淡变。`previousPage` 在 `onChange` 中更新，比 `activeView` 晚一次刷新，body 才能读出方向。未加 `.clipped()`，否则会裁掉滚动到工具栏下方的内容。录制/快门不再共用滚动位置，切换后回到各自顶部。
+- 验证：macOS Debug 编译通过；静态外观已看过，填充取值后未再目视确认。滑动动画本身、内容页过渡（含胶片页 HSplitView 的淡变）、`testMacWorkbenchToolbarAndKeyboardActions` 及点击切换尚未实际运行，工具栏项重建是否打断动画仍待人工确认。
+
 ## 本地临时文件整理（2026-10-05）
 
 - 可复用的发布截图、测试脚本与合成扫描样本、诊断记录、图标设计原稿和历史签名分发包已集中到 `/Users/rasteaks/Desktop/FFFilm/未命名文件夹`。以后需要这些资料时，优先查看该目录的 `整理说明.txt` 和 `清理记录-20261005/result.json`；后者记录原路径、现路径、用途和完整性校验。此前记录中的 `/tmp/FFFilm-*` 路径仅代表当时的验证位置，不再作为现存文件位置。

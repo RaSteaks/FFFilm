@@ -1,8 +1,12 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "  " : {
+
+    },
     " (cancelled)" : {
       "comment" : "macOS film workbench",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -17,6 +21,9 @@
           }
         }
       }
+    },
+    "%" : {
+
     },
     "%@\n%@/h" : {
       "localizations" : {
@@ -107,7 +114,20 @@
         }
       }
     },
+    "%@ Hz mains · assumes %@ Hz light pulses" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ Hz mains · assumes %2$@ Hz light pulses"
+          }
+        }
+      }
+    },
     "%@ Mb/s" : {
+
+    },
+    "%@ stops versus target" : {
 
     },
     "%@, %@" : {
@@ -116,16 +136,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$@, %2$@"
-          }
-        }
-      }
-    },
-    "%@: %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@: %2$@"
           }
         }
       }
@@ -175,6 +185,9 @@
         }
       }
     },
+    "%lld" : {
+
+    },
     "%lld × %lld" : {
       "localizations" : {
         "en" : {
@@ -211,217 +224,13 @@
     "%lld%%" : {
 
     },
-    "Add directly after the previous frame using the film format's frame length." : {
-      "comment" : "macOS scan import and physical film geometry",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Add directly after the previous frame using the film format's frame length."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "紧接上一帧添加，按胶片规格设置帧高。"
-          }
-        }
-      }
-    },
-    "Automatic (%@)" : {
-      "comment" : "macOS scan import and physical film geometry",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automatic (%@)"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "自动（%@）"
-          }
-        }
-      }
-    },
-    "Cannot access the scan. Drag the file from Finder again." : {
-      "comment" : "macOS scan import and physical film geometry",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cannot access the scan. Drag the file from Finder again."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法访问扫描文件，请从 Finder 重新拖入文件。"
-          }
-        }
-      }
-    },
-    "Detected from scan dimensions and sprockets; select a format to correct it." : {
-      "comment" : "macOS scan import and physical film geometry",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Detected from scan dimensions and sprockets; select a format to correct it."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "根据扫描尺寸和齿孔识别规格；识别不准时可手动选择。"
-          }
-        }
-      }
-    },
-    "Drop a TIFF or Flextight FFF scan file." : {
-      "comment" : "macOS scan import and physical film geometry",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Drop a TIFF or Flextight FFF scan file."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "请拖入 TIFF 或 Flextight FFF 扫描文件。"
-          }
-        }
-      }
-    },
-    "Drop one scan file at a time." : {
-      "comment" : "macOS scan import and physical film geometry",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Drop one scan file at a time."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "请一次拖入一个扫描文件。"
-          }
-        }
-      }
-    },
-    "Drop or import a TIFF / Flextight FFF scan to split, crop and export frames." : {
-      "comment" : "macOS scan import and physical film geometry",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Drop or import a TIFF / Flextight FFF scan to split, crop and export frames."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "拖入或导入 TIFF / Flextight FFF 扫描，分割、裁切并导出。"
-          }
-        }
-      }
-    },
-    "Film format" : {
-      "comment" : "macOS scan import and physical film geometry",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Film format"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "胶片规格"
-          }
-        }
-      }
-    },
-    "Large format" : {
-      "comment" : "macOS scan import and physical film geometry",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Large format"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "大画幅"
-          }
-        }
-      }
-    },
-    "Not enough scan remains for a full frame. Adjust the previous boundary or draw a frame." : {
-      "comment" : "macOS scan import and physical film geometry",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Not enough scan remains for a full frame. Adjust the previous boundary or draw a frame."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "扫描剩余长度不足以添加完整帧，请调整上一帧边界或手动框选。"
-          }
-        }
-      }
-    },
-    "Release to import scan" : {
-      "comment" : "macOS scan import and physical film geometry",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Release to import scan"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "松开以导入扫描"
-          }
-        }
-      }
-    },
-    "Unknown" : {
-      "comment" : "macOS scan import and physical film geometry",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Unknown"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "未识别"
-          }
-        }
-      }
-    },
     "↶ 90°" : {
 
     },
     "↷ 90°" : {
 
     },
-    "180°" : {
+    "≈ %@ px" : {
 
     },
     "A valid input color profile is required." : {
@@ -437,6 +246,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "缺少有效的输入色彩配置。"
+          }
+        }
+      }
+    },
+    "Add directly after the previous frame using the film format's frame length." : {
+      "comment" : "macOS scan import and physical film geometry",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add directly after the previous frame using the film format's frame length."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "紧接上一帧添加，按胶片规格设置帧高。"
           }
         }
       }
@@ -562,8 +388,46 @@
         }
       }
     },
+    "At the limit: %@° · %@\nExposure change: %@ stops versus target, with other exposure settings unchanged." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "At the limit: %1$@° · %2$@\nExposure change: %3$@ stops versus target, with other exposure settings unchanged."
+          }
+        }
+      }
+    },
+    "Automatic (%@)" : {
+      "comment" : "macOS scan import and physical film geometry",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatic (%@)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自动（%@）"
+          }
+        }
+      }
+    },
+    "Baseline: %@ fps · %@°\nGoal: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Baseline: %1$@ fps · %2$@°\nGoal: %3$@"
+          }
+        }
+      }
+    },
     "Batch selection" : {
       "comment" : "macOS film workbench",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -581,6 +445,16 @@
     },
     "Calculator reset." : {
 
+    },
+    "Camera %@: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Camera %1$@: %2$@"
+          }
+        }
+      }
     },
     "Camera: %@\nFormat: %@ · %@ · %@\nFrame rate: %@ fps\nOverdrive: %@\nRate: %@ %@/h · %@ Mb/s" : {
       "localizations" : {
@@ -964,6 +838,7 @@
     },
     "Candidate frames added. Check and refine their boundaries." : {
       "comment" : "macOS film workbench",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -975,6 +850,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已生成候选帧，请检查并修正边界。"
+          }
+        }
+      }
+    },
+    "Cannot access the scan. Drag the file from Finder again." : {
+      "comment" : "macOS scan import and physical film geometry",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cannot access the scan. Drag the file from Finder again."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法访问扫描文件，请从 Finder 重新拖入文件。"
           }
         }
       }
@@ -1030,8 +922,19 @@
         }
       }
     },
+    "Capture FPS: %@\nUser-set maximum: %@°" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Capture FPS: %1$@\nUser-set maximum: %2$@°"
+          }
+        }
+      }
+    },
     "Choose folder & export…" : {
       "comment" : "macOS film workbench",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1273,6 +1176,40 @@
         }
       }
     },
+    "copy.shutterBaseline" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Baseline: %1$@ fps · %2$@°\nGoal: %3$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "基准：%1$@ fps · %2$@°\n目标：%3$@"
+          }
+        }
+      }
+    },
+    "copy.shutterContext" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Capture FPS: %1$@\nUser-set maximum: %2$@°"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "拍摄帧率：%1$@\n用户设定上限：%2$@°"
+          }
+        }
+      }
+    },
     "copy.shutterHint" : {
       "localizations" : {
         "en" : {
@@ -1285,6 +1222,40 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "复制快门结果摘要。"
+          }
+        }
+      }
+    },
+    "copy.shutterLight" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Light model: %1$@ · %2$@ Hz"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "光源模型：%1$@ · %2$@ Hz"
+          }
+        }
+      }
+    },
+    "copy.shutterPreference" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preferred angle: %@°"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "偏好角度：%@°"
           }
         }
       }
@@ -1340,6 +1311,7 @@
     },
     "Detect frame gaps" : {
       "comment" : "macOS film workbench",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1351,6 +1323,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "自动识别帧间隙"
+          }
+        }
+      }
+    },
+    "Detected from scan dimensions and sprockets; select a format to correct it." : {
+      "comment" : "macOS scan import and physical film geometry",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Detected from scan dimensions and sprockets; select a format to correct it."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "根据扫描尺寸和齿孔识别规格；识别不准时可手动选择。"
           }
         }
       }
@@ -1402,6 +1391,57 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "框选新帧"
+          }
+        }
+      }
+    },
+    "Drop a TIFF or Flextight FFF scan file." : {
+      "comment" : "macOS scan import and physical film geometry",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drop a TIFF or Flextight FFF scan file."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请拖入 TIFF 或 Flextight FFF 扫描文件。"
+          }
+        }
+      }
+    },
+    "Drop one scan file at a time." : {
+      "comment" : "macOS scan import and physical film geometry",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drop one scan file at a time."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请一次拖入一个扫描文件。"
+          }
+        }
+      }
+    },
+    "Drop or import a TIFF / Flextight FFF scan to split, crop and export frames." : {
+      "comment" : "macOS scan import and physical film geometry",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drop or import a TIFF / Flextight FFF scan to split, crop and export frames."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "拖入或导入 TIFF / Flextight FFF 扫描，分割、裁切并导出。"
           }
         }
       }
@@ -2026,6 +2066,23 @@
         }
       }
     },
+    "Film format" : {
+      "comment" : "macOS scan import and physical film geometry",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Film format"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "胶片规格"
+          }
+        }
+      }
+    },
     "Film slicing" : {
       "comment" : "macOS film slicing",
       "localizations" : {
@@ -2300,6 +2357,7 @@
     },
     "Import a TIFF or Flextight FFF strip, split, crop and export frames." : {
       "comment" : "macOS film slicing",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2393,8 +2451,25 @@
         }
       }
     },
-    "JPEG · 8-bit · sRGB" : {
+    "JPEG" : {
 
+    },
+    "Large format" : {
+      "comment" : "macOS scan import and physical film geometry",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Large format"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "大画幅"
+          }
+        }
+      }
     },
     "Later" : {
       "comment" : "macOS film workbench",
@@ -2412,6 +2487,19 @@
           }
         }
       }
+    },
+    "Light model: %@ · %@ Hz" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Light model: %1$@ · %2$@ Hz"
+          }
+        }
+      }
+    },
+    "Light-pulse model: %@ Hz" : {
+
     },
     "Locate the original scan file" : {
       "comment" : "macOS film workbench",
@@ -3527,6 +3615,23 @@
         }
       }
     },
+    "negative.fit" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fit entire image"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示全图"
+          }
+        }
+      }
+    },
     "negative.freeze" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3550,13 +3655,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Negative preview. Pinch to zoom; tap to sample while selecting the film base."
+            "value" : "Negative preview. Pinch or double-tap to zoom. Double-tap again to fit. Tap to sample while selecting the film base."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "负片预览。双指缩放；选取片基时点按取色。"
+            "value" : "负片预览。双指或双击放大，再次双击显示全图；选取片基时点按取色。"
           }
         }
       }
@@ -4088,6 +4193,23 @@
         }
       }
     },
+    "negative.zoomIn" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zoom in"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "放大"
+          }
+        }
+      }
+    },
     "No complete light-cycle exposure fits the current angle limit. This does not prove that flicker will occur." : {
 
     },
@@ -4104,6 +4226,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "未找到可靠帧间隙，请手动框选或调整现有裁切框。"
+          }
+        }
+      }
+    },
+    "Not enough scan remains for a full frame. Adjust the previous boundary or draw a frame." : {
+      "comment" : "macOS scan import and physical film geometry",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not enough scan remains for a full frame. Adjust the previous boundary or draw a frame."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "扫描剩余长度不足以添加完整帧，请调整上一帧边界或手动框选。"
           }
         }
       }
@@ -4193,6 +4332,9 @@
           }
         }
       }
+    },
+    "Preferred angle: %@°" : {
+
     },
     "Preview rendering failed." : {
       "comment" : "macOS film workbench",
@@ -4442,6 +4584,23 @@
         }
       }
     },
+    "Release to import scan" : {
+      "comment" : "macOS scan import and physical film geometry",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Release to import scan"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "松开以导入扫描"
+          }
+        }
+      }
+    },
     "Remove selected" : {
       "comment" : "macOS film workbench",
       "localizations" : {
@@ -4460,6 +4619,9 @@
       }
     },
     "Reset undone." : {
+
+    },
+    "Restore to camera %@" : {
 
     },
     "result.activeArea" : {
@@ -4665,6 +4827,7 @@
     },
     "Retry failed exports…" : {
       "comment" : "macOS film workbench",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4784,6 +4947,7 @@
     },
     "Scope" : {
       "comment" : "macOS film workbench",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4798,6 +4962,9 @@
           }
         }
       }
+    },
+    "Screen-cycle model: %@ Hz · PWM and scan synchronization are not modeled." : {
+
     },
     "Select" : {
       "comment" : "macOS film workbench",
@@ -4835,6 +5002,7 @@
     },
     "Selected frames" : {
       "comment" : "macOS film workbench",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -5027,6 +5195,23 @@
         }
       }
     },
+    "settings.repository" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GitHub repository"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GitHub 仓库"
+          }
+        }
+      }
+    },
     "settings.shortcut" : {
       "localizations" : {
         "en" : {
@@ -5094,6 +5279,57 @@
     "Shutter result is unavailable because the input is invalid." : {
 
     },
+    "shutter.candidate.difference" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ stops versus target"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "相对目标 %1$@ 档"
+          }
+        }
+      }
+    },
+    "shutter.candidate.scope" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Model candidates need test footage. Exposure differences assume other settings are unchanged."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "模型候选需实拍确认。曝光差按其他设置不变计算。"
+          }
+        }
+      }
+    },
+    "shutter.candidate.use" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "采用"
+          }
+        }
+      }
+    },
     "shutter.candidates" : {
       "localizations" : {
         "en" : {
@@ -5106,6 +5342,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "最近光源周期候选"
+          }
+        }
+      }
+    },
+    "shutter.clearTime" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear exposure time"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清除曝光时间"
           }
         }
       }
@@ -5223,18 +5476,36 @@
         }
       }
     },
-    "shutter.copyResult" : {
+    "shutter.copied" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Copy result"
+            "value" : "Copied"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "复制结果"
+            "value" : "已复制"
+          }
+        }
+      }
+    },
+    "shutter.copyResult" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copy settings"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "复制完整设置"
           }
         }
       }
@@ -5256,33 +5527,35 @@
       }
     },
     "shutter.direction.angleToTime" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Angle → time"
+            "value" : "Find time"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "角度 → 时间"
+            "value" : "求时间"
           }
         }
       }
     },
     "shutter.direction.timeToAngle" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Time → angle"
+            "value" : "Find angle"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "时间 → 角度"
+            "value" : "求角度"
           }
         }
       }
@@ -5646,13 +5919,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Time: 1 /"
+            "value" : "Exposure time"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "时间：1 /"
+            "value" : "曝光时间"
           }
         }
       }
@@ -5754,6 +6027,312 @@
         }
       }
     },
+    "shutter.library.cancel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancel"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "取消"
+          }
+        }
+      }
+    },
+    "shutter.library.checked" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Field check recorded by user"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用户已记录现场检查"
+          }
+        }
+      }
+    },
+    "shutter.library.checkScope" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "For a field check, describe the conditions. This records your observation for these settings, not automatic flicker detection or a guarantee for other conditions."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "记录现场检查时，请填写条件。这是你对这组设置的观察记录，不是自动频闪检测，也不代表其他条件同样适用。"
+          }
+        }
+      }
+    },
+    "shutter.library.conditions" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Light / screen, brightness, camera mode and notes"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "灯具或屏幕、亮度、相机模式及备注"
+          }
+        }
+      }
+    },
+    "shutter.library.delete" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove saved setup"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "移出常用方案"
+          }
+        }
+      }
+    },
+    "shutter.library.deleteQuestion" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove this saved setup? Recent records are kept."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "从常用移除此方案？最近记录会保留。"
+          }
+        }
+      }
+    },
+    "shutter.library.details" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Setup details"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "方案详情"
+          }
+        }
+      }
+    },
+    "shutter.library.done" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Done"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "完成"
+          }
+        }
+      }
+    },
+    "shutter.library.empty" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No setups yet"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "暂无方案"
+          }
+        }
+      }
+    },
+    "shutter.library.emptyHint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Complete a calculation or save the current setup."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "完成一次计算，或保存当前设置。"
+          }
+        }
+      }
+    },
+    "shutter.library.fieldCheck" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I checked this setup with test footage"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "我已通过实拍检查此设置"
+          }
+        }
+      }
+    },
+    "shutter.library.name" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Name (optional)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "名称（留空使用参数摘要）"
+          }
+        }
+      }
+    },
+    "shutter.library.recent" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recent calculations"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近计算"
+          }
+        }
+      }
+    },
+    "shutter.library.recorded" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recorded"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "记录时间"
+          }
+        }
+      }
+    },
+    "shutter.library.restore" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restore to camera %1$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "恢复至 %1$@ 机"
+          }
+        }
+      }
+    },
+    "shutter.library.save" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Save setup"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存方案"
+          }
+        }
+      }
+    },
+    "shutter.library.saved" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saved setups"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "常用方案"
+          }
+        }
+      }
+    },
+    "shutter.library.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Setups"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "方案"
+          }
+        }
+      }
+    },
     "shutter.light.custom" : {
       "localizations" : {
         "en" : {
@@ -5818,6 +6397,57 @@
         }
       }
     },
+    "shutter.lightModel.custom" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Light-pulse model: %1$@ Hz"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "光脉冲模型：%1$@ Hz"
+          }
+        }
+      }
+    },
+    "shutter.lightModel.displays" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Screen-cycle model: %1$@ Hz · PWM and scan synchronization are not modeled."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "屏幕周期模型：%1$@ Hz；未建模 PWM 与扫描同步。"
+          }
+        }
+      }
+    },
+    "shutter.lightModel.mains" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ Hz mains · assumes %2$@ Hz light pulses"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ Hz 市电 · 假设 %2$@ Hz 光脉冲"
+          }
+        }
+      }
+    },
     "shutter.match.angle" : {
       "localizations" : {
         "en" : {
@@ -5866,18 +6496,35 @@
         }
       }
     },
-    "shutter.mode.conversion" : {
+    "shutter.maximumAlternative" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Angle ↔ time"
+            "value" : "At the limit: %1$@° · %2$@\nExposure change: %3$@ stops versus target, with other exposure settings unchanged."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "快门换算"
+            "value" : "上限下可实现：%1$@° · %2$@\n其他曝光条件不变时，相对目标曝光量变化 %3$@ 档。"
+          }
+        }
+      }
+    },
+    "shutter.mode.conversion" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Convert"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "换算"
           }
         }
       }
@@ -5899,17 +6546,18 @@
       }
     },
     "shutter.mode.matching" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Over / undercrank"
+            "value" : "Frame rate"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "升格 / 降格"
+            "value" : "变帧率"
           }
         }
       }
@@ -6044,6 +6692,23 @@
         }
       }
     },
+    "shutter.primary.theoretical" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "THEORETICAL ANGLE"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "理论角度"
+          }
+        }
+      }
+    },
     "shutter.primary.time" : {
       "localizations" : {
         "en" : {
@@ -6076,7 +6741,144 @@
         }
       }
     },
+    "shutter.rig.camera" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Camera and recording mode"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "相机与录制模式"
+          }
+        }
+      }
+    },
+    "shutter.rig.configure" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Camera setup"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "机位设置"
+          }
+        }
+      }
+    },
+    "shutter.rig.context" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Camera %1$@: %2$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ 机：%2$@"
+          }
+        }
+      }
+    },
+    "shutter.rig.hint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A label for this camera setup. FPS and the user-set angle limit stay independent of the recording calculator."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此处为机位备注。帧率与用户设定角度上限仍独立于录制计算器。"
+          }
+        }
+      }
+    },
+    "shutter.rig.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Camera"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "机位"
+          }
+        }
+      }
+    },
+    "shutter.rig.unspecified" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Camera / mode not specified"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未填写相机或模式"
+          }
+        }
+      }
+    },
+    "shutter.rig.useRecording" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use recording calculator description"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用录制页相机信息"
+          }
+        }
+      }
+    },
+    "shutter.timeInputHint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1/50 s · 20 ms · 0.02 s; a bare number means 1/number s."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "支持 1/50 s、20 ms、0.02 s；纯数字表示分母。"
+          }
+        }
+      }
+    },
     "shutter.use180" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -6198,7 +7000,7 @@
         }
       }
     },
-    "TIFF · 16-bit · Adobe RGB" : {
+    "TIFF" : {
 
     },
     "Undo" : {
@@ -6231,6 +7033,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "撤销胶片调整"
+          }
+        }
+      }
+    },
+    "Unknown" : {
+      "comment" : "macOS scan import and physical film geometry",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unknown"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未识别"
           }
         }
       }

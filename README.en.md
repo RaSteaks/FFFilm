@@ -20,10 +20,12 @@ Data rate, storage runtime and shutter planning for the camera you actually have
 **Shutter** — three modes sharing camera FPS and a user-set maximum angle.
 
 - **Convert** — angle ⇄ exposure time, with the primary readout following the conversion direction.
-- **Flicker reference** — flicker-free angles against mains (50/60 Hz), a custom optical rate, or 2–16 display refresh rates.
-- **Over / undercrank** — match an exposure by keeping the angle or the time, with playback speed and an optional light check.
+- **Flicker reference** — optical-cycle model candidates for mains (50/60 Hz), a custom optical rate, or 2–16 display refresh rates. Adopt a candidate directly and inspect its relative exposure difference; test footage is still required.
+- **Frame rate (over / undercrank)** — match by keeping angle or exposure time, with playback speed and an optional light check. Over-limit results include both the theoretical target and achievable exposure at the limit.
 
 Preset frame rates carry their exact rational values; typed decimals stay literal.
+
+DIT shortcuts expose common FPS, angles and exposure times; time input accepts `1/50`, `20 ms` and `0.02 s`. Independent A/B/C camera slots retain settings and camera/mode notes, including window-local drafts while switching. Saved setups and the latest 12 distinct calculations restore to their source camera slot. Field-check conditions and notes are user-recorded observations, not automatic flicker detection.
 
 **Camera catalog** — 39 profiles across ARRI, Sony, RED, DJI, Kinefinity and standalone Apple ProRes, with manufacturer-grouped search, reorderable favorites and per-camera recording-mode details.
 
@@ -41,9 +43,13 @@ See the [implementation notes](docs/ios-negative-film-preview.md) for simulator 
 
 ## Film slicing (macOS only)
 
-Open **Film** in the Mac toolbar, or press **⌘3**. Drop or import a TIFF / experimental Flextight FFF scan, detect frame gaps or draw frames manually, then crop, rotate, reorder and export. Scan dimensions and sprockets identify 135, 120 or large format; select a format manually when detection is uncertain. **Add frame** joins the previous frame and sizes the new slice for the film format. Without reliable gaps, 120 starts at 6×6 and subsequent frames inherit the preceding frame's height. Automatic identification and boundaries are candidates and should be checked. Save `.fffilm` projects to resume slicing without modifying the scan.
+Open **Film** in the Mac toolbar, or press **⌘3**. Drop or import a TIFF / experimental Flextight FFF scan, detect frames and conservatively fit their four edges, or draw frames manually, then crop, rotate, reorder and export. Scan dimensions and sprockets identify 135, 120 or large format; select a format manually when detection is uncertain. **Add frame** joins the previous frame and sizes the new slice for the film format. Without reliable gaps, 120 starts at 6×6 and subsequent frames inherit the preceding frame's height. Automatic identification and boundaries are candidates and should be checked. Save `.fffilm` projects to resume slicing without modifying the scan.
+
+Automatic selection identifies stable dark scanner margins and combines strip-wide aperture evidence with per-frame edges to remove broad black borders; it does not discard dark subjects using a whole-image brightness threshold. It reuses import analysis, checks long scans in overlapping segments, and refines uncertain edges from source-precision pixels. Use **Sample film base** in the canvas tool picker or **Calibrate from current frame** to help refine other automatic frames. Repeat detection preserves manual edits and identifies edges needing review. Sampling and calibration are session-only; final crops are saved in the project. Automatic transport pitch stays separate from the trimmed image width when adding a frame. See the [validation record](docs/film-detection-validation.md) for test and performance evidence.
 
 Export current, checked or all frames as 16-bit Adobe RGB TIFF or 8-bit sRGB JPEG. Whole-strip output places rotated crops in their original slots, clipping to the slot boundaries; individual exports retain full rotated bounds. Zoom, undo/redo and batch selection remain available.
+
+Choose **Export…** to open a separate sheet, configure the prefix and frame-name or sequence naming, and preview filenames. Progress returns to the workbench; cancelled items can resume and failed files retry from the original job. Existing files are kept by default. Export drafts last for the current source/window session and are not saved into project files. See the [export framework contract](docs/film-export-framework.md).
 
 **Color management** remains for accurate input/output interpretation: embedded input profiles take precedence; untagged scans require explicit assignment or a matching RGB ICC. Floating-point previews preserve extended RGB and exports embed their output profiles. No automatic negative conversion is applied. See [color-management notes](docs/film-color-management.md).
 

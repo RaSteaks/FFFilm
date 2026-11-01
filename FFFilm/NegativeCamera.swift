@@ -5,7 +5,6 @@ import OSLog
 
 nonisolated struct NegativeCameraFrame: @unchecked Sendable {
     let asset: NegativeAsset
-    let positive: CGImage?
     let frozenForSampling: Bool
     var isMacro = false
     // Repeated on every frame so dropping one delivery cannot lose a lens-change event.
@@ -24,21 +23,15 @@ nonisolated protocol NegativeCameraCapture: Sendable {
     func rotate(_ angle: CGFloat)
 }
 
-/// Session, device, frame and rendering state belong exclusively to this serial queue.
+/// Session, device and source-buffer state belong exclusively to this serial queue.
 /// Only immutable frame snapshots are delivered to the main actor.
 nonisolated final class NegativeCamera: NSObject, NegativeCameraCapture, AVCaptureVideoDataOutputSampleBufferDelegate, @unchecked Sendable {
     private let queue = DispatchQueue(label: "FFFilm.negative.camera", qos: .userInitiated)
     private let session = AVCaptureSession()
     // A failed/interrupted session can stop before its notification reaches our queue.
     private var captureRequested = false
-    // Initialize the GPU context only on the capture queue, not during SwiftUI view creation.
-    private var renderContext: CIContext?
-    private var context: CIContext {
-        if let renderContext { return renderContext }
-        let created = NegativePixels.context()
-        renderContext = created
-        return created
-    }
+    // Copy native planes into a bounded pool; never retain AVCapture's scarce buffers.
+    private let framePool = NegativeCameraBufferPool()
     private var device: AVCaptureDevice?
     private var output: AVCaptureVideoDataOutput?
     private var frameHandler: (@Sendable (NegativeCameraFrame, @escaping @Sendable () -> Void) -> Void)?
@@ -67,7 +60,7 @@ nonisolated final class NegativeCamera: NSObject, NegativeCameraCapture, AVCaptu
     private let performanceLog = Logger(subsystem: "com.rasteaks.FFFilm", category: "NegativeCameraPerformance")
     private var performanceStart: CFAbsoluteTime = 0
     private var receivedFrames = 0, deliveredFrames = 0, throttledFrames = 0, busyFrames = 0, droppedFrames = 0
-    private var renderSeconds: Double = 0
+    private var copySeconds: Double = 0
     #endif
 
     override init() {
@@ -113,7 +106,6 @@ nonisolated final class NegativeCamera: NSObject, NegativeCameraCapture, AVCaptu
             do {
                 // Stop before changing inputs/formats so old frames cannot enter the new calibration.
                 session.stopRunning()
-                // Reuse the context and compiled kernels across lens/format changes.
                 let configuration = try configure(settings)
                 guard let device else { throw NegativeFailure(key: "negative.error.camera") }
                 try device.lockForConfiguration()
@@ -143,7 +135,7 @@ nonisolated final class NegativeCamera: NSObject, NegativeCameraCapture, AVCaptu
                 minimumFrameTimestamp = CMClockGetTime(CMClockGetHostTimeClock())
                 #if DEBUG
                 performanceStart = CFAbsoluteTimeGetCurrent()
-                receivedFrames = 0; deliveredFrames = 0; throttledFrames = 0; busyFrames = 0; droppedFrames = 0; renderSeconds = 0
+                receivedFrames = 0; deliveredFrames = 0; throttledFrames = 0; busyFrames = 0; droppedFrames = 0; copySeconds = 0
                 #endif
                 onConfiguration(configuration)
                 session.startRunning()
@@ -294,6 +286,7 @@ nonisolated final class NegativeCamera: NSObject, NegativeCameraCapture, AVCaptu
         captureRequested = false
         frozen = true; locking = false; waitingForLockedFrame = false; awaitingLockCompletion = false; lockGeneration = UUID()
         session.stopRunning()
+        framePool.flush()
     }
 
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
@@ -380,20 +373,15 @@ nonisolated final class NegativeCamera: NSObject, NegativeCameraCapture, AVCaptu
             return
         }
         #if DEBUG
-        let renderStart = CFAbsoluteTimeGetCurrent()
-        defer { renderSeconds += CFAbsoluteTimeGetCurrent() - renderStart }
+        let copyStart = CFAbsoluteTimeGetCurrent()
+        defer { copySeconds += CFAbsoluteTimeGetCurrent() - copyStart }
         #endif
         autoreleasepool {
             do {
-                let image = CIImage(cvPixelBuffer: buffer)
-                // Materialize bounded camera pixels so holding a frame never pins a capture-pool buffer.
-                guard let cg = context.createCGImage(image, from: image.extent, format: .RGBAh, colorSpace: NegativePixels.linear) else {
-                    throw NegativeFailure(key: "negative.error.render")
-                }
-                let retained = CIImage(cgImage: cg)
-                let asset = NegativeAsset(image: retained, preview: cg)
-                let rendered = try base.map { try NegativePixels.preview(retained, base: $0, context: context,
-                    limit: max(retained.extent.width, retained.extent.height)) }
+                // There is no per-frame CGImage readback or second full-size positive bitmap.
+                // Pool exhaustion drops a frame rather than growing latency or memory.
+                guard let owned = try framePool.copy(buffer) else { return }
+                let asset = NegativeAsset(image: CIImage(cvPixelBuffer: owned))
                 let sample = waitingForLockedFrame
                 if sample { frozen = true; waitingForLockedFrame = false }
                 // One main-actor delivery at a time; a busy UI drops frames rather than retaining a queue of images.
@@ -403,7 +391,7 @@ nonisolated final class NegativeCamera: NSObject, NegativeCameraCapture, AVCaptu
                 deliveredFrames += 1
                 #endif
                 let isMacro = device?.isVirtualDevice == true && device?.activePrimaryConstituent?.deviceType == .builtInUltraWideCamera
-                frameHandler?(NegativeCameraFrame(asset: asset, positive: rendered, frozenForSampling: sample,
+                frameHandler?(NegativeCameraFrame(asset: asset, frozenForSampling: sample,
                     isMacro: isMacro, calibrationID: calibrationID)) { [weak self] in
                     self?.queue.async { [weak self] in
                         guard let self, self.deliveryGeneration == generation else { return }
@@ -427,10 +415,10 @@ nonisolated final class NegativeCamera: NSObject, NegativeCameraCapture, AVCaptu
         guard performanceStart > 0, elapsed >= 5 else { return }
         // One aggregate every five seconds; never log images, device identifiers or per-frame payloads.
         let fps = Double(deliveredFrames) / elapsed
-        let milliseconds = deliveredFrames > 0 ? renderSeconds * 1000 / Double(deliveredFrames) : 0
-        performanceLog.debug("Preview fps=\(fps, privacy: .public) render_ms=\(milliseconds, privacy: .public) received=\(self.receivedFrames) throttled=\(self.throttledFrames) ui_busy=\(self.busyFrames) capture_dropped=\(self.droppedFrames)")
+        let milliseconds = deliveredFrames > 0 ? copySeconds * 1000 / Double(deliveredFrames) : 0
+        performanceLog.debug("Delivery fps=\(fps, privacy: .public) copy_ms=\(milliseconds, privacy: .public) received=\(self.receivedFrames) throttled=\(self.throttledFrames) ui_busy=\(self.busyFrames) capture_dropped=\(self.droppedFrames)")
         performanceStart = now
-        receivedFrames = 0; deliveredFrames = 0; throttledFrames = 0; busyFrames = 0; droppedFrames = 0; renderSeconds = 0
+        receivedFrames = 0; deliveredFrames = 0; throttledFrames = 0; busyFrames = 0; droppedFrames = 0; copySeconds = 0
     }
     #endif
 }

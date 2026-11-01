@@ -48,6 +48,13 @@ enum DisplayFormat {
         return value.formatted(.number.grouping(.never).precision(.fractionLength(0 ... 6)))
     }
 
+    /// Settings shared with another operator retain exact fractional cadence. A typed
+    /// decimal is only labeled rational when its stored value actually equals that preset.
+    static func shutterFrameRate(_ value: Double) -> String {
+        let fractional: [ShutterFramePreset] = [.fractional24, .fractional30, .fractional60, .fractional100Over3]
+        return fractional.first(where: { $0.fps == value })?.label ?? shutterNumber(value)
+    }
+
     // Keep the camera-setting readout separate from equivalent exposure-duration units.
     static func shutterTime(_ exposure: ShutterExposure) -> String {
         "1/\(shutterNumber(exposure.shutterDenominator)) s"

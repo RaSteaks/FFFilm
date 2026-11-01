@@ -301,9 +301,10 @@ extension View {
     }
 
     @ViewBuilder
-    func numericKeyboard() -> some View {
+    func numericKeyboard(allowsTimeExpression: Bool = false) -> some View {
         #if os(iOS)
-        keyboardType(.decimalPad)
+        // Time expressions need a slash and unit letters; other numeric fields stay decimal-only.
+        keyboardType(allowsTimeExpression ? .numbersAndPunctuation : .decimalPad)
         #else
         self
         #endif

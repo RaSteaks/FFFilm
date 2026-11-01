@@ -47,6 +47,32 @@ struct SettingsView: View {
             }
 
             Section {
+                Link(destination: URL(string: "https://github.com/RaSteaks/FFFilm")!) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "chevron.left.forwardslash.chevron.right")
+                            .font(.title3)
+                            .accessibilityHidden(true)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("settings.repository")
+                                .font(.headline)
+                            Text(verbatim: "RaSteaks/FFFilm")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer(minLength: 8)
+                        Image(systemName: "arrow.up.right")
+                            .foregroundStyle(.secondary)
+                            .accessibilityHidden(true)
+                    }
+                    .foregroundStyle(.primary)
+                    .padding(.vertical, 8)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("github-repository-link")
+            }
+
+            Section {
                 LabeledContent {
                     Text(verbatim: "zhuyutian041119@foxmail.com")
                         .textSelection(.enabled)
@@ -56,9 +82,19 @@ struct SettingsView: View {
                 }
             } header: { Text("feedback.email.section") }
             footer: {
-                // The native form footer keeps attribution separate from preference rows.
-                AppCopyrightFooter()
-                    .padding(.top, 8)
+                // Keep attribution and the registration number separate from preference rows.
+                VStack(spacing: 8) {
+                    AppCopyrightFooter()
+                    // The registered identifier stays unchanged in both app languages.
+                    Text(verbatim: "浙ICP备2026090281号-2A")
+                        .font(.caption2)
+                        .foregroundStyle(Palette.muted)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity)
+                        .accessibilityIdentifier("app-icp-registration")
+                }
+                .padding(.top, 8)
             }
         }
         .formStyle(.grouped)

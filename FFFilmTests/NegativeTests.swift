@@ -6,6 +6,17 @@ import UniformTypeIdentifiers
 
 @Suite(.serialized)
 struct NegativeTests {
+    @Test func sourceLoupePadsEdgesWithoutMovingTheSampleCenter() async throws {
+        let source = CIImage(color: .white).cropped(to: CGRect(x: 0, y: 0, width: 1000, height: 600))
+        let loupe = try await NegativeRenderer().loupe(NegativeAsset(image: source), point: CGPoint(x: 0.01, y: 0.5))
+        // A clipped crop would narrow the loupe and mislabel the sample with a centered crosshair.
+        #expect(loupe.width == 72 && loupe.height == 72)
+        let bytes = pixels(loupe)
+        #expect(bytes[0] == 0 && bytes[3] == 255)
+        let center = (36 * 72 + 36) * 4
+        #expect(bytes[center] == 255 && bytes[center + 3] == 255)
+    }
+
     @Test func checkedBitmapMatchesLegacyRendering() throws {
         let context = NegativePixels.context()
         let image = fixture(width: 72, height: 600)
@@ -146,7 +157,9 @@ struct NegativeTests {
         let renderer = NegativeRenderer(), asset = try await renderer.load(url)
         #expect(asset.width == 2200 && asset.height == 1400)
         // Import keeps the bounded preview; explicit display tiers resize exactly and never upsample.
-        #expect(asset.preview.width == 1800 && asset.preview.height == 1145)
+        // Imported files still provide a bitmap; GPU-only camera sources may omit it.
+        let preview = try #require(asset.preview)
+        #expect(preview.width == 1800 && preview.height == 1145)
         let base = try await renderer.sample(asset, point: CGPoint(x: 0.5, y: 0.1))
         let original = try await renderer.filePreview(asset, limit: 2000)
         #expect(original.width == 2000 && original.height == 1273)
@@ -280,7 +293,8 @@ struct NegativeTests {
     private func verifyLargeFile(_ url: URL) async throws {
         let renderer = NegativeRenderer(), asset = try await renderer.load(url)
         #expect(asset.width == 5167 && asset.height == 16443)
-        #expect(max(asset.preview.width, asset.preview.height) <= 1801)
+        let preview = try #require(asset.preview)
+        #expect(max(preview.width, preview.height) <= 1801)
         let base = try await renderer.sample(asset, point: CGPoint(x: 0.5, y: 0.1))
         for format in NegativeFormat.allCases {
             let output = try await renderer.export(asset, base: base, format: format)

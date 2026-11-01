@@ -22,6 +22,9 @@ struct ContentView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     #else
     @State private var filmStore = FilmStore()
+    // Lags activeView by one update, which is what lets body read the direction of travel.
+    @State private var previousPage: CalculatorView = .rate
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     #endif
 
     init() {
@@ -56,11 +59,14 @@ struct ContentView: View {
                 }
             #else
             VStack(spacing: 0) {
-                if store.activeView == .film {
-                    FilmWorkbenchView(store: filmStore)
-                } else {
-                    CalculatorWorkbench(store: store, view: store.activeView, showsCameras: $showsCameras)
+                // A ZStack keeps both pages in one slot while they overlap; the identity gives
+                // each workbench its own transition instead of an in-place content swap.
+                ZStack {
+                    workbenchPage
+                        .transition(pageTransition)
+                        .id(store.activeView)
                 }
+                .animation(reduceMotion ? WorkbenchMotion.fade : WorkbenchMotion.travel, value: store.activeView)
                 // HSplitView's AppKit children do not consistently consume an inherited
                 // safe-area inset. Reserve real layout space so bottom controls stay reachable.
                 AppCopyrightFooter()
@@ -75,7 +81,10 @@ struct ContentView: View {
             .background(FilmWindowGuard(store: filmStore))
             .sensoryFeedback(.selection, trigger: store.activeView)
             // The desktop toolbar binds activeView directly, so clear page feedback here.
-            .onChange(of: store.activeView) { _, _ in store.clearTransientState() }
+            .onChange(of: store.activeView) { _, view in
+                previousPage = view
+                store.clearTransientState()
+            }
             #endif
         }
         // Present outside the compact tab shell so iPad sheets retain their
@@ -85,6 +94,27 @@ struct ContentView: View {
         .preferredColorScheme(.dark)
         .sensoryFeedback(.selection, trigger: store.settings)
     }
+
+    #if os(macOS)
+    @ViewBuilder private var workbenchPage: some View {
+        if store.activeView == .film {
+            FilmWorkbenchView(store: filmStore)
+        } else {
+            CalculatorWorkbench(store: store, view: store.activeView, showsCameras: $showsCameras)
+        }
+    }
+
+    /// The incoming page travels with the toolbar thumb. The outgoing page fades in place and
+    /// faster, because its transition is captured before the direction is known and a slow
+    /// fade would double-expose both forms.
+    private var pageTransition: AnyTransition {
+        let pages = CalculatorView.allCases
+        let forward = (pages.firstIndex(of: store.activeView) ?? 0) >= (pages.firstIndex(of: previousPage) ?? 0)
+        let travel = reduceMotion ? 0 : forward ? WorkbenchMotion.pageTravel : -WorkbenchMotion.pageTravel
+        return .asymmetric(insertion: .offset(x: travel).combined(with: .opacity),
+                           removal: .opacity.animation(WorkbenchMotion.pageExit))
+    }
+    #endif
 
     #if os(iOS)
     private enum MobileTab: Hashable {

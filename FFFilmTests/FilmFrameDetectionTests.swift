@@ -213,6 +213,92 @@ struct FilmFrameDetectionTests {
         #expect(FilmFrameDetection.frames(pixels: [], width: Int.max, height: 160).isEmpty)
     }
 
+    @Test func effectiveFramesTrimFourSidesWithoutChangingTransportIntervals() throws {
+        for horizontal in [true, false] {
+            let pixels = strip(horizontal: horizontal, gaps: [196..<204, 396..<404]) { position, cross, color in
+                position < 12 || position >= 588 || cross < 20 || cross >= 140 ? orange : color
+            }
+            let result = FilmFrameDetection.analyze(pixels: pixels,
+                width: horizontal ? 600 : 160, height: horizontal ? 160 : 600)
+            expectBoundaries(result.splitFrames, [200, 400], horizontal: horizontal)
+            #expect(result.gaps.map(\.start) == [196.0 / 600, 396.0 / 600])
+            #expect(result.candidates.count == 3)
+            for (candidate, interval) in zip(result.candidates, [12..<196, 204..<396, 404..<588]) {
+                let crop = candidate.crop
+                #expect(abs((horizontal ? crop.x : crop.y) * 600 - Double(interval.lowerBound)) < 0.001)
+                #expect(abs((horizontal ? crop.width : crop.height) * 600 - Double(interval.count)) < 0.001)
+                #expect(abs((horizontal ? crop.y : crop.x) * 160 - 20) < 0.001)
+                #expect(abs((horizontal ? crop.height : crop.width) * 160 - 120) < 0.001)
+                #expect(candidate.edges.values.allSatisfy { $0 == .reliable })
+            }
+        }
+    }
+
+    @Test func singleFrameRequiresFourSupportedBordersAndKeepsAmbiguousScans() throws {
+        let pixels = strip(gaps: []) { position, cross, color in
+            position < 18 || position >= 582 || cross < 24 || cross >= 136 ? orange : color
+        }
+        let result = FilmFrameDetection.analyze(pixels: pixels, width: 600, height: 160)
+        #expect(result.splitFrames.isEmpty)
+        let candidate = try #require(result.candidates.first)
+        #expect(result.candidates.count == 1)
+        #expect(abs(candidate.crop.x - 18.0 / 600) < 0.00001)
+        #expect(abs(candidate.crop.y - 24.0 / 160) < 0.00001)
+        let noBorders = FilmFrameDetection.analyze(pixels: strip(gaps: [], textured: false), width: 600, height: 160)
+        #expect(noBorders.candidates.isEmpty)
+    }
+
+    @Test func underexposedEdgesUseRepeatedPitchWithoutTrimmingIndistinguishableImage() throws {
+        for horizontal in [true, false] {
+            for base in [orange, RGB(repeating: 180)] {
+                let gaps = [196..<204, 396..<404, 596..<604, 796..<804, 996..<1004]
+                let pixels = strip(horizontal: horizontal, length: 1200, gaps: gaps, base: base) { position, cross, color in
+                    // Two boundaries have visible content in only three of seven lanes.
+                    if ((386..<414).contains(position) || (586..<614).contains(position)), cross < 85 { return base }
+                    // The fifth frame is almost clear, with only a small subject in one sampling lane.
+                    if (770..<1050).contains(position) {
+                        return (870..<930).contains(position) && (72..<88).contains(cross) ? color : base
+                    }
+                    return color
+                }
+                let result = FilmFrameDetection.analyze(pixels: pixels,
+                    width: horizontal ? 1200 : 160, height: horizontal ? 160 : 1200)
+                try #require(result.candidates.count == 6)
+                expectBoundaries(result.splitFrames, [200, 400, 600, 800, 1000], horizontal: horizontal, length: 1200)
+                #expect(result.gaps.filter(\.inferred).count == 4)
+                let before = result.candidates[3], after = result.candidates[4]
+                #expect(before.edges[horizontal ? .right : .bottom] == .inferred)
+                #expect(after.edges[horizontal ? .left : .top] == .inferred)
+                // Both neighbors retain the uncertain band, rather than searching deep into faint content.
+                #expect((horizontal ? before.crop.x + before.crop.width : before.crop.y + before.crop.height) * 1200 >= 804)
+                #expect((horizontal ? after.crop.x : after.crop.y) * 1200 <= 796)
+            }
+        }
+    }
+
+    @Test func unexposedTrailerDoesNotBecomeExtraFrames() {
+        let gaps = [196..<204, 396..<404, 596..<604]
+        let pixels = strip(length: 1200, gaps: gaps) { position, cross, color in
+            if ((386..<414).contains(position) || (586..<614).contains(position)), cross < 85 { return orange }
+            return position >= 770 ? orange : color
+        }
+        let result = FilmFrameDetection.analyze(pixels: pixels, width: 1200, height: 160)
+        #expect(result.gaps.count == 3)
+        #expect(result.gaps.allSatisfy { $0.center < 0.6 })
+    }
+
+    @Test func irregularWeakBandsDoNotEstablishAnExtrapolatedFrameGrid() {
+        let gaps = [196..<204, 466..<474, 596..<604]
+        let pixels = strip(length: 1200, gaps: gaps) { position, cross, color in
+            if ((456..<484).contains(position) || (586..<614).contains(position)), cross < 85 { return orange }
+            if (770..<850).contains(position) || (970..<1050).contains(position) { return orange }
+            return color
+        }
+        let result = FilmFrameDetection.analyze(pixels: pixels, width: 1200, height: 160)
+        #expect(result.gaps.count == 1)
+        #expect(result.gaps.allSatisfy { !$0.inferred })
+    }
+
     @Test func rendererUsesTopLeftCoordinatesAndTheSameDetectionOnImport() async throws {
         // An asymmetric vertical TIFF catches accidental bottom-up Core Image bitmap interpretation.
         let width = 160, height = 600
@@ -222,7 +308,7 @@ struct FilmFrameDetectionTests {
             bytesPerRow: width * 4, space: CGColorSpace(name: CGColorSpace.sRGB)!,
             bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue),
             provider: provider, decode: nil, shouldInterpolate: false, intent: .defaultIntent))
-        let url = FileManager.default.temporaryDirectory.appending(path: "FilmDetection-\(UUID()).tiff")
+        let url = try FilmTestFiles.directory().appending(path: "FilmDetection-\(UUID()).tiff")
         defer { try? FileManager.default.removeItem(at: url) }
         let destination = try #require(CGImageDestinationCreateWithURL(url as CFURL, UTType.tiff.identifier as CFString, 1, nil))
         CGImageDestinationAddImage(destination, image, nil)
@@ -233,7 +319,21 @@ struct FilmFrameDetectionTests {
         expectBoundaries(frames, [170, 390], horizontal: false)
         // Import uses the same interior interval to estimate the next-frame length.
         #expect(abs((info.layout.frameLength ?? 0) - 220.0 / 600) < 0.002)
+        let before = await renderer.performance.measurements
+        let first = try await renderer.detectFrameCandidates()
+        let second = try await renderer.detectFrameCandidates()
+        #expect(first == second)
+        let after = await renderer.performance.measurements
+        #expect(after.count == before.count)
+        #expect(after.filter { $0.stage == .pixels }.count == 1)
+        #expect(after.filter { $0.stage == .coarseDetection }.count == 1)
+        #expect(after.allSatisfy { $0.milliseconds >= 0 })
+        let identity = await renderer.sourceIdentifier
+        _ = try await renderer.load(url, inputSpace: "sRGB")
+        #expect(await renderer.sourceIdentifier != identity)
+        #expect(await renderer.performance.measurements.filter { $0.stage == .pixels }.count == 1)
         await renderer.close()
+        #expect(try await renderer.detectFrameCandidates().candidates.isEmpty)
     }
 
     private func detect(_ pixels: [UInt8], horizontal: Bool = true, length: Int = 600) -> [FilmRect] {

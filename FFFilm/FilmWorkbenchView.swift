@@ -7,6 +7,7 @@ struct FilmWorkbenchView: View {
     /// renderer survive workbench-tab switches; no longer a standalone window.
     @Bindable var store: FilmStore
     @State private var dropTargeted = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// Split-pane minimums plus the divider: the narrowest window that keeps both
     /// panes visible. ContentView raises the window minimum to this while the
@@ -31,6 +32,12 @@ struct FilmWorkbenchView: View {
         }
         .background(Palette.background)
         .toolbar { toolbar }
+        .sheet(isPresented: Binding(get: { store.exportController.isPresented },
+                                    set: { if !$0 { store.exportController.dismiss() } }),
+               onDismiss: { store.exportController.didDismiss() }) {
+            FilmExportSheet(controller: store.exportController, parentWindow: store.window,
+                            frameCount: store.project.frames.count)
+        }
         .alert(filmText("操作未完成", "Operation failed"), isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) {
             Button(filmText("好", "OK")) { store.error = nil }
         } message: { Text(store.error ?? "") }
@@ -81,11 +88,12 @@ struct FilmWorkbenchView: View {
                         Button { store.notice = "" } label: { Image(systemName: "xmark") }.buttonStyle(.plain).accessibilityLabel(filmText("关闭提示", "Dismiss notice"))
                     }.padding(10)
                 }
-                if store.busy || store.exporting {
-                    HStack { ProgressView().controlSize(.small); Text(store.exporting ? store.progress : filmText("正在处理…", "Processing…")); Spacer()
-                        if store.exporting { Button(filmText("取消导出", "Cancel export")) { store.exportTask?.cancel() } }
+                if store.busy {
+                    HStack { ProgressView().controlSize(.small); Text(store.detecting ? store.progress : filmText("正在处理…", "Processing…")); Spacer()
+                        if store.detecting { Button(filmText("取消框选", "Cancel detection")) { store.cancelDetection() }.accessibilityIdentifier("film-cancel-detection") }
                     }.padding(10)
                 }
+                FilmExportStatusView(controller: store.exportController)
             }.frame(minWidth: Self.canvasMinimumWidth, maxWidth: .infinity, maxHeight: .infinity)
             inspector.frame(minWidth: Self.inspectorMinimumWidth, idealWidth: 330, maxWidth: 380)
         }
@@ -94,14 +102,14 @@ struct FilmWorkbenchView: View {
 
     @ToolbarContentBuilder private var toolbar: some ToolbarContent {
         ToolbarItemGroup(placement: .primaryAction) {
-            Button { store.openScan() } label: { Label(filmText("导入", "Import"), systemImage: "plus") }.disabled(store.busy || store.exporting || store.presentingSheet)
+            Button { store.openScan() } label: { Label(filmText("导入", "Import"), systemImage: "plus") }.disabled(store.busy || store.exporting || store.hasPresentedSheet)
             Menu {
                 Button(filmText("打开项目", "Open project")) { store.openProject() }
                 Button(filmText("保存项目", "Save project")) { store.saveProject() }.disabled(store.info == nil)
                 Button(filmText("项目另存为…", "Save project as…")) { store.saveProject(asNew: true) }.disabled(store.info == nil)
-            } label: { Text(filmText("项目", "Project")) }.disabled(store.busy || store.exporting || store.presentingSheet)
-            Button { store.undo() } label: { Label(filmText("撤销", "Undo"), systemImage: "arrow.uturn.backward") }.disabled(store.undoStack.isEmpty || store.busy || store.exporting || store.presentingSheet)
-            Button { store.redo() } label: { Label(filmText("重做", "Redo"), systemImage: "arrow.uturn.forward") }.disabled(store.redoStack.isEmpty || store.busy || store.exporting || store.presentingSheet)
+            } label: { Text(filmText("项目", "Project")) }.disabled(store.busy || store.exporting || store.hasPresentedSheet)
+            Button { store.undo() } label: { Label(filmText("撤销", "Undo"), systemImage: "arrow.uturn.backward") }.disabled(store.undoStack.isEmpty || store.busy || store.exporting || store.hasPresentedSheet)
+            Button { store.redo() } label: { Label(filmText("重做", "Redo"), systemImage: "arrow.uturn.forward") }.disabled(store.redoStack.isEmpty || store.busy || store.exporting || store.hasPresentedSheet)
         }
     }
     private var canvasToolbar: some View {
@@ -110,6 +118,7 @@ struct FilmWorkbenchView: View {
                 Text(filmText("整条", "Strip")).tag(true)
                 Text(filmText("单帧", "Frame")).tag(false)
             }.pickerStyle(.segmented).frame(width: 140).accessibilityIdentifier("film-view-picker")
+                .disabled(store.busy || store.hasPresentedSheet)
             Spacer()
             // Toolbar, keyboard and native gestures share the same bounded store zoom.
             Button { store.zoomOut() } label: { Image(systemName: "minus.magnifyingglass") }
@@ -154,15 +163,24 @@ struct FilmWorkbenchView: View {
         ScrollView(.horizontal) {
             HStack(spacing: 8) {
                 ForEach(store.project.frames) { frame in
+                    let isCurrent = store.selected == frame.id
                     VStack(spacing: 5) {
+                        // Highlight = the frame being viewed; the checkbox = batch export membership.
                         Button { store.showStrip = false; store.select(frame.id) } label: {
                             VStack(spacing: 3) {
                                 FilmFrameThumbnail(store: store, frame: frame)
                                 Text(frame.name).font(.caption.monospacedDigit())
-                            }.padding(5).background(store.selected == frame.id ? Color.white.opacity(0.16) : Color.clear, in: RoundedRectangle(cornerRadius: 6))
+                            }.padding(5)
+                                .background(isCurrent ? Color.white.opacity(0.16) : Color.clear, in: RoundedRectangle(cornerRadius: 6))
+                                .overlay { if isCurrent { RoundedRectangle(cornerRadius: 6).stroke(Palette.text.opacity(0.7), lineWidth: 1.5) } }
                         }.buttonStyle(.plain).accessibilityLabel(filmText("选择帧", "Select frame") + " " + frame.name)
-                        Toggle(filmText("批量选择", "Batch selection"), isOn: Binding(get: { store.selection.contains(frame.id) }, set: { if $0 { store.selection.insert(frame.id) } else { store.selection.remove(frame.id) } }))
-                            .toggleStyle(.checkbox).font(.caption2)
+                            .accessibilityAddTraits(isCurrent ? .isSelected : [])
+                            .disabled(store.busy || store.hasPresentedSheet)
+                        Toggle(filmText("批量导出", "Include in export") + " " + frame.name,
+                               isOn: Binding(get: { store.selection.contains(frame.id) }, set: { store.setFrameChecked(frame.id, checked: $0) }))
+                            .toggleStyle(.checkbox).labelsHidden()
+                            .help(filmText("勾选后可批量导出", "Check to include in batch export"))
+                            .disabled(!store.canImportScan)
                     }
                 }
             }.padding(10)
@@ -170,21 +188,28 @@ struct FilmWorkbenchView: View {
     }
 
     private var inspector: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
-                Text(filmText("胶片分割", "Film slicing")).font(.title2.weight(.semibold))
-                if let info = store.info { Text("\(info.width) × \(info.height) · \(info.depth)-bit").font(.caption.monospacedDigit()).foregroundStyle(.secondary) }
-                // Source profile information remains relevant to faithful image export.
-                if let info = store.info {
-                    Text((info.hasProfile ? filmText("嵌入配置：", "Embedded profile: ") : filmText("指定输入：", "Assigned input: ")) + info.profileName)
-                        .font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
-                }
-                Text(filmText("分帧与裁切", "Frames & crop")).font(.headline)
-                cropControls
-                Divider()
-                exportControls
-            }.padding(16)
-        }.disabled(store.info == nil || store.busy || store.exporting || store.presentingSheet)
+        let locked = store.info == nil || store.busy || store.exporting || store.hasPresentedSheet
+        return VStack(spacing: 0) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    Text(filmText("胶片分割", "Film slicing")).font(.title2.weight(.semibold))
+                    if let info = store.info { Text("\(info.width) × \(info.height) · \(info.depth)-bit").font(.caption.monospacedDigit()).foregroundStyle(.secondary) }
+                    // Source profile information remains relevant to faithful image export.
+                    if let info = store.info {
+                        Text((info.hasProfile ? filmText("嵌入配置：", "Embedded profile: ") : filmText("指定输入：", "Assigned input: ")) + info.profileName)
+                            .font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
+                    }
+                    Text(filmText("分帧与裁切", "Frames & crop")).font(.headline)
+                    cropControls
+                }.padding(16)
+            }.disabled(locked)
+            // Pinned so export stays reachable however long the crop controls grow.
+            Divider()
+            exportControls.padding(16).disabled(locked)
+        }
+        // While a job runs the inspector is paused rather than gone; ease into and out of that state.
+        .opacity(store.exporting ? 0.75 : 1)
+        .animation(.easeOut(duration: 0.15), value: store.exporting)
     }
 
     private var cropControls: some View {
@@ -199,11 +224,28 @@ struct FilmWorkbenchView: View {
             }
             .accessibilityIdentifier("film-format-picker")
             .help(filmText("根据扫描尺寸和齿孔识别规格；识别不准时可手动选择。", "Detected from scan dimensions and sprockets; select a format to correct it."))
-            Button(filmText("自动识别帧间隙", "Detect frame gaps")) { store.detect() }
+            Button(filmText("自动框选画面", "Detect frames")) { store.detect() }
+                .accessibilityIdentifier("film-detect-frames")
             Picker(filmText("画布工具", "Canvas tool"), selection: $store.drawMode) {
                 Text(filmText("选择", "Select")).tag(0)
                 Text(filmText("框选新帧", "Draw frame")).tag(1)
+                Text(filmText("采样片基", "Sample film base")).tag(2)
             }.onChange(of: store.drawMode) { _, mode in if mode != 0 { store.showStrip = true } }
+            if store.drawMode == 2 {
+                Text(filmText("点击干净、未曝光的片基区域。", "Click a clean, unexposed film edge."))
+                    .font(.caption).foregroundStyle(.secondary)
+                Button(filmText("在视图中心取样", "Sample at view center")) {
+                    store.sampleFilmBase(at: store.canvasCenter); store.drawMode = 0
+                }.accessibilityIdentifier("film-sample-center")
+            }
+            if store.detectionOptions.base != nil {
+                Button(filmText("清除片基取样", "Clear film base sample")) { store.clearFilmBase() }
+                    .accessibilityIdentifier("film-clear-base")
+            }
+            Button(filmText("以当前帧校准", "Calibrate from current frame")) { store.calibrateCurrentFrame() }
+                .disabled(store.frame == nil)
+                .help(filmText("用当前帧帮助寻找其他自动框的边界，保留手工修改。", "Use this frame to refine other automatic frames. Manual edits are kept."))
+                .accessibilityIdentifier("film-calibrate-frame")
             HStack {
                 Button(filmText("添加帧", "Add frame")) { store.addFrame() }
                     .accessibilityIdentifier("film-add-frame")
@@ -211,6 +253,19 @@ struct FilmWorkbenchView: View {
                 Button(filmText("删除所选", "Remove selected")) { store.removeFrame() }.disabled(store.frame == nil)
             }
             if let frame = store.frame {
+                let edges = store.unresolvedEdges(for: frame)
+                if !edges.isEmpty {
+                    let labels = edges.map { edge in
+                        switch edge {
+                        case .left: filmText("左", "left")
+                        case .right: filmText("右", "right")
+                        case .top: filmText("上", "top")
+                        case .bottom: filmText("下", "bottom")
+                        }
+                    }.joined(separator: " · ")
+                    Label(filmText("待检查边界：", "Check edges: ") + labels, systemImage: "exclamationmark.triangle")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
                 TextField(filmText("帧名称", "Frame name"), text: Binding(get: { store.frame?.name ?? "" }, set: { name in store.updateFrame { $0.name = name } }))
                 cropField("X", key: \.x, range: 0...max(0, 1 - frame.crop.width))
                 cropField("Y", key: \.y, range: 0...max(0, 1 - frame.crop.height))
@@ -244,26 +299,30 @@ struct FilmWorkbenchView: View {
         FilmSlider(label: label, value: Binding(get: { store.frame?.crop[keyPath: key] ?? 0 }, set: { value in store.updateFrame { $0.crop[keyPath: key] = value } }), range: range, store: store)
     }
     private var exportControls: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(filmText("导出", "Export")).font(.headline)
-            Picker(filmText("范围", "Scope"), selection: $store.exportScope) {
-                Text(filmText("当前帧", "Current frame")).tag(0)
-                Text(filmText("所选帧", "Selected frames")).tag(1)
-                Text(filmText("全部帧", "All frames")).tag(2)
-                Text(filmText("整条", "Whole strip")).tag(3)
+        let frames = store.project.frames
+        let checked = frames.filter { store.selection.contains($0.id) }.count
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(filmText("导出", "Export")).font(.headline)
+                Spacer()
+                Text(String(format: filmText("已勾选 %d / %d 帧", "%d of %d frames checked"), checked, frames.count))
+                    .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                    .contentTransition(reduceMotion ? .identity : .numericText())
+                    .animation(.easeOut(duration: 0.15), value: checked)
+                    .accessibilityIdentifier("film-checked-count")
             }
-            Picker(filmText("格式", "Format"), selection: Binding(get: { store.project.exportJPEG }, set: { value in store.change { $0.exportJPEG = value } })) {
-                Text("TIFF · 16-bit · Adobe RGB").tag(false)
-                Text("JPEG · 8-bit · sRGB").tag(true)
-            }
-            if store.project.exportJPEG {
-                FilmSlider(label: filmText("质量", "Quality"), value: Binding(get: { store.project.jpegQuality }, set: { value in store.change { $0.jpegQuality = value } }), range: 0.1...1, store: store)
-            }
-            if !store.failedExports.isEmpty {
-                Button(filmText("重试失败项目…", "Retry failed exports…")) { store.export(scope: 4) }
-            }
-            Button(filmText("选择文件夹并导出…", "Choose folder & export…")) { store.export(scope: store.exportScope) }
-                .disabled(store.exportScope != 3 && store.frame == nil)
+            HStack {
+                Button(filmText("全选", "Check all")) { frames.forEach { store.setFrameChecked($0.id, checked: true) } }
+                    .disabled(checked == frames.count)
+                    .accessibilityIdentifier("film-check-all")
+                Button(filmText("清除勾选", "Clear checks")) { frames.forEach { store.setFrameChecked($0.id, checked: false) } }
+                    .disabled(checked == 0)
+                    .accessibilityIdentifier("film-clear-checks")
+            }.controlSize(.small)
+            Button { store.openExportSettings() } label: {
+                Text(filmText("导出…", "Export…")).frame(maxWidth: .infinity)
+            }.controlSize(.large)
+                .accessibilityIdentifier("film-open-export")
         }
     }
 }
@@ -488,18 +547,24 @@ struct FilmCanvas: View {
                             }
                         }
                     }
-                } else {
+                } else if drawMode == 1 {
                     let x = min(size.width, max(0, min(value.startLocation.x, value.location.x)))
                     let y = min(size.height, max(0, min(value.startLocation.y, value.location.y)))
                     dragRect = CGRect(x: x, y: y, width: min(size.width - x, abs(value.location.x - value.startLocation.x)), height: min(size.height - y, abs(value.location.y - value.startLocation.y)))
                 }
-            }.onEnded { _ in
+            }.onEnded { value in
                 defer {
                     dragRect = nil
                     dragTarget = nil
                     hoveredBorder = nil
                     NSCursor.arrow.set()
                     store.endEdit()
+                }
+                guard store.showStrip, !store.busy, !store.exporting else { return }
+                if drawMode == 2 {
+                    store.sampleFilmBase(at: CGPoint(x: value.location.x / size.width, y: value.location.y / size.height))
+                    drawMode = 0
+                    return
                 }
                 guard let rectangle = dragRect, rectangle.width >= 3, rectangle.height >= 3 else { return }
                 let crop = FilmRect(x: rectangle.minX / size.width, y: rectangle.minY / size.height, width: rectangle.width / size.width, height: rectangle.height / size.height)
@@ -549,10 +614,10 @@ struct FilmCommands: Commands {
     @FocusedValue(\.filmStore) private var store
     var body: some Commands {
         CommandMenu(filmText("胶片", "Film")) {
-            Button(filmText("导入扫描…", "Import scan…")) { store?.openScan() }.keyboardShortcut("o", modifiers: [.command, .shift]).disabled(store == nil || store?.busy == true || store?.exporting == true || store?.presentingSheet == true)
-            Button(filmText("保存项目", "Save project")) { store?.saveProject() }.keyboardShortcut("s").disabled(store?.info == nil || store?.busy == true || store?.exporting == true || store?.presentingSheet == true)
-            Button(filmText("撤销胶片调整", "Undo film edit")) { store?.undo() }.keyboardShortcut("z").disabled(store?.undoStack.isEmpty != false || store?.busy == true || store?.exporting == true || store?.presentingSheet == true)
-            Button(filmText("重做胶片调整", "Redo film edit")) { store?.redo() }.keyboardShortcut("z", modifiers: [.command, .shift]).disabled(store?.redoStack.isEmpty != false || store?.busy == true || store?.exporting == true || store?.presentingSheet == true)
+            Button(filmText("导入扫描…", "Import scan…")) { store?.openScan() }.keyboardShortcut("o", modifiers: [.command, .shift]).disabled(store == nil || store?.busy == true || store?.exporting == true || store?.hasPresentedSheet == true)
+            Button(filmText("保存项目", "Save project")) { store?.saveProject() }.keyboardShortcut("s").disabled(store?.info == nil || store?.busy == true || store?.exporting == true || store?.hasPresentedSheet == true)
+            Button(filmText("撤销胶片调整", "Undo film edit")) { store?.undo() }.keyboardShortcut("z").disabled(store?.undoStack.isEmpty != false || store?.busy == true || store?.exporting == true || store?.hasPresentedSheet == true)
+            Button(filmText("重做胶片调整", "Redo film edit")) { store?.redo() }.keyboardShortcut("z", modifiers: [.command, .shift]).disabled(store?.redoStack.isEmpty != false || store?.busy == true || store?.exporting == true || store?.hasPresentedSheet == true)
             Divider()
             Button(filmText("放大", "Zoom in")) { store?.zoomIn() }.keyboardShortcut("+", modifiers: .command)
                 .disabled(store?.canZoom != true || (store?.zoom ?? 8) >= FilmZoom.levels.last!)
@@ -589,7 +654,7 @@ struct FilmWindowGuard: NSViewRepresentable {
         func windowShouldClose(_ sender: NSWindow) -> Bool {
             // Consume one approved close without asking again when the user chose Don't Save.
             if confirmedClose { confirmedClose = false; return true }
-            guard !store.presentingSheet else { return false }
+            guard !store.hasPresentedSheet else { return false }
             guard !store.busy, !store.exporting else { NSSound.beep(); return false }
             guard store.dirty else { return true }
             store.requestDiscard { accepted in

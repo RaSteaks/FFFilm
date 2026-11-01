@@ -1,8 +1,12 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "  " : {
+
+    },
     " (cancelled)" : {
       "comment" : "macOS film workbench",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -17,6 +21,9 @@
           }
         }
       }
+    },
+    "%" : {
+
     },
     "%@\n%@/h" : {
       "localizations" : {
@@ -133,16 +140,6 @@
         }
       }
     },
-    "%@: %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@: %2$@"
-          }
-        }
-      }
-    },
     "%@°" : {
 
     },
@@ -188,6 +185,9 @@
         }
       }
     },
+    "%lld" : {
+
+    },
     "%lld × %lld" : {
       "localizations" : {
         "en" : {
@@ -228,6 +228,9 @@
 
     },
     "↷ 90°" : {
+
+    },
+    "≈ %@ px" : {
 
     },
     "A valid input color profile is required." : {
@@ -424,6 +427,7 @@
     },
     "Batch selection" : {
       "comment" : "macOS film workbench",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -834,6 +838,7 @@
     },
     "Candidate frames added. Check and refine their boundaries." : {
       "comment" : "macOS film workbench",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -929,6 +934,7 @@
     },
     "Choose folder & export…" : {
       "comment" : "macOS film workbench",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1305,6 +1311,7 @@
     },
     "Detect frame gaps" : {
       "comment" : "macOS film workbench",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2444,7 +2451,7 @@
         }
       }
     },
-    "JPEG · 8-bit · sRGB" : {
+    "JPEG" : {
 
     },
     "Large format" : {
@@ -4820,6 +4827,7 @@
     },
     "Retry failed exports…" : {
       "comment" : "macOS film workbench",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4939,6 +4947,7 @@
     },
     "Scope" : {
       "comment" : "macOS film workbench",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4993,6 +5002,7 @@
     },
     "Selected frames" : {
       "comment" : "macOS film workbench",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -5181,6 +5191,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Microsoft：Windows 的二进制单位标注"
+          }
+        }
+      }
+    },
+    "settings.repository" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GitHub repository"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GitHub 仓库"
           }
         }
       }
@@ -6973,7 +7000,7 @@
         }
       }
     },
-    "TIFF · 16-bit · Adobe RGB" : {
+    "TIFF" : {
 
     },
     "Undo" : {

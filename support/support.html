@@ -63,7 +63,7 @@
               <section class="content-section" id="about" aria-labelledby="about-title">
                 <p class="section-label">01 / ABOUT</p>
                 <h2 id="about-title">FFFilm 是什么</h2>
-                <p>FFFilm 是面向影视拍摄规划的本地计算工具，提供数据率、存储容量、录制时长和快门换算功能，帮助你在拍摄前快速估算介质需求和曝光相关参数；Mac 版还内置胶片切片工作台，用于处理整条扫描。</p>
+                <p>FFFilm 是面向影视拍摄规划的本地计算工具，提供数据率、存储容量、录制时长和快门换算功能，帮助你在拍摄前快速估算介质需求和曝光相关参数。iPhone 和 iPad 版提供负片预览，Mac 版内置胶片切片工作台，用于处理整条扫描。</p>
                 <dl class="data-table">
                   <div class="data-row">
                     <dt>数据率</dt>
@@ -75,11 +75,19 @@
                   </div>
                   <div class="data-row">
                     <dt>快门换算</dt>
-                    <dd>在不同拍摄帧率、项目帧率和理论快门角度之间进行换算，并提供频闪参考；灯光源支持市电 50/60 Hz、自定义光学频率，或 2–16 台显示器的刷新率组合。</dd>
+                    <dd>角度与曝光时间换算、频闪参考和变帧率（升格 / 降格）三种模式共享相机 FPS 和快门角度上限。频闪参考支持市电 50/60 Hz、自定义光学频率，或 2–16 台显示设备的刷新率组合；A/B/C 机位和常用方案可保存在设备本地。</dd>
+                  </div>
+                  <div class="data-row">
+                    <dt>相机目录</dt>
+                    <dd>内置 ARRI、Sony、RED、DJI、Kinefinity 与 Apple ProRes 机型档案，可按厂商搜索、拖动排序收藏，并查看每台相机的录制模式。</dd>
+                  </div>
+                  <div class="data-row">
+                    <dt>负片预览（iPhone / iPad）</dt>
+                    <dd>从照片、文件或相机载入负片，采样未曝光片边后查看正片；可导出 TIFF、PNG、JPG，或把正片 JPG 存入相册。</dd>
                   </div>
                   <div class="data-row">
                     <dt>胶片切片（仅 Mac）</dt>
-                    <dd>导入 TIFF 或实验性 Flextight FFF 整条扫描，自动识别或手动框选片框，裁切、旋转拉直并排序后，导出 16 位 Adobe RGB TIFF 或 8 位 sRGB JPEG。原始扫描文件不会被修改。</dd>
+                    <dd>拖入或导入 TIFF、实验性 Flextight FFF 整条扫描，自动分帧或手动绘制片框，裁切、旋转拉直并排序后，导出 16 位 Adobe RGB TIFF 或 8 位 sRGB JPEG。原始扫描文件不会被修改。</dd>
                   </div>
                 </dl>
               </section>
@@ -105,20 +113,32 @@
                     <p>不能保证。参考候选基于输入的光学频率和理论模型；LED、PWM、滚动快门、电源波动和现场灯具差异都可能影响结果。请在实际灯光和摄影机组合下测试。</p>
                   </details>
                   <details class="faq">
-                    <summary>多台显示器场景下提示“折衷快门”是什么意思？</summary>
-                    <p>当 2–16 台显示器的刷新率组合不存在完全无频闪的快门角度时，FFFilm 会给出使各显示器频闪误差最小的折衷曝光参考，并标注每台显示器的剩余误差。这是理论最优解，不替代现场实测。</p>
+                    <summary>多台显示设备场景下提示“折中结果”是什么意思？</summary>
+                    <p>当 2–16 台显示设备的刷新率组合在当前限制内没有严格共同解时，FFFilm 会给出折中的角度与时间：优先减小各设备的最大周期偏差，同等偏差时接近首选角度。周期偏差不代表频闪强度，折中结果仍可能出现频闪，请以实拍为准。</p>
                   </details>
                   <details class="faq">
                     <summary>iPhone 或 iPad 上为什么没有胶片工作台？</summary>
-                    <p>胶片切片目前仅在 Mac 版提供：在 Mac 工具栏打开“胶片”标签（或按 ⌘3）。iPhone 和 iPad 版本提供完整的数据率与快门计算功能。</p>
+                    <p>胶片切片目前仅在 Mac 版提供：在 Mac 工具栏打开“胶片”标签（或按 ⌘3）。iPhone 和 iPad 版本提供完整的数据率与快门计算功能，以及负片预览。</p>
+                  </details>
+                  <details class="faq">
+                    <summary>负片预览会上传我的照片或相机画面吗？</summary>
+                    <p>不会。负片图像和相机帧只在设备本地处理，也不建立图库。打开相机时才请求相机权限，不请求麦克风权限；存入相册时只请求“仅添加”权限。完整说明请查看<a href="privacy.html">隐私政策</a>。</p>
+                  </details>
+                  <details class="faq">
+                    <summary>负片预览的结果可以当作最终扫描吗？</summary>
+                    <p>不建议。负片预览用于查看，没有额外调色、裁切、预设或批处理，也不承诺扫描级色彩还原。多页 TIFF 和浮点 TIFF 暂不支持。</p>
                   </details>
                   <details class="faq">
                     <summary>胶片切片会修改我的原始扫描文件吗？</summary>
                     <p>不会。原始扫描只被读取；分帧、裁切和旋转等调整保存在你选择位置保存的 .fffilm 项目文件中，导出图像只写入你主动选择的文件夹。删除应用不影响原始扫描和已导出的文件。</p>
                   </details>
                   <details class="faq">
+                    <summary>批量导出时取消或失败怎么办？</summary>
+                    <p>取消后可以继续导出剩余项，失败时可以按原任务重试；默认保留同名文件的两份副本。文件命名等导出草稿只在当前窗口会话中保留，不写入项目文件。</p>
+                  </details>
+                  <details class="faq">
                     <summary>为什么导入扫描时要求选择输入色彩配置？</summary>
-                    <p>未嵌入色彩配置的扫描无法被准确解释。FFFilm 会要求你指定扫描软件实际输出的色彩空间（如 sRGB、Adobe RGB），或提供匹配的 RGB ICC 文件；仅知道数据是线性的，不足以推断色彩原色。FFFilm 不做自动负片转换，色调调整请交给专业后期软件。</p>
+                    <p>未嵌入色彩配置的扫描无法被准确解释。FFFilm 会要求你指定扫描软件实际输出的色彩空间（如 sRGB、Adobe RGB），或提供匹配的 RGB ICC 文件；仅知道数据是线性的，不足以推断色彩原色。胶片切片不做自动负片转换，色调调整请交给专业后期软件。</p>
                   </details>
                   <details class="faq">
                     <summary>Flextight FFF 扫描支持到什么程度？</summary>
@@ -141,6 +161,7 @@
                   <li><strong>复现步骤：</strong>从打开应用到出现问题的具体操作顺序。</li>
                   <li><strong>当前设置：</strong>相机、模式、分辨率、编码、帧率、介质和拍摄时长等相关选项。</li>
                   <li><strong>胶片切片（如涉及）：</strong>扫描格式（TIFF 或 FFF）、导入与分帧的操作步骤、导出格式与质量设置，以及 .fffilm 项目能否正常重新打开。</li>
+                  <li><strong>负片预览（如涉及）：</strong>图像来源（照片、文件或相机）、镜头与分辨率设置，以及是否已采样片边。</li>
                   <li><strong>截图或录屏：</strong>如能帮助说明问题，请一并附上；请先移除不必要的个人或项目敏感信息。</li>
                 </ul>
               </section>

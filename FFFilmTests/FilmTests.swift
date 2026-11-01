@@ -333,6 +333,50 @@ struct FilmTests {
         #expect(store.project.valid)
     }
 
+    @Test @MainActor func singleFrameDrawingReturnsToSelect() {
+        let store = FilmStore()
+        let crop = FilmRect(x: 0.1, y: 0.2, width: 0.6, height: 0.25)
+        #expect(!store.batchDrawing)
+        store.drawMode = 1
+        store.drawFrame(crop)
+        #expect(store.project.frames.map(\.crop) == [crop])
+        #expect(store.frame?.id == store.project.frames.last?.id)
+        #expect(store.drawMode == 0)
+    }
+
+    @Test @MainActor func batchFrameDrawingKeepsToolAndSeparateHistory() {
+        let store = FilmStore()
+        let first = FilmRect(x: 0.1, y: 0.1, width: 0.7, height: 0.2)
+        let second = FilmRect(x: 0.1, y: 0.4, width: 0.7, height: 0.2)
+        let third = FilmRect(x: 0.1, y: 0.7, width: 0.7, height: 0.2)
+        store.drawMode = 1
+        store.batchDrawing = true
+        #expect(!store.dirty)
+        #expect(store.undoStack.isEmpty)
+
+        store.drawFrame(first)
+        #expect(store.drawMode == 1)
+        store.drawFrame(second)
+        #expect(store.drawMode == 1)
+        #expect(store.project.frames.map(\.crop) == [first, second])
+        #expect(store.project.frames.map(\.name) == ["01", "02"])
+        #expect(store.frame?.crop == second)
+        #expect(store.undoStack.count == 2)
+
+        store.undo()
+        #expect(store.project.frames.map(\.crop) == [first])
+        #expect(store.drawMode == 1 && store.batchDrawing)
+        store.redo()
+        #expect(store.project.frames.map(\.crop) == [first, second])
+
+        store.batchDrawing = false
+        store.drawFrame(third)
+        #expect(store.project.frames.map(\.crop) == [first, second, third])
+        #expect(store.drawMode == 0)
+        store.undo()
+        #expect(store.project.frames.map(\.crop) == [first, second])
+    }
+
     @Test @MainActor func manualFrameLimitPreservesSelectionAndUndo() {
         let store = FilmStore()
         store.project.frames = (1...FilmProject.maximumFrames).map { FilmFrame(name: String($0)) }

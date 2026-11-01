@@ -231,6 +231,13 @@ struct FilmWorkbenchView: View {
                 Text(filmText("框选新帧", "Draw frame")).tag(1)
                 Text(filmText("采样片基", "Sample film base")).tag(2)
             }.onChange(of: store.drawMode) { _, mode in if mode != 0 { store.showStrip = true } }
+            .accessibilityIdentifier("film-canvas-tool")
+            if store.drawMode == 1 {
+                Toggle(filmText("批量框选", "Batch drawing"), isOn: $store.batchDrawing)
+                    .toggleStyle(.checkbox)
+                    .help(filmText("开启后可连续拖拽框选多个新帧；切换画布工具即可结束。", "Keep drawing new frames after each drag. Switch canvas tools to finish."))
+                    .accessibilityIdentifier("film-batch-drawing")
+            }
             if store.drawMode == 2 {
                 Text(filmText("点击干净、未曝光的片基区域。", "Click a clean, unexposed film edge."))
                     .font(.caption).foregroundStyle(.secondary)
@@ -569,8 +576,7 @@ struct FilmCanvas: View {
                 guard let rectangle = dragRect, rectangle.width >= 3, rectangle.height >= 3 else { return }
                 let crop = FilmRect(x: rectangle.minX / size.width, y: rectangle.minY / size.height, width: rectangle.width / size.width, height: rectangle.height / size.height)
                 guard crop.valid else { return }
-                if drawMode == 1 { store.addFrame(crop) }
-                drawMode = 0
+                if drawMode == 1 { store.drawFrame(crop) }
             })
             .onContinuousHover(coordinateSpace: .local) { phase in
                 guard drawMode == 0, store.showStrip, !store.busy, !store.exporting else {

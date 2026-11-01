@@ -3,11 +3,27 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
     <meta name="theme-color" content="#f3efe4">
     <meta name="description" content="FFFilm 隐私政策与技术支持。">
     <title>FFFilm / 支持</title>
-    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+    <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+    <link rel="preload" href="fonts/display-700.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="styles.css">
+    <!-- Runs before first paint so the theme never flashes and script-only controls keep their space. -->
+    <script>
+      (function (root) {
+        root.dataset.js = "";
+        try {
+          var theme = localStorage.getItem("fffilm-theme");
+          if (theme) root.dataset.theme = theme;
+        } catch (_) {}
+      })(document.documentElement);
+    </script>
+    <script src="site.js" defer></script>
   </head>
   <body>
     <a class="skip-link" href="#main">跳到主要内容</a>
@@ -18,13 +34,19 @@
       <header class="site-header">
         <div class="wrap">
           <a class="brand" href="index.html" aria-label="FFFilm 支持首页">
-            <span class="brand-chip" aria-hidden="true">F</span>
+            <img class="brand-mark" src="icons/brand-mark.png" alt="" width="32" height="32">
             <span class="brand-name">FFFilm <em>/ support</em></span>
           </a>
-          <nav class="site-nav" aria-label="主要导航">
-            <a href="support.html">技术支持</a>
-            <a href="privacy.html">隐私政策</a>
-          </nav>
+          <div class="site-tools">
+            <nav class="site-nav" aria-label="主要导航">
+              <a href="support.html">技术支持</a>
+              <a href="privacy.html">隐私政策</a>
+            </nav>
+            <button class="theme-toggle needs-js" type="button" aria-pressed="false" aria-label="暗房模式">
+              <span class="theme-lamp" aria-hidden="true"></span>
+              <span class="theme-label" aria-hidden="true">暗房</span>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -47,12 +69,12 @@
               <a class="frame-card" href="support.html">
                 <span class="frame-title">技术支持</span>
                 <span class="frame-desc">数据率、存储、快门、负片预览与胶片切片的用法和常见问题。</span>
-                <span class="frame-arrow" aria-hidden="true">↗</span>
+                <svg class="frame-arrow" viewBox="0 0 20 20" aria-hidden="true"><path d="M6 14 14 6M7 6h7v7"/></svg>
               </a>
               <a class="frame-card" href="privacy.html">
                 <span class="frame-title">隐私政策</span>
                 <span class="frame-desc">应用处理哪些数据、什么留在本地、什么不会上传。</span>
-                <span class="frame-arrow" aria-hidden="true">↗</span>
+                <svg class="frame-arrow" viewBox="0 0 20 20" aria-hidden="true"><path d="M6 14 14 6M7 6h7v7"/></svg>
               </a>
             </div>
           </section>

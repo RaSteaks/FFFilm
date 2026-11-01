@@ -1,0 +1,26 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "design-system-font",
+        "value": "songti sc",
+        "createdAt": "2026-11-01T18:58:10.802Z",
+        "reason": "incumbent support-site font stack predating this work; DESIGN.md documents only the native app's type system"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "pingfang sc",
+        "createdAt": "2026-11-01T18:58:10.816Z",
+        "reason": "incumbent support-site font stack predating this work; DESIGN.md documents only the native app's type system"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "fffilm display",
+        "createdAt": "2026-11-01T18:58:29.843Z",
+        "reason": "self-hosted Noto Serif SC subset for the support site, added in this redesign so iOS gets a serif; DESIGN.md documents only the native app"
+      }
+    ]
+  }
+}

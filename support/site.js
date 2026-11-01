@@ -267,7 +267,8 @@ if (search) {
 
   addEventListener("keydown", (event) => {
     const typing = event.target.closest?.("input, textarea, select, [contenteditable]");
-    if (event.key === "/" && !typing && !event.metaKey && !event.ctrlKey && !event.altKey) {
+    const modal = document.querySelector("dialog[open]");
+    if (event.key === "/" && !typing && !modal && !event.metaKey && !event.ctrlKey && !event.altKey) {
       event.preventDefault();
       search.focus();
     }
@@ -286,15 +287,6 @@ if (search) {
   apply();
   openTarget();
   addEventListener("hashchange", openTarget);
-
-  // An unanswered search becomes the first line of the report.
-  document.querySelector("[data-carry-query]").addEventListener("click", (event) => {
-    const issue = document.querySelector("#r-issue");
-    event.preventDefault();
-    issue.value ||= search.value.trim();
-    issue.closest(".report").scrollIntoView();
-    issue.focus({ preventScroll: true });
-  });
 }
 
 /* Copying ---------------------------------------------------------------- */
@@ -322,11 +314,12 @@ document.querySelectorAll("[data-copy]").forEach((button) => {
   });
 });
 
-/* Report form ------------------------------------------------------------ */
+/* Report sheet ----------------------------------------------------------- */
 
 const report = document.querySelector(".report");
 
 if (report) {
+  const sheet = document.querySelector("#report-sheet");
   // Some mail apps truncate longer links; past this the text goes by clipboard.
   const mailtoLimit = 1800;
   const to = report.dataset.to;
@@ -334,6 +327,16 @@ if (report) {
   const issueError = report.querySelector("#r-issue-error");
   const status = report.querySelector(".report-status");
   const groups = [...report.querySelectorAll("[data-for]")];
+
+  // Closing keeps the draft for as long as the page stays open, so a stray Esc costs nothing.
+  function openSheet() {
+    if (!sheet.open) sheet.showModal();
+    issue.focus();
+  }
+
+  function followHash() {
+    if (location.hash === "#report") openSheet();
+  }
 
   function showGroups() {
     const chosen = report.querySelector("[data-report-feature] input:checked")?.dataset.group ?? "general";
@@ -400,5 +403,22 @@ if (report) {
     status.textContent = copied ? `已复制，请粘贴到邮件发送至 ${to}。` : "无法访问剪贴板，请手动选择表单内容。";
   });
 
+  report.querySelector("[data-report-cancel]").addEventListener("click", () => sheet.close());
+
+  // Drop #report on close, or a reload would open the sheet again.
+  sheet.addEventListener("close", () => {
+    if (location.hash === "#report") history.replaceState(null, "", location.pathname + location.search);
+  });
+
+  document.querySelectorAll("[data-report-open]").forEach((button) => button.addEventListener("click", openSheet));
+
+  // An unanswered search becomes the first line of the report.
+  document.querySelector("[data-carry-query]").addEventListener("click", () => {
+    issue.value ||= search.value.trim();
+    openSheet();
+  });
+
   showGroups();
+  followHash();
+  addEventListener("hashchange", followHash);
 }

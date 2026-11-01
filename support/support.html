@@ -90,8 +90,7 @@
               <ol>
                 <li><a href="#faq">常见问题</a></li>
                 <li><a href="#about">应用介绍</a></li>
-                <li><a href="#report">提交问题</a></li>
-                <li><a href="#contact">联系邮箱</a></li>
+                <li><a href="#contact">联系支持</a></li>
               </ol>
             </aside>
 
@@ -157,7 +156,7 @@
                 </div>
                 <div class="faq-empty" hidden>
                   <p>没有找到与“<span class="faq-empty-query"></span>”相关的问题。</p>
-                  <a class="button" href="#report" data-carry-query>把它写进问题反馈</a>
+                  <button class="button" type="button" data-carry-query>把它写进问题反馈</button>
                 </div>
               </section>
 
@@ -192,11 +191,11 @@
                 </dl>
               </section>
 
-              <section class="content-section" id="report" aria-labelledby="report-title">
+              <!-- Without scripting the sheet cannot open, so this checklist stands in; #report opens the sheet otherwise. -->
+              <section class="content-section no-script" id="report" aria-labelledby="report-title">
                 <h2 id="report-title">提交问题</h2>
 
-                <!-- Without scripting the report form cannot compose a mail, so the checklist stands in. -->
-                <ul class="no-script">
+                <ul>
                   <li><strong>应用版本：</strong>可在系统或 App Store 的应用信息中查看。</li>
                   <li><strong>设备与系统：</strong>例如 iPhone 17 Pro、iPad 或 Mac，以及对应的 iOS / iPadOS / macOS 版本。</li>
                   <li><strong>复现步骤：</strong>从打开应用到出现问题的具体操作顺序。</li>
@@ -205,105 +204,6 @@
                   <li><strong>负片预览（如涉及）：</strong>图像来源（照片、文件或相机）、镜头与分辨率设置，以及是否已采样片边。</li>
                   <li><strong>截图或录屏：</strong>如能帮助说明问题，请一并附上；请先移除不必要的个人或项目敏感信息。</li>
                 </ul>
-
-                <!-- Field names become the mail's line labels. Keep data-to synchronized with the contact address. -->
-                <form class="report needs-js" data-to="zhuyutian041119@foxmail.com" novalidate>
-                  <fieldset class="field">
-                    <legend>涉及功能</legend>
-                    <div class="choices" data-report-feature>
-                      <label class="choice"><input type="radio" name="涉及功能" value="数据率与存储"><span>数据率与存储</span></label>
-                      <label class="choice"><input type="radio" name="涉及功能" value="快门换算"><span>快门换算</span></label>
-                      <label class="choice"><input type="radio" name="涉及功能" value="相机目录"><span>相机目录</span></label>
-                      <label class="choice"><input type="radio" name="涉及功能" value="负片预览" data-group="negative"><span>负片预览</span></label>
-                      <label class="choice"><input type="radio" name="涉及功能" value="胶片切片" data-group="film"><span>胶片切片</span></label>
-                      <label class="choice"><input type="radio" name="涉及功能" value="其他"><span>其他</span></label>
-                    </div>
-                  </fieldset>
-
-                  <div class="field">
-                    <label for="r-issue">遇到的问题</label>
-                    <input id="r-issue" name="遇到的问题" type="text" required aria-describedby="r-issue-error">
-                    <p class="field-error" id="r-issue-error" hidden>请先写下遇到的问题，再发送或复制。</p>
-                  </div>
-
-                  <div class="field">
-                    <label for="r-version">应用版本</label>
-                    <input id="r-version" name="应用版本" type="text" aria-describedby="r-version-hint">
-                    <p class="field-hint" id="r-version-hint">可在系统或 App Store 的应用信息中查看。</p>
-                  </div>
-
-                  <div class="field">
-                    <label for="r-device">设备与系统</label>
-                    <input id="r-device" name="设备与系统" type="text" aria-describedby="r-device-hint">
-                    <p class="field-hint" id="r-device-hint">例如 iPhone 17 Pro、iPad 或 Mac，以及对应的 iOS / iPadOS / macOS 版本。</p>
-                  </div>
-
-                  <div class="field">
-                    <label for="r-steps">复现步骤</label>
-                    <textarea id="r-steps" name="复现步骤" rows="3" aria-describedby="r-steps-hint"></textarea>
-                    <p class="field-hint" id="r-steps-hint">从打开应用到出现问题的具体操作顺序。</p>
-                  </div>
-
-                  <fieldset class="field-group" data-for="general">
-                    <div class="field">
-                      <label for="r-settings">当前设置</label>
-                      <textarea id="r-settings" name="当前设置" rows="2" aria-describedby="r-settings-hint"></textarea>
-                      <p class="field-hint" id="r-settings-hint">相机、模式、分辨率、编码、帧率、介质和拍摄时长等相关选项。</p>
-                    </div>
-                  </fieldset>
-
-                  <fieldset class="field-group" data-for="film" disabled hidden>
-                    <fieldset class="field">
-                      <legend>扫描格式</legend>
-                      <div class="choices">
-                        <label class="choice"><input type="radio" name="扫描格式" value="TIFF"><span>TIFF</span></label>
-                        <label class="choice"><input type="radio" name="扫描格式" value="FFF"><span>FFF</span></label>
-                      </div>
-                    </fieldset>
-                    <div class="field">
-                      <label for="r-film-steps">导入与导出设置</label>
-                      <textarea id="r-film-steps" name="导入与导出设置" rows="2" aria-describedby="r-film-steps-hint"></textarea>
-                      <p class="field-hint" id="r-film-steps-hint">导入与分帧的操作步骤、导出格式与质量设置。</p>
-                    </div>
-                    <fieldset class="field">
-                      <legend>.fffilm 项目能否正常重新打开</legend>
-                      <div class="choices">
-                        <label class="choice"><input type="radio" name=".fffilm 项目能否重新打开" value="能"><span>能</span></label>
-                        <label class="choice"><input type="radio" name=".fffilm 项目能否重新打开" value="不能"><span>不能</span></label>
-                      </div>
-                    </fieldset>
-                  </fieldset>
-
-                  <fieldset class="field-group" data-for="negative" disabled hidden>
-                    <fieldset class="field">
-                      <legend>图像来源</legend>
-                      <div class="choices">
-                        <label class="choice"><input type="radio" name="图像来源" value="照片"><span>照片</span></label>
-                        <label class="choice"><input type="radio" name="图像来源" value="文件"><span>文件</span></label>
-                        <label class="choice"><input type="radio" name="图像来源" value="相机"><span>相机</span></label>
-                      </div>
-                    </fieldset>
-                    <div class="field">
-                      <label for="r-lens">镜头与分辨率设置</label>
-                      <input id="r-lens" name="镜头与分辨率设置" type="text">
-                    </div>
-                    <fieldset class="field">
-                      <legend>是否已采样片边</legend>
-                      <div class="choices">
-                        <label class="choice"><input type="radio" name="是否已采样片边" value="是"><span>是</span></label>
-                        <label class="choice"><input type="radio" name="是否已采样片边" value="否"><span>否</span></label>
-                      </div>
-                    </fieldset>
-                  </fieldset>
-
-                  <p class="report-note">截图或录屏如能帮助说明问题，请在邮件中一并附上；请先移除不必要的个人或项目敏感信息。</p>
-
-                  <div class="report-actions">
-                    <button class="button" type="submit">用邮件发送</button>
-                    <button class="button button-quiet" type="button" data-report-copy>复制内容</button>
-                    <p class="report-status" role="status"></p>
-                  </div>
-                </form>
               </section>
 
               <section class="content-section" id="contact" aria-labelledby="contact-title">
@@ -316,6 +216,8 @@
                     <button class="button button-quiet needs-js" type="button" data-copy="zhuyutian041119@foxmail.com">复制邮箱</button>
                   </div>
                 </div>
+                <!-- The report form stays off the page until asked for: it lives in the sheet below. -->
+                <button class="button contact-report needs-js" type="button" data-report-open>提交问题</button>
               </section>
             </article>
           </div>
@@ -329,5 +231,111 @@
         </div>
       </footer>
     </div>
+
+    <!-- Report sheet. Field names become the mail's line labels. Keep data-to synchronized with the contact address. -->
+    <dialog class="report-sheet" id="report-sheet" aria-labelledby="report-sheet-title">
+      <form class="report" data-to="zhuyutian041119@foxmail.com" novalidate>
+        <header class="report-head">
+          <h2 id="report-sheet-title">提交问题</h2>
+        </header>
+        <div class="report-body">
+          <fieldset class="field">
+            <legend>涉及功能</legend>
+            <div class="choices" data-report-feature>
+              <label class="choice"><input type="radio" name="涉及功能" value="数据率与存储"><span>数据率与存储</span></label>
+              <label class="choice"><input type="radio" name="涉及功能" value="快门换算"><span>快门换算</span></label>
+              <label class="choice"><input type="radio" name="涉及功能" value="相机目录"><span>相机目录</span></label>
+              <label class="choice"><input type="radio" name="涉及功能" value="负片预览" data-group="negative"><span>负片预览</span></label>
+              <label class="choice"><input type="radio" name="涉及功能" value="胶片切片" data-group="film"><span>胶片切片</span></label>
+              <label class="choice"><input type="radio" name="涉及功能" value="其他"><span>其他</span></label>
+            </div>
+          </fieldset>
+
+          <div class="field">
+            <label for="r-issue">遇到的问题</label>
+            <input id="r-issue" name="遇到的问题" type="text" required aria-describedby="r-issue-error">
+            <p class="field-error" id="r-issue-error" hidden>请先写下遇到的问题，再发送或复制。</p>
+          </div>
+
+          <div class="field">
+            <label for="r-version">应用版本</label>
+            <input id="r-version" name="应用版本" type="text" aria-describedby="r-version-hint">
+            <p class="field-hint" id="r-version-hint">可在系统或 App Store 的应用信息中查看。</p>
+          </div>
+
+          <div class="field">
+            <label for="r-device">设备与系统</label>
+            <input id="r-device" name="设备与系统" type="text" aria-describedby="r-device-hint">
+            <p class="field-hint" id="r-device-hint">例如 iPhone 17 Pro、iPad 或 Mac，以及对应的 iOS / iPadOS / macOS 版本。</p>
+          </div>
+
+          <div class="field">
+            <label for="r-steps">复现步骤</label>
+            <textarea id="r-steps" name="复现步骤" rows="3" aria-describedby="r-steps-hint"></textarea>
+            <p class="field-hint" id="r-steps-hint">从打开应用到出现问题的具体操作顺序。</p>
+          </div>
+
+          <fieldset class="field-group" data-for="general">
+            <div class="field">
+              <label for="r-settings">当前设置</label>
+              <textarea id="r-settings" name="当前设置" rows="2" aria-describedby="r-settings-hint"></textarea>
+              <p class="field-hint" id="r-settings-hint">相机、模式、分辨率、编码、帧率、介质和拍摄时长等相关选项。</p>
+            </div>
+          </fieldset>
+
+          <fieldset class="field-group" data-for="film" disabled hidden>
+            <fieldset class="field">
+              <legend>扫描格式</legend>
+              <div class="choices">
+                <label class="choice"><input type="radio" name="扫描格式" value="TIFF"><span>TIFF</span></label>
+                <label class="choice"><input type="radio" name="扫描格式" value="FFF"><span>FFF</span></label>
+              </div>
+            </fieldset>
+            <div class="field">
+              <label for="r-film-steps">导入与导出设置</label>
+              <textarea id="r-film-steps" name="导入与导出设置" rows="2" aria-describedby="r-film-steps-hint"></textarea>
+              <p class="field-hint" id="r-film-steps-hint">导入与分帧的操作步骤、导出格式与质量设置。</p>
+            </div>
+            <fieldset class="field">
+              <legend>.fffilm 项目能否正常重新打开</legend>
+              <div class="choices">
+                <label class="choice"><input type="radio" name=".fffilm 项目能否重新打开" value="能"><span>能</span></label>
+                <label class="choice"><input type="radio" name=".fffilm 项目能否重新打开" value="不能"><span>不能</span></label>
+              </div>
+            </fieldset>
+          </fieldset>
+
+          <fieldset class="field-group" data-for="negative" disabled hidden>
+            <fieldset class="field">
+              <legend>图像来源</legend>
+              <div class="choices">
+                <label class="choice"><input type="radio" name="图像来源" value="照片"><span>照片</span></label>
+                <label class="choice"><input type="radio" name="图像来源" value="文件"><span>文件</span></label>
+                <label class="choice"><input type="radio" name="图像来源" value="相机"><span>相机</span></label>
+              </div>
+            </fieldset>
+            <div class="field">
+              <label for="r-lens">镜头与分辨率设置</label>
+              <input id="r-lens" name="镜头与分辨率设置" type="text">
+            </div>
+            <fieldset class="field">
+              <legend>是否已采样片边</legend>
+              <div class="choices">
+                <label class="choice"><input type="radio" name="是否已采样片边" value="是"><span>是</span></label>
+                <label class="choice"><input type="radio" name="是否已采样片边" value="否"><span>否</span></label>
+              </div>
+            </fieldset>
+          </fieldset>
+
+          <p class="report-note">截图或录屏如能帮助说明问题，请在邮件中一并附上；请先移除不必要的个人或项目敏感信息。</p>
+        </div>
+        <footer class="report-foot">
+          <button class="button button-quiet" type="button" data-report-copy>复制内容</button>
+          <button class="button button-quiet" type="button" data-report-cancel>取消</button>
+          <button class="button" type="submit">用邮件发送</button>
+          <p class="report-status" role="status"></p>
+        </footer>
+      </form>
+    </dialog>
   </body>
 </html>

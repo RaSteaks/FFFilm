@@ -1133,13 +1133,67 @@ h3 {
 }
 
 /* ------------------------------------------------------------
-   Report — filled in like a camera report: ruled lines to write
-   on, not boxes. Field labels double as the mail's line labels.
+   Report — a sheet that opens only when asked for, filled in like
+   a camera report: ruled lines to write on, not boxes. Field
+   labels double as the mail's line labels.
    ------------------------------------------------------------ */
 
+.report-sheet {
+  width: min(40rem, 100vw - 2rem);
+  max-height: calc(100dvh - 2.4rem);
+  margin: 1.2rem auto auto;
+  padding: 0;
+  overflow: hidden;
+  color: var(--ink);
+  background: var(--paper-lift);
+  border: 1px solid var(--rule-strong);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.14), 0 18px 48px rgba(0, 0, 0, 0.24);
+}
+
+.report-sheet[open] {
+  display: flex;
+}
+
+.report-sheet::backdrop {
+  background: rgba(0, 0, 0, 0.42);
+}
+
 .report {
-  margin-top: 1.6rem;
-  border-top: 2px solid var(--rule-strong);
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.report-head {
+  padding: 1rem 1.4rem 0.8rem;
+  border-bottom: 2px solid var(--rule-strong);
+}
+
+.report-head h2 {
+  font-size: 1.4rem;
+}
+
+.report-body {
+  min-height: 0;
+  flex: 1;
+  padding: 0.5rem 1.4rem 1rem;
+  overflow-y: auto;
+}
+
+.report-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0.85rem 1.4rem;
+  border-top: 1px solid var(--rule);
+}
+
+.report-foot .button-quiet:first-child {
+  margin-right: auto;
 }
 
 .report fieldset {
@@ -1151,10 +1205,10 @@ h3 {
 
 .field {
   display: grid;
-  grid-template-columns: minmax(7.5rem, 12.5rem) 1fr;
-  column-gap: 1.6rem;
+  grid-template-columns: 9.5rem minmax(0, 1fr);
+  column-gap: 1.2rem;
   align-items: baseline;
-  padding: 0.7rem 0;
+  padding: 0.6rem 0;
 }
 
 .field > label,
@@ -1169,13 +1223,13 @@ h3 {
 /* A legend won't take a grid cell, so it floats into the label column. */
 fieldset.field {
   display: block;
-  padding: 0.7rem 0;
+  padding: 0.6rem 0;
 }
 
 fieldset.field > legend {
   float: left;
-  width: min(100%, 12.5rem);
-  margin-right: 1.6rem;
+  width: 9.5rem;
+  margin-right: 1.2rem;
   padding: 0;
 }
 
@@ -1215,19 +1269,19 @@ fieldset.field > .choices {
   box-shadow: 0 1px 0 var(--key);
 }
 
-.content .field-hint,
-.content .field-error {
+.field-hint,
+.field-error {
   grid-column: 2;
   margin: 0.35rem 0 0;
   font-size: 0.82rem;
   line-height: 1.6;
 }
 
-.content .field-hint {
+.field-hint {
   color: var(--ink-3);
 }
 
-.content .field-error {
+.field-error {
   color: var(--ink);
   font-weight: 600;
 }
@@ -1280,27 +1334,21 @@ fieldset.field > .choices {
   outline-offset: 2px;
 }
 
-.content .report-note {
-  margin: 1rem 0 0;
+.report-note {
+  margin: 0.8rem 0 0;
+  color: var(--ink-2);
   font-size: 0.9rem;
+  line-height: 1.7;
 }
 
-.report-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.6rem;
-  align-items: center;
-  margin-top: 1.1rem;
-}
-
-.content .report-status {
+.report-status {
   flex: 1 1 100%;
   margin: 0;
   color: var(--ink-3);
   font-size: 0.86rem;
 }
 
-.content .report-status:empty {
+.report-status:empty {
   display: none;
 }
 
@@ -1334,6 +1382,10 @@ fieldset.field > .choices {
 
 .contact-actions:last-child {
   margin-bottom: 1.35rem;
+}
+
+.contact-report {
+  margin-top: 1rem;
 }
 
 .contact-card .email-chip {
@@ -1467,6 +1519,14 @@ fieldset.field > .choices {
     animation: develop 320ms var(--ease-out) both;
   }
 
+  .report-sheet[open] {
+    animation: sheet-drop 220ms var(--ease-out);
+  }
+
+  .report-sheet[open]::backdrop {
+    animation: sheet-dim 220ms var(--ease-out);
+  }
+
   .faq::details-content {
     block-size: 0;
     overflow: clip;
@@ -1491,6 +1551,19 @@ fieldset.field > .choices {
     from {
       opacity: 0;
       transform: translateY(10px);
+    }
+  }
+
+  @keyframes sheet-drop {
+    from {
+      opacity: 0;
+      transform: translateY(-12px);
+    }
+  }
+
+  @keyframes sheet-dim {
+    from {
+      opacity: 0;
     }
   }
 
@@ -1694,9 +1767,19 @@ fieldset.field > .choices {
 
   .field input[type="text"],
   .field textarea,
-  .content .field-hint,
-  .content .field-error {
+  .field-hint,
+  .field-error {
     grid-column: 1;
+  }
+
+  /* On a phone the sheet takes the whole screen, with its actions always in reach. */
+  .report-sheet {
+    width: 100vw;
+    max-width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    margin: 0;
+    border: 0;
   }
 
   fieldset.field > legend {
@@ -1765,7 +1848,7 @@ fieldset.field > .choices {
   .section-index,
   .site-footer,
   .needs-js,
-  .report,
+  .report-sheet,
   .finder,
   .strip::before,
   .strip::after {

@@ -40,23 +40,13 @@ final class FFFilmUITests: XCTestCase {
 
     @MainActor
     func testRecordingTasksSeparateInputsAndPreserveDuration() throws {
-        verifyRecordingTasks(chinese: false)
-    }
-
-    @MainActor
-    func testRecordingTasksInChinese() throws {
-        verifyRecordingTasks(chinese: true)
-    }
-
-    @MainActor
-    private func verifyRecordingTasks(chinese: Bool) {
         let app = XCUIApplication()
-        app.launchArguments += ["-AppleLanguages", chinese ? "(zh-Hans)" : "(en)", "-AppleLocale", chinese ? "zh_CN" : "en_US"]
+        app.launchArguments += ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()
         let picker = app.segmentedControls["recording-task-picker"]
         XCTAssertTrue(picker.waitForExistence(timeout: 5))
-        let capacity = picker.buttons[chinese ? "拍摄容量" : "Storage needed"]
-        let runtime = picker.buttons[chinese ? "可录制时长" : "Recording time"]
+        let capacity = picker.buttons["Storage needed"]
+        let runtime = picker.buttons["Recording time"]
         let duration = app.textFields["capture-duration"].firstMatch
         let preset = app.buttons["duration-quick-4"].firstMatch
         reveal(preset, in: app)
@@ -64,7 +54,7 @@ final class FFFilmUITests: XCTestCase {
         XCTAssertEqual(duration.value as? String, "4.00")
         reveal(picker, in: app)
         let capacityScreenshot = XCTAttachment(screenshot: app.screenshot())
-        capacityScreenshot.name = chinese ? "拍摄容量" : "Storage needed"
+        capacityScreenshot.name = "Storage needed"
         capacityScreenshot.lifetime = .keepAlways
         add(capacityScreenshot)
         runtime.tap()
@@ -77,7 +67,7 @@ final class FFFilmUITests: XCTestCase {
         app.buttons["1 TB"].firstMatch.tap()
         reveal(picker, in: app)
         let runtimeScreenshot = XCTAttachment(screenshot: app.screenshot())
-        runtimeScreenshot.name = chinese ? "可录制时长" : "Recording time"
+        runtimeScreenshot.name = "Recording time"
         runtimeScreenshot.lifetime = .keepAlways
         add(runtimeScreenshot)
         capacity.tap()
@@ -93,6 +83,11 @@ final class FFFilmUITests: XCTestCase {
         capacity.tap()
         XCTAssertEqual(duration.value as? String, "30")
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "duration-error").firstMatch.exists)
+        let copy = app.buttons["copy-action"].firstMatch
+        reveal(copy, in: app)
+        let restLabel = copy.label
+        copy.tap()
+        XCTAssertNotEqual(copy.label, restLabel)
     }
 
     #if os(iOS)
@@ -348,25 +343,7 @@ final class FFFilmUITests: XCTestCase {
     #endif
 
     @MainActor
-    func testPrimaryActionsExposeImmediateFeedback() throws {
-        let app = XCUIApplication()
-        app.launch()
-
-        let copyButton = app.buttons["copy-action"].firstMatch
-        XCTAssertTrue(copyButton.waitForExistence(timeout: 5))
-        // The label changes to the localized "copied" state; the exact wording
-        // depends on the simulator language, so compare against the rest state.
-        let restLabel = copyButton.label
-        copyButton.tap()
-        XCTAssertNotEqual(copyButton.label, restLabel)
-
-        app.buttons["pin-action"].firstMatch.tap()
-        let pinnedSetup = app.descendants(matching: .any).matching(identifier: "pinned-setups").firstMatch
-        XCTAssertTrue(pinnedSetup.waitForExistence(timeout: 2))
-    }
-
-    @MainActor
-    func testDurationDirectInputCommitsOnlyOnSubmit() throws {
+    func testDurationInputValidationResetAndUndo() throws {
         let app = XCUIApplication()
         // Number formatting is locale-dependent; pin the language for value checks.
         app.launchArguments += ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
@@ -393,6 +370,18 @@ final class FFFilmUITests: XCTestCase {
         quick.tap()
         XCTAssertEqual(field.value as? String ?? "", "4.00")
         XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "duration-error").firstMatch.exists)
+        #if os(macOS)
+        app.typeKey("r", modifierFlags: [.command, .shift])
+        #else
+        openMore(in: app)
+        app.buttons["reset-action"].firstMatch.tap()
+        #endif
+        let undo = app.buttons["reset-undo"].firstMatch
+        XCTAssertTrue(undo.waitForExistence(timeout: 3))
+        XCTAssertEqual(field.value as? String, "8.00")
+        undo.tap()
+        XCTAssertEqual(field.value as? String, "4.00")
+        XCTAssertFalse(undo.exists)
     }
 
     #if os(iOS)
@@ -401,11 +390,15 @@ final class FFFilmUITests: XCTestCase {
     @MainActor
     func testComparisonSheetAddsViewsAndRemovesSnapshots() throws {
         let app = XCUIApplication()
+        app.launchArguments += ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()
         let view = app.buttons["comparison-view"].firstMatch
         XCTAssertTrue(view.waitForExistence(timeout: 5))
         XCTAssertFalse(view.isEnabled)
 
+        let proRes = app.buttons["PRORES"].firstMatch
+        XCTAssertTrue(proRes.waitForExistence(timeout: 3))
+        proRes.tap()
         let add = app.buttons["comparison-add"].firstMatch
         reveal(add, in: app)
         add.tap()
@@ -416,6 +409,8 @@ final class FFFilmUITests: XCTestCase {
         let snapshot = app.descendants(matching: .any)
             .matching(NSPredicate(format: "identifier BEGINSWITH 'comparison-snapshot-'")).firstMatch
         XCTAssertTrue(snapshot.waitForExistence(timeout: 3))
+        XCTAssertTrue(snapshot.staticTexts["Project FPS"].exists)
+        XCTAssertFalse(snapshot.staticTexts["Sensor FPS"].exists)
         let remove = app.descendants(matching: .any)
             .matching(NSPredicate(format: "identifier BEGINSWITH 'comparison-remove-'")).firstMatch
         XCTAssertTrue(remove.exists)
@@ -429,58 +424,7 @@ final class FFFilmUITests: XCTestCase {
         XCTWaiter().wait(for: [expectation], timeout: 4)
         XCTAssertFalse(view.isEnabled)
     }
-
-    @MainActor
-    func testStandaloneProResComparisonNamesProjectFPS() throws {
-        let app = XCUIApplication()
-        app.launchArguments += ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
-        app.launch()
-        // The ProRes quick-start bypasses the camera picker's virtualized list.
-        let proRes = app.buttons["PRORES"].firstMatch
-        XCTAssertTrue(proRes.waitForExistence(timeout: 3))
-        proRes.tap()
-        let add = app.buttons["comparison-add"].firstMatch
-        reveal(add, in: app)
-        add.tap()
-        app.buttons["comparison-view"].firstMatch.tap()
-        let snapshot = app.descendants(matching: .any)
-            .matching(NSPredicate(format: "identifier BEGINSWITH 'comparison-snapshot-'")).firstMatch
-        XCTAssertTrue(snapshot.waitForExistence(timeout: 3))
-        // The stored cadence is project FPS for standalone ProRes, including in comparisons.
-        XCTAssertTrue(snapshot.staticTexts["Project FPS"].exists)
-        XCTAssertFalse(snapshot.staticTexts["Sensor FPS"].exists)
-    }
     #endif
-
-    @MainActor
-    func testRateResetFromMoreMenuOfferedOneStepUndo() throws {
-        let app = XCUIApplication()
-        app.launchArguments += ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
-        app.launch()
-        let field = app.textFields["capture-duration"].firstMatch
-        XCTAssertTrue(field.waitForExistence(timeout: 5))
-        let quick12 = app.buttons["duration-quick-12"].firstMatch
-        reveal(quick12, in: app)
-        quick12.tap()
-        XCTAssertEqual(field.value as? String ?? "", "12.00")
-
-        #if os(macOS)
-        app.typeKey("r", modifierFlags: [.command, .shift])
-        #else
-        openMore(in: app)
-        let reset = app.buttons["reset-action"].firstMatch
-        XCTAssertTrue(reset.waitForExistence(timeout: 3))
-        reset.tap()
-        #endif
-
-        let undo = app.buttons["reset-undo"].firstMatch
-        XCTAssertTrue(undo.waitForExistence(timeout: 3))
-        // Reset restored the default plan; undo brings the edited plan back.
-        XCTAssertEqual(field.value as? String ?? "", "8.00")
-        undo.tap()
-        XCTAssertEqual(field.value as? String ?? "", "12.00")
-        XCTAssertFalse(app.buttons["reset-undo"].firstMatch.exists)
-    }
 
     @MainActor
     private func shutterApp() -> XCUIApplication {
@@ -758,21 +702,6 @@ final class FFFilmUITests: XCTestCase {
     }
 
     @MainActor
-    func testDITFlickerCandidateCanBeSelectedDirectly() throws {
-        let app = shutterApp()
-        choose("Flicker reference", picker: "shutter-mode", in: app)
-        let candidate = app.buttons["shutter-candidate-1.0"]
-        reveal(candidate, in: app); candidate.tap()
-        XCTAssertEqual(app.staticTexts["shutter-angle-output"].label, "86.4°")
-        XCTAssertEqual(app.textFields["shutter-preferredAngle"].value as? String, "86.4")
-        let result = app.descendants(matching: .any).matching(identifier: "shutter-results").firstMatch
-        reveal(result, in: app)
-        let screenshot = XCTAttachment(screenshot: app.screenshot())
-        screenshot.name = "DIT selectable flicker candidates and model assumptions"
-        screenshot.lifetime = .keepAlways; add(screenshot)
-    }
-
-    @MainActor
     func testDITShutterTimeInputQuickPresetsAndRelaunch() throws {
         let app = shutterApp()
         choose("Find angle", picker: "shutter-direction", in: app)
@@ -806,25 +735,6 @@ final class FFFilmUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["shutter-angle-output"].waitForExistence(timeout: 5))
         XCTAssertEqual(app.staticTexts["shutter-angle-output"].label, "172.627373°")
         XCTAssertEqual(app.textFields["shutter-shutterDenominator"].value as? String, "1/50 s")
-    }
-
-    @MainActor
-    func testDITShutterLimitIsVisibleWithoutOpeningDetails() throws {
-        let app = shutterApp()
-        choose("Frame rate", picker: "shutter-mode", in: app)
-        enter("60", field: "sensorFps", in: app)
-        finishEditing(app)
-        let warning = app.descendants(matching: .any).matching(identifier: "shutter-over-limit").firstMatch
-        XCTAssertTrue(warning.exists)
-        let alternative = app.staticTexts["shutter-maximum-alternative"]
-        XCTAssertTrue(alternative.label.contains("360°"))
-        XCTAssertTrue(alternative.label.contains("1/60 s"))
-        XCTAssertEqual(app.staticTexts["shutter-angle-output"].label, "450°")
-        XCTAssertFalse(app.staticTexts["shutter-playback-output"].exists)
-        reveal(warning, in: app)
-        let screenshot = XCTAttachment(screenshot: app.screenshot())
-        screenshot.name = "DIT shutter theoretical and achievable results"
-        screenshot.lifetime = .keepAlways; add(screenshot)
     }
 
     @MainActor
@@ -894,6 +804,11 @@ final class FFFilmUITests: XCTestCase {
         let app = shutterApp()
         choose("Flicker reference", picker: "shutter-mode", in: app)
         XCTAssertEqual(app.staticTexts["shutter-angle-output"].label, "172.8°")
+        let candidate = app.buttons["shutter-candidate-1.0"]
+        reveal(candidate, in: app)
+        candidate.tap()
+        XCTAssertEqual(app.staticTexts["shutter-angle-output"].label, "86.4°")
+        XCTAssertEqual(app.textFields["shutter-preferredAngle"].value as? String, "86.4")
         enter("120", field: "sensorFps", in: app)
         finishEditing(app)
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "shutter-no-candidates").firstMatch.exists)
@@ -901,6 +816,9 @@ final class FFFilmUITests: XCTestCase {
         enter("60", field: "sensorFps", in: app)
         finishEditing(app)
         XCTAssertEqual(app.staticTexts["shutter-angle-output"].label, "450°")
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "shutter-over-limit").firstMatch.exists)
+        let alternative = app.staticTexts["shutter-maximum-alternative"]
+        XCTAssertTrue(alternative.label.contains("360°") && alternative.label.contains("1/60 s"))
         choose("Keep angle", picker: "shutter-match", in: app)
         XCTAssertEqual(app.staticTexts["shutter-angle-output"].label, "180°")
         XCTAssertTrue(app.staticTexts["shutter-time-output"].label.contains("1/120 s"))
@@ -1152,8 +1070,4 @@ final class FFFilmUITests: XCTestCase {
     }
     #endif
 
-    @MainActor
-    func testLaunchPerformance() throws {
-        measure(metrics: [XCTApplicationLaunchMetric()]) { XCUIApplication().launch() }
-    }
 }

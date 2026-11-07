@@ -79,7 +79,20 @@ xcodebuild -project FFFilm.xcodeproj -scheme FFFilm \
   -parallel-testing-enabled NO -only-testing:FFFilmUITests test
 ```
 
-UI 测试通过辅助功能标识符（而非可见文本）选取元素，因此可在任意系统语言下运行。
+测试按职责保留：
+
+| 范围 | 测试文件 | 保留重点 |
+| --- | --- | --- |
+| 码率与目录 | `FFFilmTests`、`KinefinityTests`、`SonyMirrorlessTests` | 官方数值锚点、机型兼容性、拍摄与回放帧率 |
+| 计算器状态 | `CalculatorStoreTests`、`StorageUnitTests`、`QuickStartOrderTests` | 重置/撤销、窗口隔离、单位边界、收藏持久化 |
+| 快门 | `ShutterTests`、`DITShutterTests`、`ShutterWorkspaceTests` | 数学边界、独立参考计算、输入解析、机位与历史 |
+| macOS 胶片 | `FilmTests`、`FilmFormatTests`、`FilmFrameDetectionTests`、`FilmRefinementTests`、`FilmZoomTests`、`FilmExportTests` | 裁切/识别、源像素精度、缩放、文档状态、导出防覆盖与恢复 |
+| 负片与相机 | `NegativeTests`、`NegativeStoreTests`、`NegativeCameraPerformanceTests` | 色彩/方向/位深、取消与资源生命周期、相机状态和 GPU 缓冲 |
+| 语言与界面 | `AppLanguageTests`、`FFFilmUITests`、`NegativeUITests` | 翻译资源、平台隐私配置、关键交互与布局 |
+
+修复问题不自动新增测试。先检查现有覆盖，优先修改已有用例或补充同一场景的断言；只有缺少关键行为、独立失败路径或边界覆盖时才新增用例。UI 测试负责控件接线和完整用户流程，数值组合留在单元测试；语言切换由专门流程验证，不按语言重复整套业务流程。无断言的启动截图、无基准的启动性能测试和仅验证测试辅助工具的用例不纳入常规回归。
+
+UI 测试优先通过辅助功能标识符选取元素；需要核对文案时固定语言。macOS 胶片测试与 iOS 相机测试按平台条件编译，单跑 macOS 不能覆盖 iOS。模拟器名称以 `xcrun simctl list devices available` 为准。大 TIFF 压力测试仅在 `NEGATIVE_LARGE_TEST=1` 时启用；常规运行保持关闭。需要保留验证证据时给 `xcodebuild` 指定 `-resultBundlePath`，UI 截图随 `.xcresult` 保存。
 
 ```sh
 # macOS 应用生命周期

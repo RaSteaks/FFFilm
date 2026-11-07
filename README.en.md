@@ -80,7 +80,20 @@ xcodebuild -project FFFilm.xcodeproj -scheme FFFilm \
   -parallel-testing-enabled NO -only-testing:FFFilmUITests test
 ```
 
-UI tests select elements by accessibility identifier rather than visible label, so they run against any system language.
+Tests retain distinct responsibilities:
+
+| Area | Test files | Retained coverage |
+| --- | --- | --- |
+| Rates and catalog | `FFFilmTests`, `KinefinityTests`, `SonyMirrorlessTests` | Published numeric anchors, camera compatibility, capture/playback cadence |
+| Calculator state | `CalculatorStoreTests`, `StorageUnitTests`, `QuickStartOrderTests` | Reset/undo, window isolation, unit boundaries, persistent favorites |
+| Shutter | `ShutterTests`, `DITShutterTests`, `ShutterWorkspaceTests` | Mathematical boundaries, independent reference calculations, parsing, rigs and history |
+| macOS film | `FilmTests`, `FilmFormatTests`, `FilmFrameDetectionTests`, `FilmRefinementTests`, `FilmZoomTests`, `FilmExportTests` | Cropping/detection, source precision, zoom, document state, safe export and recovery |
+| Negative and camera | `NegativeTests`, `NegativeStoreTests`, `NegativeCameraPerformanceTests` | Color/orientation/depth, cancellation and resource lifetime, camera state and GPU buffers |
+| Language and UI | `AppLanguageTests`, `FFFilmUITests`, `NegativeUITests` | Translation resources, platform privacy configuration, essential interactions and layout |
+
+A bug fix does not automatically require a new test. Check existing coverage first and prefer updating a case or adding assertions to the same scenario. Add a case only for a missing critical behavior, independent failure path, or boundary. UI tests verify control wiring and complete user workflows; numerical combinations belong in unit tests. A dedicated language-switching workflow covers localization instead of repeating business flows per language. Assertion-free launch screenshots, launch benchmarks without a baseline, and tests of test-only helpers are excluded from regular regression coverage.
+
+UI tests prefer accessibility identifiers and pin the language when checking copy. macOS film tests and iOS camera tests compile conditionally; a macOS-only run does not cover iOS. Use an available simulator name from `xcrun simctl list devices available`. The large TIFF stress test is opt-in through `NEGATIVE_LARGE_TEST=1` and remains off for ordinary runs. Pass `-resultBundlePath` to `xcodebuild` to preserve evidence; UI screenshots are stored in the `.xcresult` bundle.
 
 ```sh
 # macOS app lifecycle

@@ -1,32 +1,143 @@
 /* ============================================================
    FFFilm support — "film datasheet"
    The support site is set like a vintage film-stock datasheet:
-   warm paper, two-ink print (ink + amber), an
-   engineering title block, spec tables, and a 35mm sprocket
-   rail as the signature element. Sharp geometry, printed feel.
+   neutral gray paper, one-ink print, an engineering title block,
+   spec tables, and a 35mm sprocket rail as the signature element.
+   Sharp geometry, printed feel.
+
+   Color rule: everything is neutral gray except the film itself.
+   Only the film base carries a hue; nothing off the film does.
+
+   One rule holds the pages together: each page runs exactly one
+   dark strip of film, and that strip carries the page's point —
+   the destinations, the search, or the policy's conclusion.
+
+   The dark theme is the darkroom: the sheet goes black and the
+   film base is the only light left in the room.
    ============================================================ */
+
+/* Noto Serif SC (SIL OFL 1.1), subset to the glyphs set in display type.
+   iOS does not preinstall a Chinese serif, so headings fall back to sans
+   without it. A new heading character outside the subset falls back to
+   the next face in --font-display until the subset is regenerated. */
+@font-face {
+  font-family: "FFFilm Display";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("fonts/display-700.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "FFFilm Display";
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+  src: url("fonts/display-900.woff2") format("woff2");
+}
 
 :root {
   color-scheme: light;
-  --paper: #f3efe4;
-  --paper-deep: #eae3d1;
-  --paper-lift: #faf7ee;
-  --ink: #1d1a12;
-  --ink-2: #57503c;
-  --ink-3: #675f47;
-  --amber: #7f5600;
-  --amber-deep: #634300;
-  --amber-bright: #d9a521;
-  --amber-wash: rgba(217, 165, 33, 0.16);
-  --rule: rgba(29, 26, 18, 0.16);
-  --rule-strong: rgba(29, 26, 18, 0.42);
+  --paper: #f2f2f2;
+  --paper-deep: #e4e4e4;
+  --paper-lift: #fafafa;
+  --ink: #141414;
+  --ink-2: #4a4a4a;
+  --ink-3: #5c5c5c;
+  --tone: #3a3a3a;
+  --tone-strong: #000000;
+  --key: #141414;
+  --on-key: #f2f2f2;
+  --wash: rgba(0, 0, 0, 0.07);
+  --rule: rgba(0, 0, 0, 0.16);
+  --rule-strong: rgba(0, 0, 0, 0.42);
+  --film: #d3a24a; /* the film base: the only hue on the site */
+  --on-film: #141414;
+  --on-film-2: rgba(20, 20, 20, 0.74);
+  --on-film-rule: rgba(20, 20, 20, 0.3);
+  --solid: #1c1c1c;
+  --on-solid: #f7f7f7;
+  --on-solid-2: rgba(247, 247, 247, 0.74);
+  --band: #1c1c1c;
+  --on-band: #f2f2f2;
+  --on-band-2: rgba(242, 242, 242, 0.72);
+  --focus: #141414;
+  --grain: 0.05;
+  --grain-blend: multiply;
   --page-lift: 64px; /* width of the sprocket rail */
-  /* 35mm perforations: rounded rectangles punched through to the paper. */
-  --perf-v: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='16'%3E%3Crect x='1.5' y='4.5' width='9' height='7' rx='1.6' fill='%23f3efe4'/%3E%3C/svg%3E");
-  --perf-h: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='12'%3E%3Crect x='4.5' y='1.5' width='7' height='9' rx='1.6' fill='%23f3efe4'/%3E%3C/svg%3E");
-  --font-display: "Songti SC", "Noto Serif SC", "SimSun", "Source Han Serif SC", serif;
+  /* 35mm perforations: masks punched through the film to the sheet behind. */
+  --perf-v: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='18'%3E%3Crect x='1.5' y='5.5' width='9' height='7' rx='1.6'/%3E%3C/svg%3E");
+  --perf-h: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='12'%3E%3Crect x='5.5' y='1.5' width='7' height='9' rx='1.6'/%3E%3C/svg%3E");
+  --font-display: "FFFilm Display", "Songti SC", "Noto Serif SC", "SimSun", "Source Han Serif SC", serif;
   --font-body: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI", sans-serif;
   --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Courier New", monospace;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  interpolate-size: allow-keywords;
+}
+
+/* Screen-only, so a printed policy stays dark ink on white in either theme. */
+@media screen and (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --paper: #141414;
+    --paper-deep: #1e1e1e;
+    --paper-lift: #1d1d1d;
+    --ink: #efefef;
+    --ink-2: #c4c4c4;
+    --ink-3: #a6a6a6;
+    --tone: #d6d6d6;
+    --tone-strong: #ffffff;
+    --key: #efefef;
+    --on-key: #141414;
+    --wash: rgba(255, 255, 255, 0.1);
+    --rule: rgba(255, 255, 255, 0.14);
+    --rule-strong: rgba(255, 255, 255, 0.36);
+    --film: #c9974a;
+    --on-film: #141414;
+    --on-film-2: rgba(20, 20, 20, 0.82);
+    --on-film-rule: rgba(20, 20, 20, 0.32);
+    --solid: #e8e8e8;
+    --on-solid: #141414;
+    --on-solid-2: rgba(20, 20, 20, 0.72);
+    --band: #0c0c0c;
+    --on-band: #e8e8e8;
+    --on-band-2: rgba(232, 232, 232, 0.72);
+    --focus: #efefef;
+    --grain: 0.06;
+    --grain-blend: screen;
+  }
+}
+
+@media screen {
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --paper: #141414;
+    --paper-deep: #1e1e1e;
+    --paper-lift: #1d1d1d;
+    --ink: #efefef;
+    --ink-2: #c4c4c4;
+    --ink-3: #a6a6a6;
+    --tone: #d6d6d6;
+    --tone-strong: #ffffff;
+    --key: #efefef;
+    --on-key: #141414;
+    --wash: rgba(255, 255, 255, 0.1);
+    --rule: rgba(255, 255, 255, 0.14);
+    --rule-strong: rgba(255, 255, 255, 0.36);
+    --film: #c9974a;
+    --on-film: #141414;
+    --on-film-2: rgba(20, 20, 20, 0.82);
+    --on-film-rule: rgba(20, 20, 20, 0.32);
+    --solid: #e8e8e8;
+    --on-solid: #141414;
+    --on-solid-2: rgba(20, 20, 20, 0.72);
+    --band: #0c0c0c;
+    --on-band: #e8e8e8;
+    --on-band-2: rgba(232, 232, 232, 0.72);
+    --focus: #efefef;
+    --grain: 0.06;
+    --grain-blend: screen;
+  }
 }
 
 * {
@@ -35,13 +146,18 @@
 
 html {
   background: var(--paper);
-  scroll-behavior: smooth;
   scroll-padding-top: 5rem;
   scrollbar-color: var(--ink-3) var(--paper-deep);
 }
 
+/* A short page still fills the window, so the rail and footer reach its foot. */
 body {
+  position: relative;
+  display: flex;
+  min-height: 100vh;
+  min-height: 100dvh;
   min-width: 320px;
+  flex-direction: column;
   margin: 0;
   background: var(--paper);
   color: var(--ink);
@@ -58,35 +174,58 @@ body::after {
   inset: 0;
   pointer-events: none;
   content: "";
-  opacity: 0.05;
-  mix-blend-mode: multiply;
+  opacity: var(--grain);
+  mix-blend-mode: var(--grain-blend);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.72' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23g)'/%3E%3C/svg%3E");
 }
 
 ::selection {
-  color: var(--ink);
-  background: #e7c063;
+  color: #141414;
+  background: #c8c8c8;
+}
+
+/* Script-only controls never appear when they would do nothing. */
+html:not([data-js]) .needs-js,
+html[data-js] .no-script {
+  display: none;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 a {
-  color: var(--amber);
+  color: var(--tone);
   text-decoration: underline;
   text-decoration-thickness: 1px;
   text-underline-offset: 0.18em;
-  text-decoration-color: rgba(127, 86, 0, 0.45);
+  text-decoration-color: color-mix(in srgb, var(--tone) 45%, transparent);
   transition: color 140ms ease, background-color 140ms ease;
 }
 
 a:hover {
-  color: var(--amber-deep);
-  background-color: var(--amber-wash);
+  color: var(--tone-strong);
+  background-color: var(--wash);
 }
 
 a:focus-visible,
+button:focus-visible,
 summary:focus-visible,
 .skip-link:focus-visible {
-  outline: 2px solid var(--amber);
+  outline: 2px solid var(--focus);
   outline-offset: 3px;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
 }
 
 .skip-link {
@@ -97,9 +236,7 @@ summary:focus-visible,
   padding: 0.55rem 0.9rem;
   color: var(--paper);
   background: var(--ink);
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  letter-spacing: 0.08em;
+  font-size: 0.8rem;
   text-decoration: none;
   transform: translateY(-220%);
 }
@@ -110,18 +247,22 @@ summary:focus-visible,
 
 /* ------------------------------------------------------------
    Signature: the 35mm sprocket rail.
-   Dark film running down the left edge of the sheet, perfora-
-   tions punched through to the paper, edge codes in amber.
+   Dark film running the full length of the document, so the
+   perforations travel with the page as you scroll. The script
+   lays one frame per section down its centre; each exposes up
+   to the reading line, which makes the page read like film
+   pulled through a gate.
    ------------------------------------------------------------ */
 
 .rail {
-  position: fixed;
+  position: absolute;
   z-index: 40;
   top: 0;
   bottom: 0;
   left: 0;
   width: var(--page-lift);
-  background: var(--ink);
+  overflow: hidden;
+  background: var(--film);
 }
 
 .rail::before,
@@ -131,23 +272,50 @@ summary:focus-visible,
   top: 0;
   bottom: 0;
   width: 12px;
-  background-image: var(--perf-v);
-  background-size: 12px 16px;
-  background-repeat: repeat-y;
-  background-position: center top;
+  background: var(--paper);
+  -webkit-mask: var(--perf-v) center top / 12px 18px repeat-y;
+  mask: var(--perf-v) center top / 12px 18px repeat-y;
 }
 
 .rail::before {
-  left: 6px;
+  left: 5px;
 }
 
 .rail::after {
-  right: 6px;
+  right: 5px;
+}
+
+.rail-frame {
+  position: absolute;
+  right: 22px;
+  left: 22px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--on-film) 9%, transparent);
+}
+
+/* Exposure darkens a negative, so read frames print in ink. */
+.rail-frame::after {
+  position: absolute;
+  inset: 0;
+  background: var(--on-film);
+  content: "";
+  opacity: 0.82;
+  transform: scaleY(var(--read, 0));
+  transform-origin: top;
 }
 
 /* The page sheet sits right of the rail. */
 .page {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
   margin-left: var(--page-lift);
+}
+
+main {
+  flex: 1;
 }
 
 .wrap {
@@ -163,7 +331,7 @@ summary:focus-visible,
   position: sticky;
   top: 0;
   z-index: 30;
-  background: rgba(243, 239, 228, 0.94);
+  background: color-mix(in srgb, var(--paper) 94%, transparent);
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--rule-strong);
@@ -171,6 +339,7 @@ summary:focus-visible,
 
 .site-header .wrap {
   display: flex;
+  gap: 1rem;
   align-items: center;
   justify-content: space-between;
   min-height: 4.1rem;
@@ -185,19 +354,14 @@ summary:focus-visible,
 }
 
 .brand:hover {
+  color: var(--ink);
   background: none;
 }
 
-.brand-chip {
-  display: grid;
-  width: 1.9rem;
-  height: 1.9rem;
-  place-items: center;
-  background: var(--amber-bright);
-  color: var(--ink);
-  font-family: var(--font-mono);
-  font-size: 0.9rem;
-  font-weight: 700;
+.brand-mark {
+  display: block;
+  width: 2rem;
+  height: 2rem;
 }
 
 .brand-name {
@@ -206,6 +370,7 @@ summary:focus-visible,
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .brand-name em {
@@ -214,12 +379,17 @@ summary:focus-visible,
   font-weight: 400;
 }
 
+.site-tools {
+  display: flex;
+  gap: 1.4rem;
+  align-items: center;
+}
+
 .site-nav {
   display: flex;
-  gap: 1.6rem;
-  font-family: var(--font-mono);
-  font-size: 0.74rem;
-  letter-spacing: 0.1em;
+  gap: 1.5rem;
+  font-size: 0.84rem;
+  letter-spacing: 0.06em;
 }
 
 .site-nav a {
@@ -227,6 +397,7 @@ summary:focus-visible,
   padding: 0.35rem 0;
   color: var(--ink-2);
   text-decoration: none;
+  white-space: nowrap;
 }
 
 .site-nav a::after {
@@ -235,7 +406,7 @@ summary:focus-visible,
   bottom: -2px;
   left: 0;
   height: 2px;
-  background: var(--amber-bright);
+  background: var(--key);
   content: "";
   transform: scaleX(0);
   transform-origin: left;
@@ -256,6 +427,40 @@ summary:focus-visible,
   color: var(--ink);
 }
 
+/* The safelight switch: the lamp is lit while the room is dark. */
+.theme-toggle {
+  display: inline-flex;
+  gap: 0.5rem;
+  align-items: center;
+  min-height: 2.2rem;
+  padding: 0 0.7rem;
+  color: var(--ink-2);
+  background: none;
+  border: 1px solid var(--rule-strong);
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  transition: color 140ms ease, border-color 140ms ease;
+}
+
+.theme-toggle:hover {
+  color: var(--ink);
+  border-color: var(--ink-2);
+}
+
+.theme-lamp {
+  width: 0.62rem;
+  height: 0.62rem;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+  transition: background-color 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
+}
+
+.theme-toggle[aria-pressed="true"] .theme-lamp {
+  background: var(--key);
+  border-color: var(--key);
+  box-shadow: 0 1px 8px 1px color-mix(in srgb, var(--key) 60%, transparent);
+}
+
 /* ------------------------------------------------------------
    Title block — the datasheet's engineering header
    ------------------------------------------------------------ */
@@ -265,23 +470,22 @@ summary:focus-visible,
   grid-template-columns: minmax(0, 1fr) 19rem;
   gap: clamp(2rem, 6vw, 4.5rem);
   align-items: end;
-  padding: clamp(3.2rem, 7vw, 5.5rem) 0 3rem;
-  border-bottom: 1px solid var(--rule-strong);
+  padding: clamp(3rem, 6vw, 4.6rem) 0 2.6rem;
 }
 
 h1 {
   margin: 0;
   font-family: var(--font-display);
   font-size: clamp(2.9rem, 7vw, 5rem);
-  font-weight: 800;
+  font-weight: 900;
   letter-spacing: 0.01em;
-  line-height: 1.02;
+  line-height: 1.08;
   text-wrap: balance;
 }
 
 .lede {
   max-width: 36em;
-  margin: 1.5rem 0 0;
+  margin: 1.2rem 0 0;
   color: var(--ink-2);
   font-size: clamp(1.02rem, 1.6vw, 1.14rem);
   line-height: 1.8;
@@ -313,19 +517,267 @@ h1 {
 
 .meta-block dt {
   color: var(--ink-3);
-  font-family: var(--font-mono);
-  font-size: 0.6rem;
-  letter-spacing: 0.14em;
+  font-size: 0.76rem;
+  letter-spacing: 0.04em;
 }
 
 .meta-block dd {
   margin: 0;
   color: var(--ink);
   font-family: var(--font-mono);
-  font-size: 0.74rem;
+  font-size: 0.78rem;
   font-weight: 600;
-  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.03em;
   text-align: right;
+}
+
+/* ------------------------------------------------------------
+   The strip — the one dark length of film on each page
+   ------------------------------------------------------------ */
+
+.strip {
+  --focus: var(--on-film);
+  padding: 0.5rem 1.3rem;
+  background: var(--film);
+  color: var(--on-film);
+}
+
+.strip::before,
+.strip::after {
+  display: block;
+  height: 12px;
+  margin-inline: -0.9rem;
+  background: var(--paper);
+  -webkit-mask: var(--perf-h) left center / 18px 12px space no-repeat;
+  mask: var(--perf-h) left center / 18px 12px space no-repeat;
+  content: "";
+}
+
+.strip::before {
+  margin-bottom: 1rem;
+}
+
+.strip::after {
+  margin-top: 1.1rem;
+}
+
+.strip-inner {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.1rem; /* the dark gap reads as film between frames */
+}
+
+/* The privacy conclusion, set as the frame's exposure. */
+.strip-statement {
+  max-width: 34em;
+  margin: 0.4rem 0 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.28rem, 2.4vw, 1.72rem);
+  font-weight: 700;
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
+.absent {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem 1.3rem;
+  align-items: baseline;
+  margin-top: 1.25rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--on-film-rule);
+  font-size: 0.92rem;
+}
+
+.absent p {
+  margin: 0;
+  color: var(--on-film-2);
+}
+
+.absent ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.2rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.absent li {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  color: var(--on-film);
+}
+
+.absent li::before {
+  width: 0.62em;
+  height: 0.62em;
+  background:
+    linear-gradient(45deg, transparent calc(50% - 0.75px), var(--on-film) calc(50% - 0.75px) calc(50% + 0.75px), transparent calc(50% + 0.75px)),
+    linear-gradient(-45deg, transparent calc(50% - 0.75px), var(--on-film) calc(50% - 0.75px) calc(50% + 0.75px), transparent calc(50% + 0.75px));
+  content: "";
+}
+
+/* ------------------------------------------------------------
+   Finder — search and topics, the support page's strip
+   ------------------------------------------------------------ */
+
+.finder-field {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  padding-bottom: 0.45rem;
+  border-bottom: 1px solid var(--on-film-rule);
+  transition: border-color 160ms ease;
+}
+
+.finder-field:focus-within {
+  border-bottom-color: var(--on-film);
+}
+
+.finder-icon {
+  flex: 0 0 auto;
+  width: 1.3rem;
+  height: 1.3rem;
+  fill: none;
+  stroke: var(--on-film);
+  stroke-width: 1.6;
+}
+
+.finder-field input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0.4rem 0;
+  color: var(--on-film);
+  background: none;
+  border: 0;
+  outline: 0;
+  caret-color: var(--on-film);
+  font: inherit;
+  font-size: 1.2rem;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.finder-field input::placeholder {
+  color: var(--on-film-2);
+  opacity: 1;
+}
+
+.finder-field input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.finder-key {
+  display: none;
+  flex: 0 0 auto;
+  min-width: 1.5rem;
+  padding: 0 0.4rem;
+  color: var(--on-film-2);
+  border: 1px solid var(--on-film-rule);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1.5rem;
+  text-align: center;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .finder-key {
+    display: block;
+  }
+}
+
+.finder-field input:focus ~ .finder-key,
+.finder-field input:not(:placeholder-shown) ~ .finder-key {
+  display: none;
+}
+
+.finder-clear {
+  display: grid;
+  flex: 0 0 auto;
+  width: 2.2rem;
+  height: 2.2rem;
+  place-items: center;
+  margin: -0.3rem -0.5rem -0.3rem 0;
+  padding: 0;
+  color: var(--on-film);
+  background: none;
+  border: 0;
+}
+
+.finder-clear[hidden] {
+  display: none;
+}
+
+.finder-clear svg {
+  width: 1rem;
+  height: 1rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+}
+
+/* Filter chips — shared by the FAQ topics and the data ledger. */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.95rem;
+}
+
+.chip {
+  display: inline-flex;
+  gap: 0.45rem;
+  align-items: center;
+  min-height: 2.2rem;
+  padding: 0 0.75rem;
+  color: var(--ink-2);
+  background: none;
+  border: 1px solid var(--rule-strong);
+  font-size: 0.86rem;
+  line-height: 1;
+  white-space: nowrap;
+  transition: color 140ms ease, background-color 140ms ease, border-color 140ms ease;
+}
+
+.chip:hover {
+  color: var(--ink);
+  border-color: var(--ink-2);
+}
+
+.chip:active {
+  transform: translateY(1px);
+}
+
+.chip-count {
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.85;
+}
+
+.chip[aria-pressed="true"] {
+  color: var(--on-key);
+  background: var(--key);
+  border-color: var(--key);
+}
+
+.strip .chip {
+  color: var(--on-film-2);
+  border-color: var(--on-film-rule);
+}
+
+.strip .chip:hover {
+  color: var(--on-film);
+  border-color: var(--on-film-2);
+}
+
+.strip .chip[aria-pressed="true"] {
+  color: var(--film);
+  background: var(--on-film);
+  border-color: var(--on-film);
 }
 
 /* ------------------------------------------------------------
@@ -342,6 +794,7 @@ h1 {
 
 .section-index {
   position: sticky;
+  z-index: 20;
   top: 5.6rem;
 }
 
@@ -349,24 +802,16 @@ h1 {
   margin: 0;
   padding: 0;
   list-style: none;
-  counter-reset: sheet;
 }
 
 .section-index a {
   display: block;
-  padding: 0.42rem 0;
+  padding: 0.5rem 0;
   color: var(--ink-2);
-  font-family: var(--font-mono);
-  font-size: 0.74rem;
+  font-size: 0.86rem;
   text-decoration: none;
   border-bottom: 1px solid var(--rule);
-}
-
-.section-index a::before {
-  margin-right: 0.55rem;
-  color: var(--amber);
-  counter-increment: sheet;
-  content: counter(sheet, decimal-leading-zero);
+  transition: color 140ms ease, border-color 140ms ease;
 }
 
 .section-index a:hover {
@@ -374,13 +819,11 @@ h1 {
   background: none;
 }
 
-/* Only the sticky index stays in view while reading. */
-@media (min-width: 861px) {
-  .section-index a[aria-current="location"] {
-    color: var(--ink);
-    border-bottom-color: var(--amber-bright);
-    box-shadow: 0 1px 0 var(--amber-bright);
-  }
+.section-index a[aria-current="location"] {
+  color: var(--ink);
+  font-weight: 600;
+  border-bottom-color: var(--key);
+  box-shadow: 0 1px 0 var(--key);
 }
 
 .content {
@@ -407,13 +850,27 @@ h2 {
   font-size: clamp(1.55rem, 2.6vw, 2.05rem);
   font-weight: 700;
   letter-spacing: 0.01em;
-  line-height: 1.2;
+  line-height: 1.25;
 }
 
 h3 {
   margin: 2rem 0 0;
   font-size: 1.05rem;
   font-weight: 700;
+}
+
+.section-head {
+  display: flex;
+  gap: 1rem;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.content .faq-count {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 0.84rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .content p {
@@ -433,7 +890,7 @@ h3 {
 }
 
 .content li::marker {
-  color: var(--amber);
+  color: var(--tone);
 }
 
 .content li + li {
@@ -469,6 +926,10 @@ h3 {
   border-bottom: 1px solid var(--rule);
 }
 
+.data-row[hidden] {
+  display: none;
+}
+
 .data-row dt {
   color: var(--ink);
   font-size: 0.9rem;
@@ -483,36 +944,60 @@ h3 {
   line-height: 1.8;
 }
 
-/* Callout — one frame of negative: the sheet's single conclusion,
-   printed dark between two rows of perforations. */
-.callout {
-  margin-top: 1.7rem;
-  padding: 0.55rem 1.4rem;
+/* ------------------------------------------------------------
+   Ledger — each kind of data, keyed by where it lives. The four
+   swatches are a two-ink print legend: solid, open, hatched, ink.
+   ------------------------------------------------------------ */
+
+.chips-ledger {
+  margin-top: 1.4rem;
+}
+
+.ledger {
+  margin-top: 1rem;
+}
+
+.lane {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  margin-top: 0.15rem;
+  color: var(--ink-3);
+  font-size: 0.8rem;
+  font-weight: 400;
+}
+
+.swatch {
+  flex: 0 0 auto;
+  width: 0.7rem;
+  height: 0.7rem;
+  border: 1.5px solid var(--tone);
+}
+
+.swatch-device {
+  background: var(--tone);
+}
+
+.swatch-saved {
+  background: repeating-linear-gradient(135deg, var(--tone) 0 1.5px, transparent 1.5px 3.5px);
+}
+
+.swatch-sent {
   background: var(--ink);
+  border-color: var(--ink);
 }
 
-.callout::before,
-.callout::after {
-  display: block;
-  height: 12px;
-  margin-inline: -0.95rem;
-  background-image: var(--perf-h);
-  background-repeat: repeat-x;
-  background-size: 16px 12px;
-  content: "";
+.chip[aria-pressed="true"] .swatch {
+  border-color: var(--on-key);
 }
 
-.callout::before {
-  margin-bottom: 1rem;
+.chip[aria-pressed="true"] .swatch-device,
+.chip[aria-pressed="true"] .swatch-sent {
+  background: var(--on-key);
 }
 
-.callout::after {
-  margin-top: 1.1rem;
-}
-
-.callout p {
-  margin: 0;
-  color: var(--paper-lift);
+.chip[aria-pressed="true"] .swatch-saved {
+  background: repeating-linear-gradient(135deg, var(--on-key) 0 1.5px, transparent 1.5px 3.5px);
 }
 
 /* ------------------------------------------------------------
@@ -522,11 +1007,15 @@ h3 {
 .faq-list {
   margin-top: 1.6rem;
   border-top: 2px solid var(--rule-strong);
-  counter-reset: frame;
 }
 
 .faq {
   border-bottom: 1px solid var(--rule);
+  transition: background-color 600ms ease;
+}
+
+.faq:target {
+  background: var(--wash);
 }
 
 .faq summary {
@@ -542,7 +1031,7 @@ h3 {
 }
 
 .faq summary:hover {
-  color: var(--amber-deep);
+  color: var(--tone-strong);
 }
 
 .faq summary::-webkit-details-marker {
@@ -551,13 +1040,13 @@ h3 {
 
 .faq summary::before {
   flex: 0 0 auto;
-  color: var(--amber);
+  color: var(--tone);
   font-family: var(--font-mono);
-  font-size: 0.68rem;
+  font-size: 0.74rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  counter-increment: frame;
-  content: "F." counter(frame, decimal-leading-zero);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  content: attr(data-frame);
 }
 
 .faq summary::after {
@@ -567,8 +1056,8 @@ h3 {
   height: 0.8rem;
   margin-left: auto;
   background:
-    linear-gradient(var(--amber), var(--amber)) center / 100% 1.5px no-repeat,
-    linear-gradient(var(--amber), var(--amber)) center / 1.5px 100% no-repeat;
+    linear-gradient(var(--tone), var(--tone)) center / 100% 1.5px no-repeat,
+    linear-gradient(var(--tone), var(--tone)) center / 1.5px 100% no-repeat;
   content: "";
   transition: background-size 160ms ease;
 }
@@ -580,7 +1069,287 @@ h3 {
 .faq p {
   max-width: 42em;
   margin: -0.3rem 0 1.25rem;
-  padding-left: 2.85rem;
+  padding-left: 2.95rem;
+}
+
+::highlight(faq-hit) {
+  color: var(--on-key);
+  background-color: var(--key);
+}
+
+.faq-empty {
+  padding: 1.6rem 0 0.4rem;
+}
+
+.faq-empty[hidden] {
+  display: none;
+}
+
+.content .faq-empty p {
+  margin: 0 0 1rem;
+}
+
+/* ------------------------------------------------------------
+   Buttons
+   ------------------------------------------------------------ */
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: 0 1.15rem;
+  color: var(--on-solid);
+  background: var(--solid);
+  border: 1px solid var(--solid);
+  font-size: 0.94rem;
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 140ms ease, background-color 140ms ease, border-color 140ms ease;
+}
+
+.button:hover {
+  color: var(--on-key);
+  background: var(--tone);
+  border-color: var(--tone);
+}
+
+.button:active {
+  transform: translateY(1px);
+}
+
+.button-quiet {
+  color: var(--ink);
+  background: none;
+  border-color: var(--rule-strong);
+}
+
+.button-quiet:hover {
+  color: var(--ink);
+  background: var(--wash);
+  border-color: var(--tone);
+}
+
+/* ------------------------------------------------------------
+   Report — a sheet that opens only when asked for, filled in like
+   a camera report: ruled lines to write on, not boxes. Field
+   labels double as the mail's line labels.
+   ------------------------------------------------------------ */
+
+.report-sheet {
+  width: min(40rem, 100vw - 2rem);
+  max-height: calc(100dvh - 2.4rem);
+  margin: 1.2rem auto auto;
+  padding: 0;
+  overflow: hidden;
+  color: var(--ink);
+  background: var(--paper-lift);
+  border: 1px solid var(--rule-strong);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.14), 0 18px 48px rgba(0, 0, 0, 0.24);
+}
+
+.report-sheet[open] {
+  display: flex;
+}
+
+.report-sheet::backdrop {
+  background: rgba(0, 0, 0, 0.42);
+}
+
+.report {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.report-head {
+  padding: 1rem 1.4rem 0.8rem;
+  border-bottom: 2px solid var(--rule-strong);
+}
+
+.report-head h2 {
+  font-size: 1.4rem;
+}
+
+.report-body {
+  min-height: 0;
+  flex: 1;
+  padding: 0.5rem 1.4rem 1rem;
+  overflow-y: auto;
+}
+
+.report-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0.85rem 1.4rem;
+  border-top: 1px solid var(--rule);
+}
+
+.report-foot .button-quiet:first-child {
+  margin-right: auto;
+}
+
+.report fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.field {
+  display: grid;
+  grid-template-columns: 9.5rem minmax(0, 1fr);
+  column-gap: 1.2rem;
+  align-items: baseline;
+  padding: 0.6rem 0;
+}
+
+.field > label,
+.field > legend {
+  grid-column: 1;
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.7;
+}
+
+/* A legend won't take a grid cell, so it floats into the label column. */
+fieldset.field {
+  display: block;
+  padding: 0.6rem 0;
+}
+
+fieldset.field > legend {
+  float: left;
+  width: 9.5rem;
+  margin-right: 1.2rem;
+  padding: 0;
+}
+
+fieldset.field > .choices {
+  overflow: hidden;
+}
+
+.field input[type="text"],
+.field textarea {
+  grid-column: 2;
+  width: 100%;
+  padding: 0.1rem 0 0.3rem;
+  color: var(--ink);
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--rule-strong);
+  border-radius: 0;
+  outline: 0;
+  caret-color: var(--tone);
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1.7;
+  resize: vertical;
+  -webkit-appearance: none;
+  appearance: none;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.field input[type="text"]:focus,
+.field textarea:focus {
+  border-bottom-color: var(--tone);
+  box-shadow: 0 1px 0 var(--tone);
+}
+
+.field [aria-invalid="true"] {
+  border-bottom-color: var(--key);
+  box-shadow: 0 1px 0 var(--key);
+}
+
+.field-hint,
+.field-error {
+  grid-column: 2;
+  margin: 0.35rem 0 0;
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+
+.field-hint {
+  color: var(--ink-3);
+}
+
+.field-error {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.choice {
+  position: relative;
+  display: inline-flex;
+  cursor: pointer;
+}
+
+.choice input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.choice span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.2rem;
+  padding: 0 0.75rem;
+  color: var(--ink-2);
+  border: 1px solid var(--rule-strong);
+  font-size: 0.86rem;
+  line-height: 1;
+  transition: color 140ms ease, background-color 140ms ease, border-color 140ms ease;
+}
+
+.choice:hover span {
+  color: var(--ink);
+  border-color: var(--ink-2);
+}
+
+.choice input:checked + span {
+  color: var(--on-key);
+  background: var(--key);
+  border-color: var(--key);
+}
+
+.choice input:focus-visible + span {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.report-note {
+  margin: 0.8rem 0 0;
+  color: var(--ink-2);
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+
+.report-status {
+  flex: 1 1 100%;
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 0.86rem;
+}
+
+.report-status:empty {
+  display: none;
 }
 
 /* ------------------------------------------------------------
@@ -589,10 +1358,10 @@ h3 {
 
 .contact-card {
   margin-top: 1.7rem;
+  padding-top: 0.7rem;
   border: 1px solid var(--rule-strong);
   background: var(--paper-lift);
   box-shadow: inset 0 0 0 1px var(--paper), inset 0 0 0 2px var(--rule);
-  padding-top: 0.7rem;
 }
 
 .contact-card p {
@@ -603,16 +1372,33 @@ h3 {
   margin-bottom: 1.25rem;
 }
 
+.contact-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: stretch;
+  margin: 0.7rem 1.3rem 1.25rem;
+}
+
+.contact-actions:last-child {
+  margin-bottom: 1.35rem;
+}
+
+.contact-report {
+  margin-top: 1rem;
+}
+
 .contact-card .email-chip {
-  display: inline-block;
-  margin-top: 0.7rem;
-  margin-bottom: 0.3rem;
-  padding: 0.5rem 0.8rem;
-  background: var(--ink);
+  display: flex;
+  align-items: center;
+  min-height: 2.75rem;
+  margin: 0;
+  padding: 0.25rem 0.9rem;
+  background: var(--solid);
 }
 
 .email-chip a {
-  color: var(--amber-bright);
+  color: var(--on-solid);
   font-family: var(--font-mono);
   font-size: 0.95em;
   text-decoration: none;
@@ -620,41 +1406,13 @@ h3 {
 }
 
 .email-chip a:hover {
-  color: #f0d99d;
+  color: var(--on-solid-2);
   background: none;
 }
 
 /* ------------------------------------------------------------
-   Home — the strip: two destinations as frames on one filmstrip
+   Home — two destinations as frames on the strip
    ------------------------------------------------------------ */
-
-.strip {
-  margin: 3.2rem 0 0;
-  padding: 1.1rem;
-  background: var(--ink);
-}
-
-.strip::before,
-.strip::after {
-  content: "";
-  display: block;
-  height: 12px;
-  background-image: var(--perf-h);
-  background-size: 16px 12px;
-  background-repeat: repeat-x;
-  background-position: left center;
-}
-
-.strip::after {
-  margin-top: 1.1rem;
-}
-
-.strip-inner {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1.1rem; /* the dark gap reads as film between frames */
-  margin-top: 1.1rem;
-}
 
 .frame-card {
   display: flex;
@@ -669,9 +1427,10 @@ h3 {
 }
 
 .frame-card:hover {
+  color: var(--ink);
   background: var(--paper-lift);
   transform: translateY(-3px);
-  box-shadow: inset 0 0 0 1px var(--paper), inset 0 0 0 2px var(--amber-bright);
+  box-shadow: inset 0 0 0 1px var(--paper), inset 0 0 0 2px var(--key);
 }
 
 .frame-title {
@@ -688,11 +1447,13 @@ h3 {
 }
 
 .frame-arrow {
+  width: 1.2rem;
+  height: 1.2rem;
   margin-top: auto;
   align-self: flex-end;
-  color: var(--amber);
-  font-family: var(--font-mono);
-  font-size: 1.1rem;
+  fill: none;
+  stroke: var(--tone);
+  stroke-width: 1.5;
   transition: transform 180ms ease;
 }
 
@@ -705,9 +1466,10 @@ h3 {
    ------------------------------------------------------------ */
 
 .site-footer {
+  position: relative;
+  z-index: 41; /* closes over the rail's foot */
   margin-top: 4rem;
-  background: var(--ink);
-  border-top: 3px solid var(--amber-bright);
+  background: var(--band);
 }
 
 .site-footer .wrap {
@@ -720,23 +1482,23 @@ h3 {
 
 .site-footer p {
   margin: 0;
-  color: rgba(243, 239, 228, 0.72);
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
+  color: var(--on-band-2);
+  font-size: 0.78rem;
 }
 
 .site-footer a {
-  color: var(--amber-bright);
+  color: var(--on-band);
 }
 
 .site-footer a:hover {
-  color: #f0d99d;
+  color: var(--on-band-2);
   background: none;
 }
 
 /* ------------------------------------------------------------
-   Motion — one orchestrated moment: the sheet settles as the
-   film advances a frame. Guarded by reduced-motion.
+   Motion — state changes only, plus one authored moment: the
+   safelight spreads from the lamp when the room changes.
+   Guarded by reduced-motion.
    ------------------------------------------------------------ */
 
 @media (prefers-reduced-motion: no-preference) {
@@ -745,20 +1507,44 @@ h3 {
   }
 
   .title-copy > * {
-    animation: settle 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+    animation: settle 0.55s var(--ease-out) both;
   }
 
   .title-copy > :nth-child(2) {
     animation-delay: 0.07s;
   }
 
-  .meta-block {
-    animation: settle 0.55s 0.2s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  /* An answer comes up the way a print does in the developer. */
+  .faq[open] > p {
+    animation: develop 320ms var(--ease-out) both;
   }
 
-  .rail::before,
-  .rail::after {
-    animation: advance 0.9s cubic-bezier(0.3, 0.7, 0.2, 1) both;
+  .report-sheet[open] {
+    animation: sheet-drop 220ms var(--ease-out);
+  }
+
+  .report-sheet[open]::backdrop {
+    animation: sheet-dim 220ms var(--ease-out);
+  }
+
+  .faq::details-content {
+    block-size: 0;
+    overflow: clip;
+    transition: block-size 240ms var(--ease-out), content-visibility 240ms allow-discrete;
+  }
+
+  .faq[open]::details-content {
+    block-size: auto;
+  }
+
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+    mix-blend-mode: normal;
+  }
+
+  ::view-transition-new(root) {
+    animation: safelight 560ms var(--ease-out);
   }
 
   @keyframes settle {
@@ -768,9 +1554,33 @@ h3 {
     }
   }
 
-  @keyframes advance {
+  @keyframes sheet-drop {
     from {
-      background-position: center -16px;
+      opacity: 0;
+      transform: translateY(-12px);
+    }
+  }
+
+  @keyframes sheet-dim {
+    from {
+      opacity: 0;
+    }
+  }
+
+  @keyframes develop {
+    from {
+      opacity: 0;
+      filter: blur(3px);
+    }
+  }
+
+  @keyframes safelight {
+    from {
+      clip-path: circle(0 at var(--lamp-x, 100%) var(--lamp-y, 0));
+    }
+
+    to {
+      clip-path: circle(var(--lamp-r, 150vmax) at var(--lamp-x, 100%) var(--lamp-y, 0));
     }
   }
 }
@@ -796,6 +1606,11 @@ h3 {
 @media (max-width: 860px) {
   :root {
     --page-lift: 0px;
+    --gutter: 1.5rem;
+  }
+
+  html {
+    scroll-padding-top: 4rem;
   }
 
   /* The rail becomes a short horizontal strip above the sheet. */
@@ -811,11 +1626,8 @@ h3 {
     left: 0;
     width: auto;
     height: 12px;
-    background-image: var(--perf-h);
-    background-size: 16px 12px;
-    background-repeat: repeat-x;
-    background-position: left center;
-    animation: none;
+    -webkit-mask: var(--perf-h) left center / 18px 12px space no-repeat;
+    mask: var(--perf-h) left center / 18px 12px space no-repeat;
   }
 
   .rail::before {
@@ -828,32 +1640,66 @@ h3 {
     bottom: 2px;
   }
 
+  .rail-frame {
+    display: none;
+  }
+
+  /* The section index takes over the sticky slot, so the header scrolls away. */
+  .site-header {
+    position: static;
+  }
+
   .title-block {
     grid-template-columns: 1fr;
     align-items: start;
-    gap: 2rem;
+    gap: 1.6rem;
+    padding-bottom: 2rem;
   }
 
   .content-layout {
-    grid-template-columns: 1fr;
-    gap: 2.2rem;
-    padding-top: 2.4rem;
+    display: block;
+    padding-top: 1.2rem;
   }
 
   .section-index {
-    position: static;
-    padding-bottom: 1.4rem;
+    position: sticky;
+    top: 0;
+    margin-inline: calc(var(--gutter) * -1);
+    margin-bottom: 2rem;
+    overflow-x: auto;
+    background: var(--paper);
     border-bottom: 1px solid var(--rule-strong);
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .section-index::-webkit-scrollbar {
+    display: none;
   }
 
   .section-index ol {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    column-gap: 1.5rem;
+    display: flex;
+    gap: 1.3rem;
+    width: max-content;
+    padding-inline: var(--gutter);
+  }
+
+  .section-index a {
+    padding: 0.8rem 0;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+  }
+
+  .section-index a[aria-current="location"] {
+    box-shadow: none;
   }
 }
 
 @media (max-width: 560px) {
+  :root {
+    --gutter: 0.9rem;
+  }
+
   .wrap {
     width: min(100% - 1.8rem, 66rem);
   }
@@ -863,17 +1709,87 @@ h3 {
   }
 
   .brand-name {
-    font-size: 0.7rem;
+    font-size: 0.74rem;
+  }
+
+  .site-tools {
+    gap: 0.7rem;
   }
 
   .site-nav {
-    gap: 1rem;
-    font-size: 0.66rem;
+    gap: 0.9rem;
+    font-size: 0.8rem;
+    letter-spacing: 0.02em;
   }
 
-  .data-row {
+  .theme-toggle {
+    justify-content: center;
+    width: 2.4rem;
+    min-height: 2.4rem;
+    padding: 0;
+  }
+
+  .theme-label {
+    display: none;
+  }
+
+  .strip {
+    padding-inline: 1rem;
+  }
+
+  .strip::before,
+  .strip::after {
+    margin-inline: -0.6rem;
+  }
+
+  .finder-field input {
+    font-size: 1.06rem;
+  }
+
+  /* Topics scroll sideways so the first screen reaches the answers. */
+  .finder .chips {
+    flex-wrap: nowrap;
+    margin-inline: -1rem;
+    padding-inline: 1rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .finder .chips::-webkit-scrollbar {
+    display: none;
+  }
+
+  .data-row,
+  .field {
     grid-template-columns: 1fr;
     gap: 0.3rem;
+  }
+
+  .field input[type="text"],
+  .field textarea,
+  .field-hint,
+  .field-error {
+    grid-column: 1;
+  }
+
+  /* On a phone the sheet takes the whole screen, with its actions always in reach. */
+  .report-sheet {
+    width: 100vw;
+    max-width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    margin: 0;
+    border: 0;
+  }
+
+  fieldset.field > legend {
+    float: none;
+    width: auto;
+    margin: 0 0 0.45rem;
+  }
+
+  .lane {
+    margin-top: 0;
   }
 
   .faq p {
@@ -887,19 +1803,18 @@ h3 {
   /* The datasheet folds to two columns so the first screen reaches the text. */
   .meta-block dl {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    column-gap: 1.2rem;
+    grid-template-columns: max-content minmax(0, 1fr);
+    column-gap: 1.6rem;
   }
 
   .meta-block dl > div {
     display: block;
-  }
-
-  .meta-block dl > div:nth-last-child(2) {
     border-bottom: 0;
   }
 
   .meta-block dd {
+    font-size: 0.74rem;
+    letter-spacing: 0;
     text-align: left;
   }
 
@@ -907,6 +1822,12 @@ h3 {
     flex-direction: column;
     align-items: flex-start;
     gap: 0.5rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .brand-name em {
+    display: none;
   }
 }
 
@@ -926,9 +1847,17 @@ h3 {
   .site-header,
   .section-index,
   .site-footer,
-  .callout::before,
-  .callout::after {
+  .needs-js,
+  .report-sheet,
+  .finder,
+  .strip::before,
+  .strip::after {
     display: none;
+  }
+
+  /* A printed policy always shows every row, whatever filter was on. */
+  .data-row[hidden] {
+    display: grid;
   }
 
   .page {
@@ -943,8 +1872,7 @@ h3 {
     max-width: none;
   }
 
-  .title-copy > *,
-  .meta-block {
+  .title-copy > * {
     animation: none;
   }
 
@@ -953,12 +1881,15 @@ h3 {
   }
 
   /* Printers drop backgrounds, so dark-ground text returns to ink. */
-  .callout p,
+  .strip,
+  .strip-statement,
+  .absent p,
+  .absent li,
   .email-chip a {
     color: var(--ink);
   }
 
-  .callout {
+  .strip {
     padding: 0.9rem 1.2rem;
     border: 1px solid var(--rule-strong);
   }

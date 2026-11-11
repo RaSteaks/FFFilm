@@ -333,17 +333,6 @@ struct FilmTests {
         #expect(store.project.valid)
     }
 
-    @Test @MainActor func singleFrameDrawingReturnsToSelect() {
-        let store = FilmStore()
-        let crop = FilmRect(x: 0.1, y: 0.2, width: 0.6, height: 0.25)
-        #expect(!store.batchDrawing)
-        store.drawMode = 1
-        store.drawFrame(crop)
-        #expect(store.project.frames.map(\.crop) == [crop])
-        #expect(store.frame?.id == store.project.frames.last?.id)
-        #expect(store.drawMode == 0)
-    }
-
     @Test @MainActor func batchFrameDrawingKeepsToolAndSeparateHistory() {
         let store = FilmStore()
         let first = FilmRect(x: 0.1, y: 0.1, width: 0.7, height: 0.2)
@@ -372,7 +361,7 @@ struct FilmTests {
         store.batchDrawing = false
         store.drawFrame(third)
         #expect(store.project.frames.map(\.crop) == [first, second, third])
-        #expect(store.drawMode == 0)
+        #expect(store.drawMode == 0 && store.frame?.crop == third)
         store.undo()
         #expect(store.project.frames.map(\.crop) == [first, second])
     }

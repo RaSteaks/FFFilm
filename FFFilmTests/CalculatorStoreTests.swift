@@ -101,22 +101,30 @@ struct CalculatorStoreTests {
         #expect(store.shutterSettings.angle == 90)
     }
 
-    @Test("Reset updates the default camera memory and can be undone in one step")
-    func resetUndo() throws {
+    @Test("Reset preserves preferences and camera memory while undo stays observable")
+    func resetUndo() async throws {
         let suite = "FFFilm.ResetUndo.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
 
+        defaults.set(StorageUnit.binary.rawValue, forKey: StorageUnit.preferenceKey)
         let store = CalculatorStore(defaults: defaults)
         store.selectMedia("1tb")
         store.setShootHours(4.5)
         let before = store.settings
         #expect(store.pinCurrentSetup() == .added)
-        store.resetActiveView()
+        await confirmation("Reset enables undo") { changed in
+            withObservationTracking { _ = store.resetUndoAvailable } onChange: { changed() }
+            store.resetActiveView()
+        }
+        #expect(defaults.string(forKey: StorageUnit.preferenceKey) == StorageUnit.binary.rawValue)
         #expect(store.resetUndoAvailable)
         #expect(store.settings == CalculatorEngine(catalog: store.catalog).normalized(.default))
         #expect(store.pinnedSetups.count == 1)
-        store.undoReset()
+        await confirmation("Undo consumes the snapshot") { changed in
+            withObservationTracking { _ = store.resetUndoAvailable } onChange: { changed() }
+            store.undoReset()
+        }
         #expect(store.settings == before)
         #expect(!store.resetUndoAvailable)
 
@@ -130,27 +138,6 @@ struct CalculatorStoreTests {
         #expect(relaunched.settings.codecId == before.codecId)
         #expect(relaunched.settings.sensorFps == before.sensorFps)
         #expect(relaunched.settings.sensorOverdrive == before.sensorOverdrive)
-    }
-
-    @Test("Undo availability remains observable when reset is created, consumed or invalidated")
-    func resetUndoObservation() async throws {
-        let suite = "FFFilm.ResetObservation.\(UUID())"
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
-        let store = CalculatorStore(defaults: defaults)
-        store.setShootHours(4.5)
-
-        await confirmation("Reset enables undo") { changed in
-            withObservationTracking { _ = store.resetUndoAvailable } onChange: { changed() }
-            store.resetActiveView()
-        }
-        #expect(store.resetUndoAvailable)
-        await confirmation("Undo consumes the snapshot") { changed in
-            withObservationTracking { _ = store.resetUndoAvailable } onChange: { changed() }
-            store.undoReset()
-        }
-        #expect(!store.resetUndoAvailable)
-        #expect(store.settings.shootHours == 4.5)
 
         store.resetActiveView()
         await confirmation("A new edit invalidates undo") { changed in
@@ -242,21 +229,10 @@ struct CalculatorStoreTests {
         #expect(store.calculation.dayTotalGb == capacity * 2)
         let capacitySummary = store.readableRecordingSummary(storageUnit: .decimal)
         #expect(capacitySummary.contains("7.00 h"))
+        #expect(capacitySummary.contains("GB/h") && capacitySummary.contains("Mb/s") && capacitySummary.contains("fps"))
+        #expect(store.readableRecordingSummary(storageUnit: .binary).contains("GiB/h"))
         #expect(!capacitySummary.contains("Media:"))
         #expect(!capacitySummary.contains("存储介质："))
     }
 
-    @Test("Readable summaries include the storage plan in both unit systems")
-    func readableSummaries() {
-        let store = CalculatorStore()
-        let decimal = store.readableRecordingSummary(storageUnit: .decimal)
-        let binary = store.readableRecordingSummary(storageUnit: .binary)
-        // The host system language decides the summary language, so assert on
-        // language-invariant fragments: unit symbols, fps, Mb/s and numbers.
-        #expect(decimal.contains("GB/h"))
-        #expect(binary.contains("GiB/h"))
-        #expect(decimal.contains("Mb/s"))
-        #expect(decimal.contains("fps"))
-        #expect(decimal.contains("8.00"))  // default 8-hour plan
-    }
 }

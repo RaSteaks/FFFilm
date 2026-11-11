@@ -102,3 +102,7 @@ script/build_and_run.sh --verify   # confirm the process is running
 script/build_and_run.sh --debug    # launch under lldb
 script/build_and_run.sh --logs     # stream the unified log
 ```
+
+## License
+
+This project is licensed under the GNU Affero General Public License v3.0 only (SPDX: `AGPL-3.0-only`). See [LICENSE](LICENSE) for the full terms.

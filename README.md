@@ -101,3 +101,7 @@ script/build_and_run.sh --verify   # 确认进程正在运行
 script/build_and_run.sh --debug    # 在 lldb 下启动
 script/build_and_run.sh --logs     # 流式查看统一日志
 ```
+
+## 许可证
+
+本项目采用 GNU Affero General Public License v3.0（仅第 3 版，SPDX：`AGPL-3.0-only`）授权。完整条款见 [LICENSE](LICENSE)。

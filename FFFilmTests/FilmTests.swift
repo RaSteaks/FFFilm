@@ -210,7 +210,7 @@ struct FilmTests {
     }
 
     @Test @MainActor func windowGuardRetainsAndForwardsSheetDelegate() throws {
-        let coordinator = FilmWindowGuard.Coordinator(store: FilmStore())
+        let coordinator = FilmWindowGuard.Coordinator(store: FilmBatchStore())
         weak var original: FilmSheetDelegateProbe?
         autoreleasepool {
             let delegate = FilmSheetDelegateProbe()
@@ -233,6 +233,59 @@ struct FilmTests {
         #expect(window.delegate === retained)
         #expect(coordinator.original == nil)
         #expect(retained.closedWindows == 1)
+    }
+
+    @Test(arguments: [false, true]) @MainActor
+    func switchingDuringDetectionReleasesInactiveSource(cancel: Bool) async throws {
+        let directory = try FilmTestFiles.directory().appendingPathComponent("FilmBatchSwitch-\(UUID())")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let extent = CGRect(x: 0, y: 0, width: 600, height: 32)
+        var scan = CIImage(color: CIColor(red: 0.3, green: 0.3, blue: 0.3)).cropped(to: extent)
+        for x in [196, 396] {
+            scan = CIImage(color: .white).cropped(to: CGRect(x: x, y: 0, width: 8, height: 32)).composited(over: scan)
+        }
+        let urls = ["a.tiff", "b.tiff"].map { directory.appendingPathComponent($0) }
+        for url in urls {
+            try CIContext().writeTIFFRepresentation(of: scan, to: url, format: .RGBA16,
+                colorSpace: CGColorSpace(name: CGColorSpace.sRGB)!)
+        }
+        let workspace = FilmBatchStore()
+        defer { workspace.closeSources() }
+        workspace.autoDetect = false
+        try #require(workspace.appendScans(urls))
+        for _ in 0..<500 where workspace.busy { try await Task.sleep(for: .milliseconds(10)) }
+        try #require(!workspace.busy && workspace.items.allSatisfy(\.initialized))
+        let first = workspace.items[0], second = workspace.items[1]
+        let source = await first.store.renderer.sourceIdentifier
+        first.store.zoom = 3
+        let original = first.store.project
+
+        // Switch while the real manual detector owns the source, outside the batch queue.
+        first.store.detect()
+        try #require(first.store.busy)
+        workspace.select(second)
+        if cancel { first.store.cancelDetection() }
+        for _ in 0..<500 {
+            let currentSource = await first.store.renderer.sourceIdentifier
+            if !workspace.busy && first.store.sourceSuspended && currentSource != source { break }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        try #require(!workspace.busy && first.store.sourceSuspended)
+        #expect(workspace.activeID == second.id && !second.store.sourceSuspended)
+        await #expect(throws: FilmFailure.self) {
+            try await first.store.renderer.thumbnail(frame: FilmFrame(name: "probe"))
+        }
+        if cancel { #expect(first.store.project == original) }
+        else { #expect(first.store.project.frames.count == 3 && !first.store.undoStack.isEmpty) }
+
+        let project = first.store.project, history = first.store.undoStack
+        workspace.select(first)
+        for _ in 0..<500 where workspace.busy { try await Task.sleep(for: .milliseconds(10)) }
+        try #require(!workspace.busy && !first.store.sourceSuspended && first.store.error == nil)
+        #expect(first.store.project == project && first.store.undoStack == history && first.store.zoom == 3)
+        #expect(second.store.sourceSuspended)
+        _ = try await first.store.renderer.thumbnail(frame: first.store.project.frames[0])
     }
 
     @Test func rotatedJPEGFlattensTransparentCornersAndThumbnailRotates() async throws {

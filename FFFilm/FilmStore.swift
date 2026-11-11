@@ -16,14 +16,19 @@ import UniformTypeIdentifiers
         }
     }
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        let documents = Self.stores.allObjects.filter { $0.window != nil }
-        guard !documents.contains(where: { $0.busy || $0.exporting || $0.hasPresentedSheet }) else { NSSound.beep(); return .terminateCancel }
-        guard documents.contains(where: \.dirty) else { return .terminateNow }
+        let batches = FilmBatchStore.workspaces.allObjects.filter { $0.window != nil }
+        let documents = Self.stores.allObjects.filter { $0.window != nil && $0.workspace == nil }
+        guard !batches.contains(where: { $0.busy || $0.blocksDocuments }),
+              !documents.contains(where: { $0.busy || $0.exporting || $0.hasPresentedSheet }) else { NSSound.beep(); return .terminateCancel }
+        guard batches.contains(where: \.dirty) || documents.contains(where: \.dirty) else { return .terminateNow }
         guard !checkingQuit else { return .terminateCancel }
         checkingQuit = true
+        let decisions: [(@escaping (Bool) -> Void) -> Void] = batches.map { batch in { batch.requestDiscard($0) } }
+            + documents.map { document in { document.requestDiscard($0) } }
         func check(_ index: Int) {
-            guard index < documents.count else { checkingQuit = false; sender.reply(toApplicationShouldTerminate: true); return }
-            documents[index].requestDiscard { accepted in
+            guard index < decisions.count else { checkingQuit = false; sender.reply(toApplicationShouldTerminate: true); return }
+            let decide = decisions[index]
+            decide { accepted in
                 if accepted { check(index + 1) }
                 else { self.checkingQuit = false; sender.reply(toApplicationShouldTerminate: false) }
             }
@@ -35,7 +40,15 @@ import UniformTypeIdentifiers
 
 @MainActor @Observable
 final class FilmStore {
-    var project = FilmProject()
+    var project = FilmProject() {
+        didSet { if project != oldValue { reviewed = false } }
+    }
+    var reviewed = false
+    var batchQueued = false
+    var sourceSuspended = false
+    @ObservationIgnored weak var workspace: FilmBatchStore?
+    @ObservationIgnored private(set) var importTask: Task<Void, Never>?
+    @ObservationIgnored private var suspensionTask: Task<Void, Never>?
     var selected: UUID?
     var selection: Set<UUID> = []
     var image: CGImage?
@@ -53,7 +66,7 @@ final class FilmStore {
     var drawMode = 0
     var batchDrawing = false
     var busy = false
-    var exporting: Bool { exportController.isRunning }
+    var exporting: Bool { exportController.isRunning || workspace?.isExporting(self) == true }
     let exportController: FilmExportController
     var detecting = false
     private(set) var detectionOptions = FilmDetectionOptions()
@@ -99,9 +112,9 @@ final class FilmStore {
     @ObservationIgnored private var displayedFrameID: UUID?
     @ObservationIgnored private var editStart: FilmProject?
     var dirty: Bool { project != savedProject }
-    var hasPresentedSheet: Bool { presentingSheet || exportController.blocksDocument }
-    var canImportScan: Bool { !busy && !exporting && !hasPresentedSheet }
-    var canZoom: Bool { info != nil && !busy && !hasPresentedSheet }
+    var hasPresentedSheet: Bool { presentingSheet || exportController.blocksDocument || workspace?.blocksDocuments == true }
+    var canImportScan: Bool { !busy && !batchQueued && !sourceSuspended && !exporting && !hasPresentedSheet }
+    var canZoom: Bool { info != nil && !sourceSuspended && !busy && !hasPresentedSheet }
     var canvasCenter: CGPoint { showStrip ? stripCenter : frameCenter }
     var canvasSize: CGSize {
         guard let info else { return .zero }
@@ -168,8 +181,9 @@ final class FilmStore {
         redoStack.removeAll()
     }
     func change(_ body: (inout FilmProject) -> Void) {
-        // Detection commits while busy; exports and modal editing still block changes.
-        guard !exporting, !hasPresentedSheet else { return }
+        // Detection can finish while the batch opens an unrelated import panel.
+        // User editing remains gated by the view; export snapshots stay immutable.
+        guard !exporting, !hasPresentedSheet || detecting else { return }
         let previous = project
         body(&project)
         guard project.valid else { project = previous; return }
@@ -204,7 +218,7 @@ final class FilmStore {
         renderTask?.cancel(); renderRevision += 1
         let revision = renderRevision, snapshot = project, target = showStrip ? nil : frame
         let wanted = displayLongSide
-        guard info != nil, !busy else { return }
+        guard info != nil, !busy, !sourceSuspended else { return }
         // Import and unchanged view state already have a completed image to display.
         if image != nil, displayedProject == snapshot, displayedFrameID == target?.id,
            wanted == nil || displayedLimit + 1 >= wanted! { return }
@@ -268,6 +282,7 @@ final class FilmStore {
     }
 
     func openScan() {
+        if let workspace { workspace.openScans(); return }
         guard !busy, !exporting, !hasPresentedSheet else { return }
         requestDiscard { accepted in
             guard accepted else { return }
@@ -284,6 +299,7 @@ final class FilmStore {
 
     /// Finder drops use the same discard/profile/import workflow as the open panel.
     @discardableResult func importDroppedScans(_ urls: [URL]) -> Bool {
+        if let workspace { return workspace.appendScans(urls) }
         guard canImportScan else { return false }
         guard urls.count == 1 else {
             notice = filmText("请一次拖入一个扫描文件。", "Drop one scan file at a time.")
@@ -309,8 +325,8 @@ final class FilmStore {
         return true
     }
 
-    func loadSource(_ url: URL, restoring: FilmProject?) {
-        guard !exporting, !hasPresentedSheet else { return }
+    func loadSource(_ url: URL, restoring: FilmProject?, batchImport: Bool = false) {
+        guard !exporting, !hasPresentedSheet || batchImport else { return }
         // A new renderer source invalidates every pending/failed export from the
         // previous scan, even when the new import ultimately fails.
         exportController.clearJob()
@@ -319,7 +335,7 @@ final class FilmStore {
         renderTask?.cancel(); renderRevision += 1
         // Acquire before leaving the drop callback, then retain through probe/profile/load.
         let importAccess = url.startAccessingSecurityScopedResource()
-        Task {
+        importTask = Task {
             defer { if importAccess { url.stopAccessingSecurityScopedResource() } }
             do {
                 var next = restoring ?? FilmProject()
@@ -382,7 +398,7 @@ final class FilmStore {
                 exportController.resetSource(project: next, size: CGSize(width: decoded.width, height: decoded.height),
                                              identifier: await renderer.sourceIdentifier)
                 // A newly imported scan is an unsaved document even before geometry edits.
-                project = next; info = decoded; savedProject = restoring == nil ? FilmProject() : next
+                project = next; info = decoded; sourceSuspended = false; savedProject = restoring == nil ? FilmProject() : next
                 sourceGeneration += 1
                 automaticFrames.removeAll(); automaticSource = nil
                 detectionOptions = FilmDetectionOptions()
@@ -409,6 +425,48 @@ final class FilmStore {
         }
     }
 
+    /// Batch scheduling awaits the same detector used by the individual editor.
+    func detectAndWait() async {
+        runDetection(.automatic, inBatch: true)
+        await detectionTask?.value
+    }
+
+    /// Keep lightweight document state and overview while evicting full-resolution pixels.
+    func suspendSource() async {
+        guard !busy, !sourceSuspended, !exportController.isRunning else { return }
+        sourceSuspended = true
+        renderTask?.cancel(); renderRevision += 1
+        let task = Task {
+            // Inactive scans need only a list thumbnail, not an 1800px bitmap per scan.
+            overview = try? await renderer.thumbnail(frame: FilmFrame(name: ""))
+            image = overview; displayedProject = nil; displayedLimit = 0
+            await renderer.close()
+        }
+        suspensionTask = task
+        await task.value
+        suspensionTask = nil
+    }
+
+    func resumeSource() async {
+        // Selection can arrive during eviction; finish closing before reloading.
+        await suspensionTask?.value
+        guard sourceSuspended, !busy else { return }
+        busy = true
+        defer { busy = false; refresh() }
+        do {
+            let decoded = try await renderer.load(project.resolvedSourceURL, inputSpace: project.inputSpace, inputProfile: project.inputProfile)
+            info = decoded
+            overview = try await renderer.render(project: FilmProject(), frame: nil)
+            image = showStrip ? overview : nil
+            sourceGeneration += 1
+            // Eviction changes renderer identity, not the source or detection provenance.
+            if automaticSource != nil { automaticSource = await renderer.sourceIdentifier }
+            sourceSuspended = false; error = nil
+            exportController.resetSource(project: project, size: CGSize(width: decoded.width, height: decoded.height),
+                                         identifier: await renderer.sourceIdentifier)
+        } catch { self.error = error.localizedDescription }
+    }
+
     func detect() { runDetection(.automatic) }
     func sampleFilmBase(at point: CGPoint) { runDetection(.sample(point)) }
     func clearFilmBase() { runDetection(.clearBase) }
@@ -427,8 +485,8 @@ final class FilmStore {
         case automatic, sample(CGPoint), clearBase, calibrate(FilmRect, Double)
     }
 
-    private func runDetection(_ action: DetectionAction) {
-        guard !busy, !exporting, !hasPresentedSheet else { return }
+    private func runDetection(_ action: DetectionAction, inBatch: Bool = false) {
+        guard !busy, !exporting, !hasPresentedSheet || inBatch else { return }
         busy = true; detecting = true; detectionRevision += 1
         let revision = detectionRevision, geometry = frameRevision, generation = sourceGeneration
         progress = filmText("正在分析画面边界…", "Analyzing frame boundaries…")
@@ -436,6 +494,14 @@ final class FilmStore {
             defer {
                 if revision == detectionRevision {
                     busy = false; detecting = false; progress = ""; detectionTask = nil; refresh()
+                    // Manual detection can finish after navigation skipped a busy source.
+                    // The batch worker owns its own eviction; recheck selection when this cleanup runs.
+                    if !inBatch, let workspace {
+                        Task {
+                            guard workspace.activeStore !== self else { return }
+                            await suspendSource()
+                        }
+                    }
                 }
             }
             do {
@@ -603,6 +669,7 @@ final class FilmStore {
         change { $0.frames.swapAt(index, index + offset) }
     }
     func saveProject(asNew: Bool = false, completion: @escaping (Bool) -> Void = { _ in }) {
+        if let workspace { workspace.save(asNew: asNew, completion: completion); return }
         guard !busy, !exporting, !hasPresentedSheet else { completion(false); return }
         // A failed import can leave unsaved project data without a decoded source.
         // Never let the close/quit confirmation treat that state as a successful save.
@@ -625,6 +692,7 @@ final class FilmStore {
         } catch { self.error = error.localizedDescription; return false }
     }
     func openProject() {
+        if let workspace { workspace.openProject(); return }
         guard !busy, !exporting, !hasPresentedSheet else { return }
         requestDiscard { accepted in
             guard accepted else { return }
@@ -659,6 +727,7 @@ final class FilmStore {
     }
 
     func openExportSettings() {
+        if let workspace { workspace.openExport(scope: .current); return }
         guard canImportScan, info != nil else { return }
         exportController.open(project: project, selected: selected, checked: selection)
     }

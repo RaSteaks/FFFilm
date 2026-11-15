@@ -1,5 +1,11 @@
 # FFFilm
 
+## 测试维护约定（2026-11-07）
+
+- 修复问题不自动新增测试文件或测试用例。先检查现有覆盖，优先复用、修改已有场景；仅为缺失的关键行为、独立失败路径或边界新增用例。
+- UI 测试保留控件接线和完整用户流程；数值组合留在单元测试，语言切换集中验证。避免重复启动、按语言重复业务流程、无基准性能测试，以及测试辅助工具自身的平凡检查。
+- 测试职责与运行说明见 README 的“构建、运行与测试”。保留图像精度、导出防覆盖/取消恢复、持久化与窗口隔离等关键覆盖；大 TIFF 压力测试继续按需启用。
+
 ## macOS 工作台切换器滑动选中（2026-11-01）
 
 - 原生 `.segmented` 由 NSSegmentedControl 绘制，选中态只能原地切换，因此 `MacWorkbenchToolbar.swift` 改用自绘 `WorkbenchSwitcher`：单个常驻滑块 + `offset`，弹簧 response 0.3、damping 1；未用 `matchedGeometryEffect`，避免条件视图交叉淡化。动画绑定 `selection` 值，⌘1/2/3 同样滑动，工作台内容不被带动。
@@ -183,6 +189,7 @@
 - Support-site copyright attribution names 朱煜天 as the rights holder; FFFilm remains the product name in all three page footers.
 - App Info.plists use `NSHumanReadableCopyright = © 2026 朱煜天`: the macOS source plist declares it, and both Xcode build configurations inject the field into built apps on each platform.
 - Publish the static `support/` directory as the GitHub Pages artifact through `.github/workflows/pages.yml`; its `index.html`, `support.html`, and `privacy.html` become the site root and the two App Store Connect URLs. Trigger deployment on support-site or workflow changes, with a manual dispatch option.
+- Support-site display type is a self-hosted Noto Serif SC subset in `support/fonts/` (SIL OFL, `OFL.txt` alongside), generated with `pyftsubset` from the characters in headings, frame titles and the privacy statement; iOS preinstalls no Chinese serif. Regenerate it when those strings gain new characters. Site icons in `support/icons/` are refreshed by `script/update_icons.sh`: browser tabs use the macOS slots, the Apple touch icon uses the opaque iOS fallback. Ledger lanes on `privacy.html` restate retention facts, so update them with the matching row. The report form stays off the page: it lives in a `<dialog>` sheet opened from the contact section, an unanswered search or `#report`, with a plain checklist as the no-script fallback. The only client-side storage is the `fffilm-theme` preference in `localStorage`; report-form text is never stored and reaches the developer only through the visitor's own mail app.
 - Export compliance: declare `ITSAppUsesNonExemptEncryption = NO` for the iOS generated Info.plist and macOS source plist while the app and linked dependencies use no non-exempt encryption. Reassess if encryption-related capabilities or dependencies are added.
 - Repository hygiene: exclude local `.codex/` configuration, macOS metadata, Xcode user state and build products through `.gitignore`. Keep shared Xcode schemes, tests, project documentation and icon design sources/explorations versionable.
 

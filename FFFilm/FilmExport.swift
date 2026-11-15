@@ -32,7 +32,8 @@ nonisolated struct FilmExportSettings: Equatable, Sendable {
 }
 
 nonisolated struct FilmExportItem: Identifiable, Equatable, Sendable {
-    var id: String { frame?.id.uuidString ?? "strip" }
+    var id: String { (sourceID?.uuidString ?? "") + (frame?.id.uuidString ?? "strip") }
+    var sourceID: UUID? = nil
     let frame: FilmFrame?
     let fileName: String
     let pixelSize: CGSize
@@ -44,10 +45,13 @@ nonisolated struct FilmExportPlan: Sendable {
     let project: FilmProject
     let directory: URL?
     let items: [FilmExportItem]
+    var sources: [UUID: FilmExportSource] = [:]
+    var messages: [String] = []
     var outputCount: Int { items.filter { !$0.skipped }.count }
 
     @MainActor static func make(project: FilmProject, selected: UUID?, checked: Set<UUID>,
-                                sourceSize: CGSize, settings: FilmExportSettings, directory: URL?) throws -> Self {
+                                sourceSize: CGSize, settings: FilmExportSettings, directory: URL?,
+                                reservedNames: Set<String> = [], requireExistingDirectory: Bool = true) throws -> Self {
         let prefix = settings.prefix.trimmingCharacters(in: .whitespacesAndNewlines)
         try validateComponent(prefix)
         guard (2...4).contains(settings.digits),
@@ -67,7 +71,7 @@ nonisolated struct FilmExportPlan: Sendable {
         }
         let access = directory?.startAccessingSecurityScopedResource() ?? false
         defer { if access { directory?.stopAccessingSecurityScopedResource() } }
-        if let directory {
+        if let directory, requireExistingDirectory {
             var isDirectory: ObjCBool = false
             guard FileManager.default.fileExists(atPath: directory.path, isDirectory: &isDirectory), isDirectory.boolValue else {
                 throw FilmFailure(message: filmText("导出文件夹不可用，请重新选择。", "The export folder is unavailable. Choose it again."))
@@ -75,7 +79,7 @@ nonisolated struct FilmExportPlan: Sendable {
         }
         // Reserve names within the batch as well as on disk. Case folding also keeps
         // the preview safe on the usual case-insensitive macOS destination volumes.
-        var reserved: Set<String> = []
+        var reserved = reservedNames
         var items: [FilmExportItem] = []
         for (index, frame) in frames.enumerated() {
             var token = frame.map {
@@ -113,8 +117,8 @@ nonisolated struct FilmExportPlan: Sendable {
         return Self(project: snapshot, directory: directory, items: items)
     }
 
-    @MainActor private static func validateComponent(_ value: String) throws {
-        guard !value.isEmpty, value.rangeOfCharacter(from: .controlCharacters) == nil,
+    @MainActor static func validateComponent(_ value: String) throws {
+        guard !value.isEmpty, value != ".", value != "..", value.utf8.count <= 255, value.rangeOfCharacter(from: .controlCharacters) == nil,
               !value.contains("/"), !value.contains("\\"), !value.contains(":") else {
             throw FilmFailure(message: filmText("前缀和帧名称不能为空，且不能包含路径分隔符、冒号或控制字符。",
                                                "Prefixes and frame names must be nonempty and cannot contain path separators, colons or control characters."))
@@ -138,8 +142,10 @@ nonisolated struct FilmExportJob: Identifiable, Sendable {
     let sourceIdentifier: UUID
     let directory: URL
     var results: [FilmExportResult]
+    var sources: [UUID: FilmExportSource] = [:]
     var phase = Phase.running
     var activeFileName: String?
+    var activeSourceID: UUID?
     var completedCount: Int { results.filter { $0.status == .succeeded }.count }
     var skippedCount: Int { results.filter { $0.status == .skipped }.count }
     var failedCount: Int { results.filter { if case .failed = $0.status { true } else { false } }.count }
@@ -149,4 +155,76 @@ nonisolated struct FilmExportJob: Identifiable, Sendable {
         results.filter { $0.status == .succeeded }.map { directory.appendingPathComponent($0.item.fileName) }
     }
 }
+
+/// The source and geometry are captured at confirmation, independent of editor navigation.
+nonisolated struct FilmExportSource: Sendable {
+    let id: UUID
+    var project: FilmProject
+    let selected: UUID?
+    let checked: Set<UUID>
+    let size: CGSize
+    let reviewed: Bool
+}
+
+extension FilmExportPlan {
+    @MainActor static func makeBatch(sources: [FilmExportSource], settings: FilmExportSettings,
+                                     organization: FilmFileOrganization, useSourceNames: Bool,
+                                     directory: URL?) throws -> Self {
+        let access = directory?.startAccessingSecurityScopedResource() ?? false
+        defer { if access { directory?.stopAccessingSecurityScopedResource() } }
+        if let directory {
+            var isDirectory: ObjCBool = false
+            guard FileManager.default.fileExists(atPath: directory.path, isDirectory: &isDirectory), isDirectory.boolValue else {
+                throw FilmFailure(message: filmText("导出文件夹不可用，请重新选择。", "The export folder is unavailable. Choose it again."))
+            }
+        }
+        var items: [FilmExportItem] = []
+        var snapshots: [UUID: FilmExportSource] = [:]
+        var messages: [String] = []
+        var folders: Set<String> = []
+        var reserved: [String: Set<String>] = [:]
+        for source in sources {
+            let name = URL(fileURLWithPath: source.project.sourcePath).deletingPathExtension().lastPathComponent
+            if settings.scope == .checked && source.checked.isEmpty || settings.scope != .strip && source.project.frames.isEmpty {
+                messages.append(name + ": " + filmText("没有符合范围的帧，跳过。", "No frames in this range; skipped."))
+                continue
+            }
+            var folder = ""
+            if organization == .folders {
+                try validateComponent(name)
+                folder = name
+                var suffix = 1
+                // Reuse an existing folder, but separate same-named sources within this batch.
+                // A regular file at a folder path must never be replaced.
+                func unavailable(_ value: String) -> Bool {
+                    if folders.contains(value.precomposedStringWithCanonicalMapping.lowercased()) { return true }
+                    guard let directory else { return false }
+                    var isDirectory: ObjCBool = false
+                    let exists = FileManager.default.fileExists(atPath: directory.appendingPathComponent(value).path, isDirectory: &isDirectory)
+                    return exists && !isDirectory.boolValue
+                }
+                while unavailable(folder) { suffix += 1; folder = "\(name) (\(suffix))" }
+                try validateComponent(folder)
+                folders.insert(folder.precomposedStringWithCanonicalMapping.lowercased())
+            }
+            var options = settings
+            if useSourceNames { options.prefix = name }
+            let destination = folder.isEmpty ? directory : directory?.appendingPathComponent(folder, isDirectory: true)
+            let plan = try make(project: source.project, selected: source.selected, checked: source.checked,
+                                sourceSize: source.size, settings: options, directory: destination,
+                                reservedNames: reserved[folder, default: []], requireExistingDirectory: false)
+            var snapshot = source; snapshot.project = plan.project; snapshots[source.id] = snapshot
+            for item in plan.items {
+                if !item.skipped { reserved[folder, default: []].insert(item.fileName.precomposedStringWithCanonicalMapping.lowercased()) }
+                items.append(FilmExportItem(sourceID: source.id, frame: item.frame,
+                                            fileName: folder.isEmpty ? item.fileName : folder + "/" + item.fileName,
+                                            pixelSize: item.pixelSize, skipped: item.skipped))
+            }
+        }
+        let unchecked = sources.filter { !$0.reviewed }.count
+        if unchecked > 0 { messages.insert(String(format: filmText("%d 条胶片尚未检查。", "%d scans have not been reviewed."), unchecked), at: 0) }
+        return Self(project: FilmProject(), directory: directory, items: items, sources: snapshots, messages: messages.reduce(into: [String]()) { if !$0.contains($1) { $0.append($1) } })
+    }
+}
+
 #endif

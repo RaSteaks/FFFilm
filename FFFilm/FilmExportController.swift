@@ -6,6 +6,19 @@ import Observation
 /// draft, validation, destination access, immutable job and recovery actions.
 @MainActor @Observable
 final class FilmExportController {
+    @ObservationIgnored weak var workspace: FilmBatchStore?
+    var batchScope = FilmBatchScope.checked {
+        didSet {
+            if batchScope != .current && settings.scope == .current { settings.scope = .all }
+            if isPresented { refreshPreview() }
+        }
+    }
+    var organization = FilmFileOrganization.flat {
+        didSet { if isPresented { workspace?.organization = organization; refreshPreview() } }
+    }
+    var useSourceNames = true { didSet { if isPresented { refreshPreview() } } }
+    var isBatch: Bool { workspace != nil }
+    private var canRun: Bool { workspace.map { !$0.blocksDocuments && !$0.queueRunning && !$0.switching && !$0.items.contains { $0.store.busy } } ?? (document?.canImportScan == true) }
     var settings = FilmExportSettings() {
         didSet { if isPresented { refreshPreview() } }
     }
@@ -34,11 +47,28 @@ final class FilmExportController {
     var canStart: Bool {
         !isRunning && !isChoosingDirectory && directory != nil && (preview?.outputCount ?? 0) > 0
     }
-    var canResume: Bool { document?.canImportScan == true && (job?.pendingCount ?? 0) > 0 }
-    var canRetry: Bool { document?.canImportScan == true && (job?.failedCount ?? 0) > 0 }
-    var checkedCount: Int { context.frames.filter { checked.contains($0.id) }.count }
-    var currentName: String? { context.frames.first { $0.id == selected }?.name }
-    var sourceName: String { URL(fileURLWithPath: context.sourcePath).lastPathComponent }
+    var canResume: Bool { !isRunning && canRun && (job?.pendingCount ?? 0) > 0 }
+    var canRetry: Bool { !isRunning && canRun && (job?.failedCount ?? 0) > 0 }
+    var checkedCount: Int {
+        if let workspace { return workspace.candidates(batchScope).reduce(0) { $0 + $1.store.selection.count } }
+        return context.frames.filter { checked.contains($0.id) }.count
+    }
+    var currentName: String? { workspace?.activeStore.frame?.name ?? context.frames.first { $0.id == selected }?.name }
+    var sourceName: String {
+        if let workspace { return String(format: filmText("%d 条胶片", "%d scans"), workspace.candidates(batchScope).count) }
+        return URL(fileURLWithPath: context.sourcePath).lastPathComponent
+    }
+
+    func openBatch(scope: FilmBatchScope) {
+        guard let workspace, !isRunning, !blocksDocument else { return }
+        batchScope = scope
+        organization = workspace.organization ?? (workspace.candidates(scope).count > 1 ? .folders : .flat)
+        if settings.scope == nil {
+            settings.scope = scope == .current ? (workspace.activeStore.selection.isEmpty ? .current : .checked) : .all
+        }
+        isPresented = true
+        refreshPreview()
+    }
 
     init(renderer: FilmRenderer) { self.renderer = renderer }
 
@@ -103,8 +133,13 @@ final class FilmExportController {
 
     func refreshPreview() {
         do {
-            preview = try FilmExportPlan.make(project: context, selected: selected, checked: checked,
-                                              sourceSize: sourceSize, settings: settings, directory: directory)
+            if let workspace {
+                preview = try FilmExportPlan.makeBatch(sources: workspace.exportSources(scope: batchScope), settings: settings,
+                                                       organization: organization, useSourceNames: useSourceNames, directory: directory)
+            } else {
+                preview = try FilmExportPlan.make(project: context, selected: selected, checked: checked,
+                                                  sourceSize: sourceSize, settings: settings, directory: directory)
+            }
             validationMessage = nil
         } catch {
             preview = nil
@@ -119,6 +154,7 @@ final class FilmExportController {
         refreshPreview()
         guard canStart, let preview else { return }
         pendingPlan = preview
+        if let workspace { workspace.organization = organization }
         dismiss()
     }
 
@@ -156,12 +192,12 @@ final class FilmExportController {
     private func start(_ plan: FilmExportPlan) {
         guard !isRunning, let directory = plan.directory else { return }
         job = FilmExportJob(project: plan.project, sourceIdentifier: sourceIdentifier, directory: directory,
-                            results: plan.items.map { FilmExportResult(item: $0, status: $0.skipped ? .skipped : .pending) })
+                            results: plan.items.map { FilmExportResult(item: $0, status: $0.skipped ? .skipped : .pending) }, sources: plan.sources)
         run()
     }
 
     private func run(indexes requestedIndexes: [Int]? = nil) {
-        guard document?.canImportScan == true, let snapshot = job else { return }
+        guard canRun, let snapshot = job else { return }
         let indexes = requestedIndexes ?? snapshot.results.indices.filter { snapshot.results[$0].status == .pending }
         guard !indexes.isEmpty else { return }
         isRunning = true; cancellationRequested = false; job?.phase = .running
@@ -169,18 +205,37 @@ final class FilmExportController {
             let access = snapshot.directory.startAccessingSecurityScopedResource()
             defer {
                 if access { snapshot.directory.stopAccessingSecurityScopedResource() }
-                job?.activeFileName = nil
+                job?.activeFileName = nil; job?.activeSourceID = nil
                 isRunning = false; cancellationRequested = false; task = nil
             }
+            var loadedSource: UUID?
+            var sourceFailure: String?
             for index in indexes {
                 if Task.isCancelled { break }
                 let item = snapshot.results[index].item
-                job?.activeFileName = item.fileName
+                job?.activeFileName = item.fileName; job?.activeSourceID = item.sourceID
                 let url = snapshot.directory.appendingPathComponent(item.fileName)
-                let temporary = snapshot.directory.appendingPathComponent(".\(UUID().uuidString).\(url.pathExtension)")
+                let temporary = url.deletingLastPathComponent().appendingPathComponent(".\(UUID().uuidString).\(url.pathExtension)")
                 do {
-                    try await renderer.export(project: snapshot.project, frame: item.frame, to: temporary,
-                                              sourceIdentifier: snapshot.sourceIdentifier)
+                    let project: FilmProject
+                    let identifier: UUID
+                    if let sourceID = item.sourceID, let source = snapshot.sources[sourceID] {
+                        if loadedSource != sourceID {
+                            await renderer.close()
+                            loadedSource = sourceID; sourceFailure = nil
+                            do {
+                                _ = try await renderer.load(source.project.resolvedSourceURL, inputSpace: source.project.inputSpace,
+                                                            inputProfile: source.project.inputProfile)
+                            } catch { sourceFailure = error.localizedDescription }
+                        }
+                        if let sourceFailure { throw FilmFailure(message: sourceFailure) }
+                        project = source.project; identifier = await renderer.sourceIdentifier
+                        // Create only folders with actual pending output, never during preview.
+                        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+                    } else { project = snapshot.project; identifier = snapshot.sourceIdentifier }
+                    try Task.checkCancellation()
+                    try await renderer.export(project: project, frame: item.frame, to: temporary,
+                                              sourceIdentifier: identifier)
                     try Task.checkCancellation()
                     // Publishing never overwrites a destination that appeared after
                     // planning. Report the conflict and keep its original planned name.
@@ -192,6 +247,7 @@ final class FilmExportController {
                     job?.results[index].status = .failed(error.localizedDescription)
                 }
             }
+            if !snapshot.sources.isEmpty { await renderer.close() }
             job?.phase = Task.isCancelled ? .cancelled : .finished
         }
     }

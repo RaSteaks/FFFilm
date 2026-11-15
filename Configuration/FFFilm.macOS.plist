@@ -12,5 +12,12 @@
         <key>UTTypeTagSpecification</key><dict>
             <key>public.filename-extension</key><array><string>fffilm</string></array>
         </dict>
+    </dict><dict>
+        <key>UTTypeIdentifier</key><string>com.rasteaks.fffilm-batch</string>
+        <key>UTTypeDescription</key><string>FFFilm Batch</string>
+        <key>UTTypeConformsTo</key><array><string>public.json</string></array>
+        <key>UTTypeTagSpecification</key><dict>
+            <key>public.filename-extension</key><array><string>ffbatch</string></array>
+        </dict>
     </dict></array>
 </dict></plist>

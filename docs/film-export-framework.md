@@ -1,51 +1,62 @@
-# macOS 胶片导出功能框架
-
-本框架已接入 App。FilmExportViews.swift 暂用简单原生控件，供 Claude 调整布局、视觉和呈现层。命名、文件访问和任务状态保留在框架中。
+# macOS 胶片批次与导出框架
 
 ## 文件职责
 
 | 文件 | 职责 |
 | --- | --- |
-| FFFilm/FilmStore.swift | 文档、切片、当前帧、勾选、缩放和操作限制 |
-| FFFilm/FilmExport.swift | 类型化配置、命名计划、帧快照及结果 |
-| FFFilm/FilmExportController.swift | 草稿、校验、目录权限、面板生命周期和任务控制 |
-| FFFilm/FilmExportViews.swift | 可替换的 Sheet 和工作台状态界面 |
-| FFFilm/FilmRenderer.swift | 原尺寸 TIFF/JPEG 渲染；执行时核对源图身份 |
+| FFFilm/FilmBatchStore.swift | 窗口批次、扫描列表、后台识别队列、检查状态、批次保存和关闭保护 |
+| FFFilm/FilmBatchView.swift | 胶片导航、批量操作、共享导出面板与进度 |
+| FFFilm/FilmStore.swift | 单条胶片的切片、当前帧、勾选、撤销、缩放、采样和校准 |
+| FFFilm/FilmExport.swift | 类型化配置、跨胶片命名计划、不可变源图/帧快照及逐文件结果 |
+| FFFilm/FilmExportController.swift | 草稿、校验、目录权限、面板生命周期、执行及恢复 |
+| FFFilm/FilmExportViews.swift | 导出范围、文件组织、相对路径预览和工作台状态 |
+| FFFilm/FilmRenderer.swift | 原尺寸 TIFF/JPEG 渲染；执行时核对已加载的源图身份 |
 
-## 给 Claude 的 UI 接口
+## 批次与编辑
 
-- 从 FilmStore.openExportSettings() 进入。Sheet 绑定 exportController.isPresented，关闭请求调用 dismiss()；onDismiss **必须调用 didDismiss()**。
-- 控件绑定 controller.settings。预览和 validationMessage 自动刷新，不修改文档或裁切撤销记录。
-- preview.items 提供稳定帧 ID、文件名、预计像素尺寸和 skipped 标记。preview.outputCount 是本次实际输出数量。
-- chooseDirectory(parent:) 将文件夹选择器挂在导出 Sheet 上，传入 store.window。使用 directory、isChoosingDirectory、canStart 呈现目录和可用状态。
-- 返回调用 dismiss()；导出调用 confirm()。确认时重新校验并固定计划，等 Sheet 完成关闭后才执行。
-- 工作台读取 controller.job 和 isRunning。动作是 cancel()、resume()、retryFailed()、revealFiles()、clearJob()。
-- job 提供 completedCount、skippedCount、failedCount、pendingCount、processedCount、activeFileName、completedURLs 和逐文件 results。失败原因在 result.status 的 failed 消息中。
-- 保留 film-export-* 辅助功能标识。不要在 View 中设置任务标志、修改任务结果，或重新实现命名、冲突处理和文件访问。
+- ContentView 拥有 FilmBatchStore。FilmBatchItem 有稳定 ID 和独立 FilmStore，切换胶片不替换其他胶片的项目、撤销、视口、采样或校准。
+- 文件选择和 Finder 拖放支持多条 TIFF / Flextight FFF，追加到当前批次；重复路径跳过并提示，不要求放弃已有编辑。
+- 点击胶片行控制当前编辑对象；胶片复选框控制批量操作；FilmStore.selection 仍只代表该条胶片的帧勾选。
+- 识别队列默认随导入执行，可关闭自动框选。缺少 ICC 的文件进入“需指定输入配置”，不会弹出阻塞其他文件的配置对话框；只向用户选中的未标记文件应用明确指定的配置。
+- 队列顺序加载和识别，其他已加载胶片可继续编辑。取消在当前不可中断的解码结束后生效，检测支持协作取消。未开始的文件保留，可继续加载。
+- 非当前胶片释放完整解码及显示缓存，只保留列表缩略图、源尺寸和编辑数据。手动识别期间切走的胶片在识别结束或取消后重新检查当前选择并释放源图。重新激活等待缓存释放完成，再加载源图并恢复视口；检测校准和手工修改溯源保持在该条会话中。
+- 自动框选仅生成待检查结果。“标记已检查并下一条”推进人工检查；项目变化会重新标记待检查。胶片规格可批量设置，不跨源复制裁切坐标或片基采样。
+- 批次移除不删除源文件，可撤销最近一次移除。关闭/退出保护整个批次，其他工作台标签激活时也有效。
 
-## 状态与联动
+## 导出 UI 接口
 
-1. 当前帧由 FilmStore.selected 管理，批量勾选由 selection 管理，二者独立。导出不使用 targets 的当前帧回退行为。
-2. 首次打开有勾选则默认已勾选范围，否则默认当前帧。明确选择的范围再次打开时保留；已勾选范围变空时回退当前帧。
-3. Sheet 阻止文档修改、导入/保存及竞争面板。返回保留草稿、选择和视口，再次打开刷新切片数据。
-4. confirm() 固定源图身份、几何、格式、质量、目录、文件名和冲突决策。dismiss 到 didDismiss 之间仍阻止文档操作。
-5. 执行时暂停勾选和几何修改，允许查看帧和缩放。状态显示在工作台。
-6. 取消为协作式，可能需要等待当前编码结束；移除未发布的临时文件，保留完成文件，剩余项可继续。
-7. 失败重试只处理失败项，保持原始命名与参数，不重复导出成功项，也不会顺带继续其他取消项。
-8. 切换源图会清除旧任务恢复状态，即使新导入失败。渲染器另行拒绝源图身份不匹配。
+- 单条编辑器的 openExportSettings() 在批次中路由至共享控制器，胶片范围为当前。顶栏入口默认已选胶片。原有独立 FilmStore 导出接口继续可用。
+- Sheet 绑定 controller.isPresented，关闭调用 dismiss()；onDismiss 必须调用 didDismiss()。确认后固定计划，等 Sheet 关闭再执行。
+- batchScope 为当前 / 已选 / 全部胶片。settings.scope 为每条输出的当前帧 / 已勾选帧 / 全部帧 / 整条；当前帧只在当前胶片范围可用。
+- organization 为 folders / flat：按胶片建立子文件夹或直接输出到目标文件夹。未作选择时，单条默认直接输出，多条默认子文件夹；显式选择在工作区记忆并随批次保存。
+- useSourceNames 默认启用，使用各源文件名作前缀；也可改用统一前缀。连续编号在每条胶片的本次范围内从起始编号重新开始。
+- preview.items 的 fileName 是相对目标目录的路径，同时作为执行路径。sourceID 区分不同胶片里相同的帧 ID；preview.sources 持有项目、源文件访问书签和尺寸快照。
+- preview.messages 说明未检查胶片和没有符合范围帧的胶片。空帧选择不回退当前帧或全部帧，不为其创建目录。
+- chooseDirectory(parent:) 将文件夹选择器挂在导出 Sheet 上。canStart、validationMessage 和 outputCount 决定反馈与可用状态。
+- 工作台读取 job 和 isRunning，动作仍是 cancel()、resume()、retryFailed()、revealFiles()、clearJob()。Views 不直接修改任务状态。
 
-## 命名与记忆边界
+## 状态与恢复
 
-- 默认使用源文件名前缀和帧名称；ASCII 数字补足 2–4 位，文字保留；排序只改变导出顺序。
-- 连续编号仅作用于本次选择；整条输出使用 _strip。
-- 保留两份同时处理磁盘和批内重名，追加「 (2)」等后缀；可选择跳过。确认后新出现的同名文件不会被覆盖，对应项报告失败。
-- 空名称、路径分隔符、冒号、控制字符和超过 255 个 UTF-8 字节的文件名直接提示，不静默改写。
-- 草稿在当前源图/窗口会话中记忆。新源图重置命名，并读取旧项目的格式、质量字段作为初值；窗口保留上次目录。
-- 新草稿**不写入 .fffilm，不跨 App 重启恢复**，保持现有项目格式兼容。
-- 预览尺寸使用共享裁切/旋转几何，标为预计尺寸；最终像素边界和 ICC 由现有编码器负责。
+1. Sheet 阻止批次的竞争文件面板和编辑；识别队列完成后才可打开导出面板。
+2. confirm() 重新校验范围、目录和冲突，固定源图、裁切、格式、质量、输出路径和跳过决策。
+3. 批次导出使用独立渲染器，按胶片加载源图并逐文件编码。切换查看对象不影响任务，参与导出的胶片锁定编辑，未参与的胶片可编辑。
+4. 取消保留成功文件，删除尚未发布的临时文件；继续只处理 pending。失败重试只处理 failed，不重写成功项，也不顺带继续其他取消项。
+5. 某条源图加载失败会记录到该条各待输出文件，后续胶片继续执行。
+6. 进度包含文件数量、胶片完成数量和当前相对路径。胶片列表显示失败、未完成和已导出状态；导出后再次修改源图/裁切会提示重新导出。
+7. 返回编辑保留草稿；重新打开重新读取当前数据。切换胶片不清除任务，打开另一个批次会清除旧任务。任务不会跨 App 重启恢复。
 
-## 验证
+## 命名、文件访问和持久化
 
-按 README 的 xcodebuild test 命令运行，先指定 -only-testing:FFFilmTests/FilmExportTests，再运行完整 macOS 单元测试。
+- 子文件夹以源文件名（不含扩展名）命名，同批次的同名源分配不同目录后缀。可复用磁盘上的已有目录；同名普通文件不会被替换。
+- 平铺输出在整个批次内统一预留文件名。两种组织方式均检查磁盘已有文件，支持保留两份或跳过。确认后新出现的同名文件不覆盖，对应项报告失败。
+- 子文件夹只在执行存在待输出项时创建，不在预览时创建。文件先编码到同目录临时文件，再以不覆盖的移动操作发布。
+- 文件名、文件夹名禁止空值、路径分隔符、冒号、控制字符、`.` / `..` 和超过 255 字节的组件；不静默改写用户名称。
+- `.ffbatch` 使用独立版本化 JSON，保存源链接/只读书签、每条 FilmProject、胶片/帧勾选、当前胶片/帧、检查状态、已指定输入配置标志及文件组织选择。
+- `.fffilm` 旧项目作为单条批次读取，保存时写入新 `.ffbatch`，不覆盖原文件。撤销、视口、采样/校准、导出草稿/结果属于当前会话，不写入批次。
+- 源文件不可访问时，逐条提供“重新定位”；不修改或删除原始扫描。不能创建持久书签的卷保留当前会话访问，重开时可能需要定位。
 
-测试使用真实 TIFF 与生产渲染器，覆盖命名、重排、Unicode、冲突、取消、快照恢复、源图变更、操作限制和重试时成功文件不变。原有 FilmRefinementTests 的导出回归也已迁移到新接口。
+## 本次验证边界
+
+初始批次实现仅执行 macOS 应用 build、差异格式检查和配置静态检查。
+
+审查修复后，使用本地临时签名运行 FilmTests、FilmExportTests、FilmRefinementTests 和 FilmZoomTests，48 个测试通过。新增回归使用合成 TIFF，已确认修复前在正常结束和取消两条路径均失败；修复后验证非当前源图释放，以及切回后的裁切、撤销历史和缩放保留。窗口委托生命周期测试也已适配批次存储并通过。未运行 UI 测试或真实大扫描压力测试，完整批次 UI 流程仍需另行验证。

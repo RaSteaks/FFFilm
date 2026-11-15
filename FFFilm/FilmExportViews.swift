@@ -78,10 +78,25 @@ struct FilmExportSheet: View {
 
     private var settingsForm: some View {
         Form {
-            Section(filmText("范围", "Range")) {
+            if controller.isBatch {
+                Section(filmText("胶片范围", "Scans")) {
+                    Picker(filmText("胶片范围", "Scans"), selection: $controller.batchScope) {
+                        Text(filmText("当前胶片", "Current scan")).tag(FilmBatchScope.current)
+                        Text(filmText("已选胶片", "Checked scans")).tag(FilmBatchScope.checked)
+                        Text(filmText("全部胶片", "All scans")).tag(FilmBatchScope.all)
+                    }.accessibilityIdentifier("film-export-scans")
+                    Picker(filmText("文件组织", "File organization"), selection: $controller.organization) {
+                        Text(filmText("按胶片建立子文件夹", "One folder per scan")).tag(FilmFileOrganization.folders)
+                        Text(filmText("直接输出到目标文件夹", "Directly into destination")).tag(FilmFileOrganization.flat)
+                    }.accessibilityIdentifier("film-export-organization")
+                }
+            }
+            Section(filmText("每条输出范围", "Frames per scan")) {
                 Picker(filmText("范围", "Range"), selection: $controller.settings.scope) {
-                    scopeLabel(filmText("当前帧", "Current frame"), controller.currentName)
-                        .tag(Optional(FilmExportScope.current))
+                    if !controller.isBatch || controller.batchScope == .current {
+                        scopeLabel(filmText("当前帧", "Current frame"), controller.currentName)
+                            .tag(Optional(FilmExportScope.current))
+                    }
                     scopeLabel(filmText("已勾选", "Checked"),
                                String(format: filmText("%d 帧", "%d"), controller.checkedCount))
                         .tag(Optional(FilmExportScope.checked)).disabled(controller.checkedCount == 0)
@@ -131,8 +146,13 @@ struct FilmExportSheet: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             Section(filmText("命名", "Naming")) {
-                TextField(filmText("前缀", "Prefix"), text: $controller.settings.prefix)
-                    .accessibilityIdentifier("film-export-prefix")
+                if controller.isBatch {
+                    Toggle(filmText("使用各源文件名作为前缀", "Use each source filename as prefix"), isOn: $controller.useSourceNames)
+                }
+                if !controller.isBatch || !controller.useSourceNames {
+                    TextField(filmText("前缀", "Prefix"), text: $controller.settings.prefix)
+                        .accessibilityIdentifier("film-export-prefix")
+                }
                 if controller.settings.scope != .strip {
                     Picker(filmText("帧编号", "Frames"), selection: $controller.settings.naming) {
                         Text(filmText("帧名称", "Frame name")).tag(FilmExportNaming.frameName)
@@ -203,6 +223,9 @@ struct FilmExportSheet: View {
             if let preview = controller.preview {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 0) {
+                        ForEach(preview.messages, id: \.self) { message in
+                            Text(message).font(.caption).foregroundStyle(.secondary).padding(10)
+                        }
                         ForEach(preview.items) { item in
                             VStack(spacing: 0) {
                                 previewRow(item)
@@ -267,8 +290,10 @@ struct FilmExportSheet: View {
                     .transition(.opacity)
                     .accessibilityIdentifier("film-export-validation")
             } else if let preview = controller.preview, preview.outputCount == 0 {
-                Label(filmText("所选文件在该文件夹中均已存在，将全部跳过。",
-                               "Every selected file already exists in this folder and would be skipped."),
+                Label(controller.isBatch
+                      ? filmText("当前范围没有需要导出的文件，请检查帧勾选和同名文件策略。", "No output in this range. Check frame selection and the file conflict policy.")
+                      : filmText("所选文件在该文件夹中均已存在，将全部跳过。",
+                                 "Every selected file already exists in this folder and would be skipped."),
                       systemImage: "info.circle")
                     .font(.callout).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -470,9 +495,15 @@ struct FilmExportStatusView: View {
 
     private func title(_ job: FilmExportJob) -> String {
         if controller.isRunning {
-            return controller.cancellationRequested
-                ? filmText("正在取消…", "Cancelling…")
-                : String(format: filmText("正在导出 %d / %d", "Exporting %d of %d"), job.processedCount, job.results.count)
+            if controller.cancellationRequested { return filmText("正在取消…", "Cancelling…") }
+            let files = String(format: filmText("正在导出 %d / %d", "Exporting %d of %d"), job.processedCount, job.results.count)
+            if !job.sources.isEmpty {
+                let finished = job.sources.keys.filter { id in
+                    !job.results.contains { $0.item.sourceID == id && $0.status == .pending }
+                }.count
+                return files + " · " + String(format: filmText("胶片完成 %d / %d", "Scans completed %d / %d"), finished, job.sources.count)
+            }
+            return files
         }
         if job.pendingCount > 0 { return filmText("导出已取消", "Export cancelled") }
         if job.failedCount > 0 {

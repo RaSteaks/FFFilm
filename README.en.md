@@ -43,13 +43,15 @@ See the [implementation notes](docs/ios-negative-film-preview.md) for simulator 
 
 ## Film slicing (macOS only)
 
-Open **Film** in the Mac toolbar, or press **⌘3**. Drop or import a TIFF / experimental Flextight FFF scan, detect frames and conservatively fit their four edges, or draw frames manually, then crop, rotate, reorder and export. Scan dimensions and sprockets identify 135, 120 or large format; select a format manually when detection is uncertain. **Add frame** joins the previous frame and sizes the new slice for the film format. Without reliable gaps, 120 starts at 6×6 and subsequent frames inherit the preceding frame's height. Automatic identification and boundaries are candidates and should be checked. Save `.fffilm` projects to resume slicing without modifying the scan.
+Open **Film** in the Mac toolbar, or press **⌘3**. Drop or import a TIFF / experimental Flextight FFF scan, detect frames and conservatively fit their four edges, or draw frames manually, then crop, rotate, reorder and export. Scan dimensions and sprockets identify 135, 120 or large format; select a format manually when detection is uncertain. **Add frame** joins the previous frame and sizes the new slice for the film format. Without reliable gaps, 120 starts at 6×6 and subsequent frames inherit the preceding frame's height. Automatic identification and boundaries are candidates and should be checked. Save `.ffbatch` batches to restore multiple scans, crops, ordering, checks and review status. Existing single-scan `.fffilm` projects still open; source scans are never modified.
 
 Automatic selection identifies stable dark scanner margins and combines strip-wide aperture evidence with per-frame edges to remove broad black borders; it does not discard dark subjects using a whole-image brightness threshold. It reuses import analysis, checks long scans in overlapping segments, and refines uncertain edges from source-precision pixels. Use **Sample film base** in the canvas tool picker or **Calibrate from current frame** to help refine other automatic frames. Repeat detection preserves manual edits and identifies edges needing review. Sampling and calibration are session-only; final crops are saved in the project. Automatic transport pitch stays separate from the trimmed image width when adding a frame. See the [validation record](docs/film-detection-validation.md) for test and performance evidence.
 
 Export current, checked or all frames as 16-bit Adobe RGB TIFF or 8-bit sRGB JPEG. Whole-strip output places rotated crops in their original slots, clipping to the slot boundaries; individual exports retain full rotated bounds. Zoom, undo/redo and batch selection remain available.
 
-Choose **Export…** to open a separate sheet, configure the prefix and frame-name or sequence naming, and preview filenames. Progress returns to the workbench; cancelled items can resume and failed files retry from the original job. Existing files are kept by default. Export drafts last for the current source/window session and are not saved into project files. See the [export framework contract](docs/film-export-framework.md).
+Select or drop multiple scans at once; later imports append to the batch. Click a scan to edit it and use its checkbox for batch actions. Each scan retains independent undo history, viewport, base samples and calibration. Imports run sequential automatic detection by default; turn it off, detect checked scans or assign their film format from Batch actions. **Mark reviewed and next** advances through review; automatic detection never marks a scan reviewed. Untagged files wait for explicit input-profile assignment while other scans continue. Failed scans can be retried or located again.
+
+Choose **Export checked scans…** to export the current, checked or all scans, with all frames, each scan's checked frames or whole-strip output. Current-scan export also retains the current-frame option. **File organization** offers one folder per scan or direct output into the destination. Source filename prefixes are the default; relative-path previews and collision handling cover the entire batch and existing files. Scans without matching frames are explicitly skipped without creating empty folders. Cancellation preserves completed files; resume remaining items or retry failures without repeating successful output. Switching scans preserves the batch job. Scans in a running export are locked for editing; other scans remain editable. Export drafts and jobs are session-only; the organization choice is saved in `.ffbatch`. See the [export framework contract](docs/film-export-framework.md).
 
 **Color management** remains for accurate input/output interpretation: embedded input profiles take precedence; untagged scans require explicit assignment or a matching RGB ICC. Floating-point previews preserve extended RGB and exports embed their output profiles. No automatic negative conversion is applied. See [color-management notes](docs/film-color-management.md).
 
@@ -80,7 +82,20 @@ xcodebuild -project FFFilm.xcodeproj -scheme FFFilm \
   -parallel-testing-enabled NO -only-testing:FFFilmUITests test
 ```
 
-UI tests select elements by accessibility identifier rather than visible label, so they run against any system language.
+Tests retain distinct responsibilities:
+
+| Area | Test files | Retained coverage |
+| --- | --- | --- |
+| Rates and catalog | `FFFilmTests`, `KinefinityTests`, `SonyMirrorlessTests` | Published numeric anchors, camera compatibility, capture/playback cadence |
+| Calculator state | `CalculatorStoreTests`, `StorageUnitTests`, `QuickStartOrderTests` | Reset/undo, window isolation, unit boundaries, persistent favorites |
+| Shutter | `ShutterTests`, `DITShutterTests`, `ShutterWorkspaceTests` | Mathematical boundaries, independent reference calculations, parsing, rigs and history |
+| macOS film | `FilmTests`, `FilmFormatTests`, `FilmFrameDetectionTests`, `FilmRefinementTests`, `FilmZoomTests`, `FilmExportTests` | Cropping/detection, source precision, zoom, document state, safe export and recovery |
+| Negative and camera | `NegativeTests`, `NegativeStoreTests`, `NegativeCameraPerformanceTests` | Color/orientation/depth, cancellation and resource lifetime, camera state and GPU buffers |
+| Language and UI | `AppLanguageTests`, `FFFilmUITests`, `NegativeUITests` | Translation resources, platform privacy configuration, essential interactions and layout |
+
+A bug fix does not automatically require a new test. Check existing coverage first and prefer updating a case or adding assertions to the same scenario. Add a case only for a missing critical behavior, independent failure path, or boundary. UI tests verify control wiring and complete user workflows; numerical combinations belong in unit tests. A dedicated language-switching workflow covers localization instead of repeating business flows per language. Assertion-free launch screenshots, launch benchmarks without a baseline, and tests of test-only helpers are excluded from regular regression coverage.
+
+UI tests prefer accessibility identifiers and pin the language when checking copy. macOS film tests and iOS camera tests compile conditionally; a macOS-only run does not cover iOS. Use an available simulator name from `xcrun simctl list devices available`. The large TIFF stress test is opt-in through `NEGATIVE_LARGE_TEST=1` and remains off for ordinary runs. Pass `-resultBundlePath` to `xcodebuild` to preserve evidence; UI screenshots are stored in the `.xcresult` bundle.
 
 ```sh
 # macOS app lifecycle
@@ -89,3 +104,7 @@ script/build_and_run.sh --verify   # confirm the process is running
 script/build_and_run.sh --debug    # launch under lldb
 script/build_and_run.sh --logs     # stream the unified log
 ```
+
+## License
+
+This project is licensed under the GNU Affero General Public License v3.0 only (SPDX: `AGPL-3.0-only`). See [LICENSE](LICENSE) for the full terms.

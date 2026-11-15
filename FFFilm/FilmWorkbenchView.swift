@@ -3,8 +3,8 @@ import SwiftUI
 import AppKit
 
 struct FilmWorkbenchView: View {
-    /// Owned by the embedding workbench (ContentView) so the film document and
-    /// renderer survive workbench-tab switches; no longer a standalone window.
+    /// One batch-owned editor retains history and viewport across scan switches.
+    /// FilmBatchView owns navigation and the shared export presentation.
     @Bindable var store: FilmStore
     @State private var dropTargeted = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -19,7 +19,7 @@ struct FilmWorkbenchView: View {
     var body: some View {
         scanDropTarget
         .overlay {
-            if dropTargeted && store.canImportScan {
+            if dropTargeted && (store.workspace?.canAdd ?? store.canImportScan) {
                 // Highlight both empty and loaded workbenches without moving their controls.
                 RoundedRectangle(cornerRadius: 10).stroke(Palette.text, style: StrokeStyle(lineWidth: 2, dash: [8, 4]))
                     .padding(6)
@@ -38,7 +38,7 @@ struct FilmWorkbenchView: View {
             FilmExportSheet(controller: store.exportController, parentWindow: store.window,
                             frameCount: store.project.frames.count)
         }
-        .alert(filmText("操作未完成", "Operation failed"), isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) {
+        .alert(filmText("操作未完成", "Operation failed"), isPresented: Binding(get: { store.workspace == nil && store.error != nil }, set: { if !$0 { store.error = nil } })) {
             Button(filmText("好", "OK")) { store.error = nil }
         } message: { Text(store.error ?? "") }
         .onChange(of: store.canImportScan) { _, allowed in if !allowed { dropTargeted = false } }
@@ -47,19 +47,19 @@ struct FilmWorkbenchView: View {
 
     @ViewBuilder private var scanDropTarget: some View {
         if #available(macOS 26, *) {
-            workbench.dropDestination(for: URL.self, isEnabled: store.canImportScan) { urls, _ in
+            workbench.dropDestination(for: URL.self, isEnabled: store.workspace?.canAdd ?? store.canImportScan) { urls, _ in
                 dropTargeted = false
                 store.importDroppedScans(urls)
             }
             .onDropSessionUpdated { session in
-                dropTargeted = store.canImportScan && (session.phase == .entering || session.phase == .active)
+                dropTargeted = (store.workspace?.canAdd ?? store.canImportScan) && (session.phase == .entering || session.phase == .active)
             }
         } else {
             // Keep the established Transferable API for the macOS 15 deployment target.
             workbench.dropDestination(for: URL.self) { urls, _ in
                 dropTargeted = false
                 return store.importDroppedScans(urls)
-            } isTargeted: { dropTargeted = $0 && store.canImportScan }
+            } isTargeted: { dropTargeted = $0 && (store.workspace?.canAdd ?? store.canImportScan) }
         }
     }
 
@@ -102,12 +102,14 @@ struct FilmWorkbenchView: View {
 
     @ToolbarContentBuilder private var toolbar: some ToolbarContent {
         ToolbarItemGroup(placement: .primaryAction) {
+            if store.workspace == nil {
             Button { store.openScan() } label: { Label(filmText("导入", "Import"), systemImage: "plus") }.disabled(store.busy || store.exporting || store.hasPresentedSheet)
             Menu {
                 Button(filmText("打开项目", "Open project")) { store.openProject() }
                 Button(filmText("保存项目", "Save project")) { store.saveProject() }.disabled(store.info == nil)
                 Button(filmText("项目另存为…", "Save project as…")) { store.saveProject(asNew: true) }.disabled(store.info == nil)
             } label: { Text(filmText("项目", "Project")) }.disabled(store.busy || store.exporting || store.hasPresentedSheet)
+            }
             Button { store.undo() } label: { Label(filmText("撤销", "Undo"), systemImage: "arrow.uturn.backward") }.disabled(store.undoStack.isEmpty || store.busy || store.exporting || store.hasPresentedSheet)
             Button { store.redo() } label: { Label(filmText("重做", "Redo"), systemImage: "arrow.uturn.forward") }.disabled(store.redoStack.isEmpty || store.busy || store.exporting || store.hasPresentedSheet)
         }
@@ -188,7 +190,7 @@ struct FilmWorkbenchView: View {
     }
 
     private var inspector: some View {
-        let locked = store.info == nil || store.busy || store.exporting || store.hasPresentedSheet
+        let locked = store.info == nil || !store.canImportScan
         return VStack(spacing: 0) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
@@ -533,7 +535,7 @@ struct FilmCanvas: View {
             .frame(width: size.width, height: size.height)
             .contentShape(Rectangle())
             .gesture(DragGesture(minimumDistance: 0).onChanged { value in
-                guard store.showStrip, !store.busy, !store.exporting else { return }
+                guard store.showStrip, store.canImportScan else { return }
                 if drawMode == 0 {
                     if dragTarget == nil, let target = target(at: value.startLocation, in: size) {
                         store.select(target.id)
@@ -567,7 +569,7 @@ struct FilmCanvas: View {
                     NSCursor.arrow.set()
                     store.endEdit()
                 }
-                guard store.showStrip, !store.busy, !store.exporting else { return }
+                guard store.showStrip, store.canImportScan else { return }
                 if drawMode == 2 {
                     store.sampleFilmBase(at: CGPoint(x: value.location.x / size.width, y: value.location.y / size.height))
                     drawMode = 0
@@ -579,7 +581,7 @@ struct FilmCanvas: View {
                 if drawMode == 1 { store.drawFrame(crop) }
             })
             .onContinuousHover(coordinateSpace: .local) { phase in
-                guard drawMode == 0, store.showStrip, !store.busy, !store.exporting else {
+                guard drawMode == 0, store.showStrip, store.canImportScan else {
                     hoveredBorder = nil
                     NSCursor.arrow.set()
                     return
@@ -618,12 +620,20 @@ struct FilmCommands: Commands {
     // The film workbench is now a tab of the main window; these commands act on
     // the focused scene's film store whenever that tab is showing.
     @FocusedValue(\.filmStore) private var store
+    private var canSave: Bool {
+        guard let store else { return false }
+        if let workspace = store.workspace { return workspace.canSave && (!workspace.items.isEmpty || workspace.dirty) }
+        return store.info != nil && store.canImportScan
+    }
     var body: some Commands {
         CommandMenu(filmText("胶片", "Film")) {
-            Button(filmText("导入扫描…", "Import scan…")) { store?.openScan() }.keyboardShortcut("o", modifiers: [.command, .shift]).disabled(store == nil || store?.busy == true || store?.exporting == true || store?.hasPresentedSheet == true)
-            Button(filmText("保存项目", "Save project")) { store?.saveProject() }.keyboardShortcut("s").disabled(store?.info == nil || store?.busy == true || store?.exporting == true || store?.hasPresentedSheet == true)
-            Button(filmText("撤销胶片调整", "Undo film edit")) { store?.undo() }.keyboardShortcut("z").disabled(store?.undoStack.isEmpty != false || store?.busy == true || store?.exporting == true || store?.hasPresentedSheet == true)
-            Button(filmText("重做胶片调整", "Redo film edit")) { store?.redo() }.keyboardShortcut("z", modifiers: [.command, .shift]).disabled(store?.redoStack.isEmpty != false || store?.busy == true || store?.exporting == true || store?.hasPresentedSheet == true)
+            Button(filmText("导入扫描…", "Import scan…")) { store?.openScan() }.keyboardShortcut("o", modifiers: [.command, .shift])
+                .disabled(!(store?.workspace?.canAdd ?? store?.canImportScan ?? false))
+            Button(store?.workspace == nil ? filmText("保存项目", "Save project") : filmText("保存批次", "Save batch")) {
+                store?.saveProject()
+            }.keyboardShortcut("s").disabled(!canSave)
+            Button(filmText("撤销胶片调整", "Undo film edit")) { store?.undo() }.keyboardShortcut("z").disabled(store?.undoStack.isEmpty != false || store?.canImportScan != true)
+            Button(filmText("重做胶片调整", "Redo film edit")) { store?.redo() }.keyboardShortcut("z", modifiers: [.command, .shift]).disabled(store?.redoStack.isEmpty != false || store?.canImportScan != true)
             Divider()
             Button(filmText("放大", "Zoom in")) { store?.zoomIn() }.keyboardShortcut("+", modifiers: .command)
                 .disabled(store?.canZoom != true || (store?.zoom ?? 8) >= FilmZoom.levels.last!)
@@ -637,31 +647,32 @@ struct FilmCommands: Commands {
 
 /// Retain the native window delegate and forward unhandled responsibilities to SwiftUI.
 struct FilmWindowGuard: NSViewRepresentable {
-    let store: FilmStore
+    let store: FilmBatchStore
     func makeCoordinator() -> Coordinator { Coordinator(store: store) }
     func makeNSView(context: Context) -> NSView { NSView() }
     func updateNSView(_ view: NSView, context: Context) {
+        let dirty = store.dirty
         DispatchQueue.main.async {
             guard let window = view.window else { return }
             store.window = window
             if context.coordinator.original == nil && window.delegate !== context.coordinator { context.coordinator.original = window.delegate; window.delegate = context.coordinator }
-            window.isDocumentEdited = store.dirty
+            window.isDocumentEdited = dirty
         }
     }
     final class Coordinator: NSObject, NSWindowDelegate {
-        let store: FilmStore
+        let store: FilmBatchStore
         // NSWindow's delegate is weak; retain the delegate we replace so native
         // sheet lifecycle callbacks can still reach SwiftUI through this proxy.
         var original: NSWindowDelegate?
         private var confirmedClose = false
-        init(store: FilmStore) { self.store = store }
+        init(store: FilmBatchStore) { self.store = store }
         override func responds(to selector: Selector!) -> Bool { super.responds(to: selector) || original?.responds(to: selector) == true }
         override func forwardingTarget(for selector: Selector!) -> Any? { original }
         func windowShouldClose(_ sender: NSWindow) -> Bool {
             // Consume one approved close without asking again when the user chose Don't Save.
             if confirmedClose { confirmedClose = false; return true }
-            guard !store.hasPresentedSheet else { return false }
-            guard !store.busy, !store.exporting else { NSSound.beep(); return false }
+            guard !store.blocksDocuments else { return false }
+            guard !store.busy else { NSSound.beep(); return false }
             guard store.dirty else { return true }
             store.requestDiscard { accepted in
                 if accepted { self.confirmedClose = true; sender.close() }
@@ -669,8 +680,7 @@ struct FilmWindowGuard: NSViewRepresentable {
             return false
         }
         func windowWillClose(_ notification: Notification) {
-            store.renderTask?.cancel()
-            Task { await store.renderer.close() }
+            store.closeSources()
             // Restore SwiftUI's delegate and release our ownership when this
             // window closes, so the retained delegate cannot keep it alive.
             let delegate = original

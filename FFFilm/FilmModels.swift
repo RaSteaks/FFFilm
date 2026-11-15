@@ -117,6 +117,15 @@ nonisolated struct FilmProject: Codable, Equatable, Sendable {
     var frames: [FilmFrame] = []
     var exportJPEG = false
     var jpegQuality = 0.95
+    /// Resolve at the file-access boundary; a moved bookmarked source keeps its identity.
+    var resolvedSourceURL: URL {
+        if let bookmark {
+            var stale = false
+            if let url = try? URL(resolvingBookmarkData: bookmark, options: [.withSecurityScope],
+                                  relativeTo: nil, bookmarkDataIsStale: &stale) { return url }
+        }
+        return URL(fileURLWithPath: sourcePath)
+    }
     var hasPlaceholderFrame: Bool {
         frames.count == 1 && frames[0].crop == FilmRect() && frames[0].rotation == 0
     }

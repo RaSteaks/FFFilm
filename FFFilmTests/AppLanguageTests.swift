@@ -37,21 +37,17 @@ struct AppLanguageTests {
         }
         preference.language = .simplifiedChinese
         #expect(AppText.localized("settings.title") == "设置")
+        #expect(AppText.localized("settings.language") == "应用语言")
         #expect(AppText.resource(StorageUnit.decimal.title).contains("十进制"))
         #expect(AppText.imported(sensorFps: 48, projectFps: 24).contains("48"))
         #expect(ShutterInputField.sensorFps.error(for: -1)?.contains("请输入") == true)
         preference.language = .english
         #expect(AppText.localized("settings.title") == "Settings")
+        #expect(AppText.localized("settings.language") == "App language")
         #expect(AppText.resource(StorageUnit.decimal.title).contains("Decimal"))
         // The compact confirmation still names both imported values.
         #expect(AppText.imported(sensorFps: 48, projectFps: 24) == "Imported: camera 48 fps · project 24 fps")
         #expect(ShutterInputField.sensorFps.error(for: -1)?.hasPrefix("Enter") == true)
-    }
-
-    @Test func explicitBundlesContainBothTranslations() {
-        // Exercise the built catalogs rather than a duplicate in-memory translation table.
-        #expect(AppLanguage.simplifiedChinese.bundle.localizedString(forKey: "settings.language", value: nil, table: nil) == "应用语言")
-        #expect(AppLanguage.english.bundle.localizedString(forKey: "settings.language", value: nil, table: nil) == "App language")
     }
 
     @Test func privacyDescriptionsMatchPlatform() throws {

@@ -21,7 +21,7 @@ struct ContentView: View {
     @State private var selectedTab: MobileTab = .rate
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     #else
-    @State private var filmStore = FilmStore()
+    @State private var filmStore = FilmBatchStore()
     // Lags activeView by one update, which is what lets body read the direction of travel.
     @State private var previousPage: CalculatorView = .rate
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -98,7 +98,7 @@ struct ContentView: View {
     #if os(macOS)
     @ViewBuilder private var workbenchPage: some View {
         if store.activeView == .film {
-            FilmWorkbenchView(store: filmStore)
+            FilmBatchView(workspace: filmStore)
         } else {
             CalculatorWorkbench(store: store, view: store.activeView, showsCameras: $showsCameras)
         }

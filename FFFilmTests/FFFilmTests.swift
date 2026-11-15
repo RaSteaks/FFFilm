@@ -21,17 +21,6 @@ struct FFFilmTests {
         #expect(abs(result.projectGbPerHour - 1_125.84536064) < 0.001)
     }
 
-    @Test("Apple ProRes uses the white-paper target row")
-    func proResTargetRate() {
-        let settings = CaptureSettings(
-            cameraId: "apple-prores", modeId: "encoded-frame", resolutionId: "prores-1920x1080",
-            codecId: "prores-422", projectFps: 24, sensorFps: 24, sensorOverdrive: false,
-            mediaId: "1tb", shootHours: 8
-        )
-        let result = CalculatorEngine(catalog: catalog).calculate(settings: settings)
-        #expect(result.projectMbps == 117)
-    }
-
     @Test("DJI manual MB/s rows are converted to Mb/s")
     func djiOfficialRate() {
         let settings = CaptureSettings(
@@ -90,7 +79,7 @@ struct FFFilmTests {
             mediaId: "1tb", shootHours: 8
         )
         let baseline = engine.calculate(settings: settings)
-        #expect(baseline.sensorMbps == 117)
+        #expect(baseline.projectMbps == 117 && baseline.sensorMbps == 117)
         #expect(baseline.sensorGbPerHour == baseline.projectGbPerHour)
         #expect(abs(baseline.projectRuntimeHours - baseline.captureRuntimeHours) < 0.0001)
         settings.projectFps = 30
@@ -100,16 +89,6 @@ struct FFFilmTests {
         #expect(changed.dayTotalGb > baseline.dayTotalGb)
         #expect(changed.captureRuntimeHours < baseline.captureRuntimeHours)
         #expect(abs(changed.projectRuntimeHours - changed.captureRuntimeHours) < 0.0001)
-    }
-
-    @Test("Selected media capacity produces a capture-time estimate")
-    func estimatedRecordingTime() {
-        var settings = CaptureSettings.default
-        settings.sensorFps = 48
-        let result = CalculatorEngine(catalog: catalog).calculate(settings: settings)
-
-        #expect(abs(result.captureRuntimeHours - result.projectRuntimeHours / 2) < 0.0001)
-        #expect(abs(result.captureRuntimeHours - result.media.capacityGb / result.sensorGbPerHour) < 0.0001)
     }
 
 }

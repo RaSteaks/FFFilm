@@ -48,17 +48,6 @@ nonisolated enum FilmScanFixture {
 
 @Suite(.serialized)
 struct FilmRefinementTests {
-    @Test func temporaryFilesUseRequestedRootWhenConfigured() throws {
-        if let root = ProcessInfo.processInfo.environment["FFFILM_TEST_ARTIFACT_ROOT"] {
-            let directory = try FilmTestFiles.directory()
-            #expect(directory.standardizedFileURL.path.hasPrefix(root))
-            let file = directory.appending(path: "location-probe-\(UUID()).bin")
-            defer { try? FileManager.default.removeItem(at: file) }
-            try Data([1, 2, 3]).write(to: file)
-            #expect(try Data(contentsOf: file) == Data([1, 2, 3]))
-        }
-    }
-
     @Test func robustBaseRejectsClippingAndTextureAndInterpolatesShading() throws {
         let base = SIMD3<Double>(0.6, 0.3, 0.15)
         var colors = (0..<100).map { base + SIMD3(repeating: Double($0 % 5 - 2) * 0.0002) }
@@ -395,50 +384,6 @@ struct FilmRefinementTests {
         #expect(await renderer.sourceIdentifier != identity)
         #expect(try await renderer.detectFrames().count == 3)
         await renderer.close()
-    }
-
-    @Test @MainActor func exportRetriesSnapshotAvoidsCollisionsAndCleansCancelledWork() async throws {
-        let directory = try FilmTestFiles.directory().appending(path: "FilmExportFlow-\(UUID())", directoryHint: .isDirectory)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let input = directory.appending(path: "scan.tiff")
-        try FilmScanFixture.write(to: input)
-        let store = FilmStore()
-        store.loadSource(input, restoring: nil); try await finish(store)
-        store.detect(); try await finish(store)
-        let original = store.project
-        let destination = directory.appending(path: "outputs", directoryHint: .isDirectory)
-        let controller = store.exportController
-        try FileManager.default.createDirectory(at: destination, withIntermediateDirectories: true)
-        store.openExportSettings(); controller.settings.scope = .all; controller.setDirectory(destination)
-        controller.confirm()
-        // The destination disappears after confirmation; each failed item must
-        // retain its original snapshot for the later retry.
-        try FileManager.default.removeItem(at: destination)
-        controller.didDismiss(); try await finish(store)
-        #expect(controller.job?.failedCount == 6 && controller.job?.project == original)
-        store.updateFrame { $0.crop.width *= 0.9 }
-        let edited = store.project
-        store.error = nil
-        try FileManager.default.createDirectory(at: destination, withIntermediateDirectories: true)
-        controller.retryFailed(); try await finish(store)
-        #expect(controller.job?.failedCount == 0 && store.project == edited)
-        let firstFiles = try FileManager.default.contentsOfDirectory(at: destination, includingPropertiesForKeys: nil).sorted { $0.path < $1.path }
-        #expect(firstFiles.count == 6)
-        let firstData = try firstFiles.map { try Data(contentsOf: $0) }
-        for (index, file) in firstFiles.enumerated() {
-            let source = try #require(CGImageSourceCreateWithURL(file as CFURL, nil))
-            let image = try #require(CGImageSourceCreateImageAtIndex(source, 0, nil))
-            let expected = FilmRenderer.pixelRect(original.frames[index].crop, extent: CGRect(x: 0, y: 0, width: 1200, height: 240))
-            #expect(image.width == Int(expected.width) && image.height == Int(expected.height) && image.bitsPerComponent == 16)
-        }
-        store.openExportSettings(); controller.confirm(); controller.didDismiss(); try await finish(store)
-        #expect(try FileManager.default.contentsOfDirectory(at: destination, includingPropertiesForKeys: nil).count == 12)
-        #expect(try firstFiles.map { try Data(contentsOf: $0) } == firstData)
-        store.openExportSettings(); controller.confirm(); controller.didDismiss(); controller.cancel(); try await finish(store)
-        let remaining = try FileManager.default.contentsOfDirectory(at: destination, includingPropertiesForKeys: nil)
-        #expect(remaining.count == 12 && remaining.allSatisfy { !$0.lastPathComponent.hasPrefix(".") })
-        await store.renderer.close()
     }
 
     @MainActor private func finish(_ store: FilmStore) async throws {

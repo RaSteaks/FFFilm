@@ -3,11 +3,26 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#f3efe4">
+    <meta name="color-scheme" content="light dark">
+    <meta name="theme-color" content="#f2f2f2">
     <meta name="description" content="FFFilm 隐私政策：说明应用在设备本地保存的数据，以及支持邮件的处理方式。">
     <title>隐私政策 · FFFilm</title>
-    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+    <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+    <link rel="preload" href="fonts/display-700.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="styles.css">
+    <!-- Runs before first paint so the theme never flashes and script-only controls keep their space. -->
+    <script>
+      (function (root) {
+        root.dataset.js = "";
+        try {
+          var theme = localStorage.getItem("fffilm-theme");
+          if (theme) root.dataset.theme = theme;
+        } catch (_) {}
+      })(document.documentElement);
+    </script>
     <script src="site.js" defer></script>
   </head>
   <body>
@@ -18,13 +33,19 @@
       <header class="site-header">
         <div class="wrap">
           <a class="brand" href="index.html" aria-label="FFFilm 支持首页">
-            <span class="brand-chip" aria-hidden="true">F</span>
+            <img class="brand-mark" src="icons/brand-mark.png" alt="" width="32" height="32">
             <span class="brand-name">FFFilm <em>/ support</em></span>
           </a>
-          <nav class="site-nav" aria-label="主要导航">
-            <a href="support.html">技术支持</a>
-            <a href="privacy.html" aria-current="page">隐私政策</a>
-          </nav>
+          <div class="site-tools">
+            <nav class="site-nav" aria-label="主要导航">
+              <a href="support.html">技术支持</a>
+              <a href="privacy.html" aria-current="page">隐私政策</a>
+            </nav>
+            <button class="theme-toggle needs-js" type="button" aria-pressed="false" aria-label="暗房模式">
+              <span class="theme-lamp" aria-hidden="true"></span>
+              <span class="theme-label" aria-hidden="true">暗房</span>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -43,6 +64,21 @@
             </aside>
           </section>
 
+          <section class="strip verdict-strip" id="overview" aria-labelledby="overview-title">
+            <h2 class="sr-only" id="overview-title">概览</h2>
+            <p class="strip-statement">FFFilm 不要求账户，核心计算在本地完成，也不会把你的计算输入、本地偏好或胶片项目上传到开发者服务器。</p>
+            <div class="absent">
+              <p id="absent-title">应用没有集成</p>
+              <ul aria-labelledby="absent-title">
+                <li>账户</li>
+                <li>广告</li>
+                <li>分析统计</li>
+                <li>崩溃报告</li>
+                <li>云同步</li>
+              </ul>
+            </div>
+          </section>
+
           <div class="content-layout">
             <aside class="section-index" aria-label="隐私政策章节">
               <ol>
@@ -56,56 +92,58 @@
             </aside>
 
             <article class="content">
-              <section class="content-section" id="overview" aria-labelledby="overview-title">
-                <h2 id="overview-title">概览</h2>
-                <div class="callout">
-                  <p>FFFilm 不要求账户，核心计算在本地完成，也不会把你的计算输入、本地偏好或胶片项目上传到开发者服务器。</p>
-                </div>
-              </section>
-
               <section class="content-section" id="data" aria-labelledby="data-title">
                 <h2 id="data-title">应用处理哪些数据</h2>
                 <p>这些数据只用于显示结果和恢复设置，不用于识别你的身份。</p>
-                <dl class="data-table">
-                  <div class="data-row">
-                    <dt>容量显示单位</dt>
+
+                <div class="chips chips-ledger needs-js" role="group" aria-label="按数据去向筛选">
+                  <button class="chip" type="button" data-filter="all" aria-pressed="true">全部</button>
+                  <button class="chip" type="button" data-filter="device" aria-pressed="false"><span class="swatch swatch-device" aria-hidden="true"></span>保存在设备</button>
+                  <button class="chip" type="button" data-filter="session" aria-pressed="false"><span class="swatch swatch-session" aria-hidden="true"></span>仅当前会话</button>
+                  <button class="chip" type="button" data-filter="saved" aria-pressed="false"><span class="swatch swatch-saved" aria-hidden="true"></span>由你保存</button>
+                  <button class="chip" type="button" data-filter="sent" aria-pressed="false"><span class="swatch swatch-sent" aria-hidden="true"></span>由你发送</button>
+                </div>
+
+                <dl class="data-table ledger">
+                  <div class="data-row" data-topics="device">
+                    <dt>容量显示单位<span class="lane"><span class="swatch swatch-device" aria-hidden="true"></span>保存在设备</span></dt>
                     <dd>你在设置中选择的 GB 或 GiB 单位保存在设备本地，用于显示容量、每小时数据量和每日总量。</dd>
                   </div>
-                  <div class="data-row">
-                    <dt>应用语言</dt>
+                  <div class="data-row" data-topics="device">
+                    <dt>应用语言<span class="lane"><span class="swatch swatch-device" aria-hidden="true"></span>保存在设备</span></dt>
                     <dd>你在设置中选择的简体中文或 English 保存在设备本地；未选择时跟随支持的系统语言，否则使用英文。</dd>
                   </div>
-                  <div class="data-row">
-                    <dt>相机收藏顺序</dt>
+                  <div class="data-row" data-topics="device">
+                    <dt>相机收藏顺序<span class="lane"><span class="swatch swatch-device" aria-hidden="true"></span>保存在设备</span></dt>
                     <dd>你添加、删除或排序的相机收藏保存在设备本地，用于下次打开时恢复该顺序。</dd>
                   </div>
-                  <div class="data-row">
-                    <dt>相机格式记忆</dt>
+                  <div class="data-row" data-topics="device">
+                    <dt>相机格式记忆<span class="lane"><span class="swatch swatch-device" aria-hidden="true"></span>保存在设备</span></dt>
                     <dd>每台相机上次使用的录制模式、分辨率、编码和帧率保存在设备本地，切换相机时自动恢复，不会发送给开发者。</dd>
                   </div>
-                  <div class="data-row">
-                    <dt>快门设置与方案</dt>
+                  <div class="data-row" data-topics="device">
+                    <dt>快门设置与方案<span class="lane"><span class="swatch swatch-device" aria-hidden="true"></span>保存在设备</span></dt>
                     <dd>快门参数、A/B/C 机位及其相机/模式备注、常用方案和最近 12 条计算保存在设备本地，包括你填写的方案名称、现场检查条件与备注。你可以在应用中修改或删除常用方案。</dd>
                   </div>
-                  <div class="data-row">
-                    <dt>录制计算与对比</dt>
+                  <div class="data-row" data-topics="session">
+                    <dt>录制计算与对比<span class="lane"><span class="swatch swatch-session" aria-hidden="true"></span>仅当前会话</span></dt>
                     <dd>相机、格式、帧率、介质和拍摄时长等录制输入，以及对比方案，在当前运行会话中用于计算和显示；当前版本不会跨启动保存对比方案，介质与拍摄时长等窗口内设置也不会写入外部文件。</dd>
                   </div>
-                  <div class="data-row">
-                    <dt>胶片项目与导出（仅 Mac）</dt>
+                  <div class="data-row" data-topics="saved">
+                    <dt>胶片项目与导出（仅 Mac）<span class="lane"><span class="swatch swatch-saved" aria-hidden="true"></span>由你保存</span></dt>
                     <dd>胶片切片的 .fffilm 项目文件由你选择位置保存，内容包括扫描文件路径、只读访问书签、输入色彩空间（选择自定义 ICC 时包含其数据）、胶片规格、片框几何，以及导出格式与质量。导出图像只写入你主动选择的文件夹；文件命名等导出草稿只在当前窗口会话中保留，不写入项目文件。</dd>
                   </div>
                   <!-- Negative preview only accesses user-selected images and an explicitly authorized camera. -->
-                  <div class="data-row">
-                    <dt>负片预览（iPhone / iPad）</dt>
+                  <div class="data-row" data-topics="session">
+                    <dt>负片预览（iPhone / iPad）<span class="lane"><span class="swatch swatch-session" aria-hidden="true"></span>仅当前会话</span></dt>
                     <dd>应用只读取你选择的照片或文件，以及其他 App 通过系统“打开方式”交给 FFFilm 的图片；点击打开相机后才请求相机权限，不请求麦克风权限。负片图像、相机帧和片基颜色仅用于设备本地处理，只保留在当前会话。输入副本及导出暂存文件保存在应用临时目录，不再使用时清理，不建立云端图库。</dd>
                   </div>
-                  <div class="data-row">
-                    <dt>存入相册（iPhone / iPad）</dt>
+                  <div class="data-row" data-topics="saved">
+                    <dt>存入相册（iPhone / iPad）<span class="lane"><span class="swatch swatch-saved" aria-hidden="true"></span>由你保存</span></dt>
                     <dd>只有在你点按存入相册时，应用才请求“仅添加”相册权限，并把正片 JPG 写入系统相册。该权限不允许应用读取你的相册。</dd>
                   </div>
-                  <div class="data-row">
-                    <dt>支持邮件</dt>
+                  <div class="data-row" data-topics="sent">
+                    <dt>支持邮件<span class="lane"><span class="swatch swatch-sent" aria-hidden="true"></span>由你发送</span></dt>
                     <dd>如果你主动发送邮件，我们会收到你的邮箱地址、邮件正文和你主动附带的附件，用于回复和排查问题。</dd>
                   </div>
                 </dl>
@@ -139,7 +177,10 @@
                 <!-- Keep the public support address synchronized with support.html. -->
                 <div class="contact-card">
                   <p>隐私问题请发送邮件至：</p>
-                  <p class="email-chip"><a href="mailto:zhuyutian041119@foxmail.com">zhuyutian041119@foxmail.com</a></p>
+                  <div class="contact-actions">
+                    <p class="email-chip"><a href="mailto:zhuyutian041119@foxmail.com?subject=FFFilm%20%E9%9A%90%E7%A7%81%E9%97%AE%E9%A2%98">zhuyutian041119@foxmail.com</a></p>
+                    <button class="button button-quiet needs-js" type="button" data-copy="zhuyutian041119@foxmail.com">复制邮箱</button>
+                  </div>
                   <p>请在邮件主题中写明“FFFilm 隐私问题”。</p>
                 </div>
               </section>
@@ -151,7 +192,7 @@
       <footer class="site-footer">
         <div class="wrap">
           <!-- 版权主体为朱煜天；FFFilm 保留为产品名称。 -->
-          <p>© 2026 朱煜天 · FFFilm · <a href="support.html">技术支持 ↗</a></p>
+          <p>© 2026 朱煜天 · FFFilm · <a href="support.html">技术支持</a></p>
         </div>
       </footer>
     </div>

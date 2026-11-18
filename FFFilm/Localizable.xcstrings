@@ -25,15 +25,8 @@
     "%" : {
 
     },
-    "%@\n%@/h" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@\n%2$@/h"
-          }
-        }
-      }
+    "%@" : {
+
     },
     "%@ · %@" : {
       "localizations" : {
@@ -130,16 +123,6 @@
     "%@ stops versus target" : {
 
     },
-    "%@, %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@, %2$@"
-          }
-        }
-      }
-    },
     "%@°" : {
 
     },
@@ -208,6 +191,9 @@
         }
       }
     },
+    "%lld setups" : {
+
+    },
     "%lld/%lld" : {
       "localizations" : {
         "en" : {
@@ -218,481 +204,8 @@
         }
       }
     },
-    "%lld/4" : {
-
-    },
     "%lld%%" : {
 
-    },
-    "Add setup to summary (⇧⌘P)" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Add setup to summary (⇧⌘P)"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "加入汇总（⇧⌘P）"
-          }
-        }
-      }
-    },
-    "Estimate storage for ${camera} over ${duration}" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Estimate storage for ${camera} over ${duration}"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "估算 ${camera} 录制 ${duration} 所需容量"
-          }
-        }
-      }
-    },
-    "intent.camera.type" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Camera"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "摄影机"
-          }
-        }
-      }
-    },
-    "intent.estimate.answer" : {
-      "comment" : "Siri answer: camera format, recording time, storage and hourly rate.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ for %2$@ needs about %3$@ (%4$@)."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ 录制 %2$@ 约需 %3$@（%4$@）。"
-          }
-        }
-      }
-    },
-    "intent.estimate.camera" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Camera"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "摄影机"
-          }
-        }
-      }
-    },
-    "intent.estimate.description" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Estimates the storage a camera needs for a recording time, using that camera's last format in FFFilm."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "按该摄影机在 FFFilm 中最近使用的格式，估算指定录制时长所需的存储容量。"
-          }
-        }
-      }
-    },
-    "intent.estimate.duration" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Recording time"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "录制时长"
-          }
-        }
-      }
-    },
-    "intent.estimate.invalidDuration" : {
-      "comment" : "Siri answer when the requested duration is outside the supported range.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Give a recording time from one second to 24 hours."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "请给出 1 秒到 24 小时之间的录制时长。"
-          }
-        }
-      }
-    },
-    "intent.estimate.shortTitle" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Estimate Storage"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "估算容量"
-          }
-        }
-      }
-    },
-    "intent.estimate.title" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Estimate Storage"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "估算素材容量"
-          }
-        }
-      }
-    },
-    "intent.summary.answer" : {
-      "comment" : "Siri answer: number of summary entries and their total storage.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$lld setups in the summary need %2$@ in total."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "汇总共 %1$lld 条方案，合计 %2$@。"
-          }
-        }
-      }
-    },
-    "intent.summary.description" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Reads the total storage of the setups in the FFFilm recording summary."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "读取 FFFilm 录制汇总中全部方案的存储合计。"
-          }
-        }
-      }
-    },
-    "intent.summary.empty" : {
-      "comment" : "Siri answer when no setups have been added to the summary.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The summary is empty."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "汇总为空。"
-          }
-        }
-      }
-    },
-    "intent.summary.shortTitle" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Summary Total"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "汇总合计"
-          }
-        }
-      }
-    },
-    "intent.summary.title" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Summary Total"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "汇总合计"
-          }
-        }
-      }
-    },
-    "summary.add" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Add to summary"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "加入汇总"
-          }
-        }
-      }
-    },
-    "summary.addHint" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Adds this complete setup to the shooting-day summary."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "将完整方案加入当日汇总。"
-          }
-        }
-      }
-    },
-    "summary.clear" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Clear"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "清空"
-          }
-        }
-      }
-    },
-    "summary.clearConfirm" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Clear summary"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "清空汇总"
-          }
-        }
-      }
-    },
-    "summary.clearQuestion" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Clear every setup from the summary?"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "清空汇总中的全部方案？"
-          }
-        }
-      }
-    },
-    "summary.copy" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Copy summary"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "复制汇总"
-          }
-        }
-      }
-    },
-    "summary.count" : {
-      "comment" : "Number of setups in the recording summary.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld setups"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld 条"
-          }
-        }
-      }
-    },
-    "summary.empty" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Summary is empty"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "汇总为空"
-          }
-        }
-      }
-    },
-    "summary.emptyHint" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Add setups from the recording result."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "请从录制结果加入方案。"
-          }
-        }
-      }
-    },
-    "summary.line" : {
-      "comment" : "Compact summary line under the result: number of setups and their total storage.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Summary %1$lld · %2$@"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "汇总 %1$lld 条 · %2$@"
-          }
-        }
-      }
-    },
-    "summary.remove" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Remove from summary"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "从汇总移除"
-          }
-        }
-      }
-    },
-    "summary.title" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Summary"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "汇总"
-          }
-        }
-      }
-    },
-    "summary.total" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Summary total"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "汇总合计"
-          }
-        }
-      }
-    },
-    "summary.view" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "View summary"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "查看汇总"
-          }
-        }
-      }
     },
     "↶ 90°" : {
 
@@ -754,7 +267,23 @@
         }
       }
     },
-    "Added to comparison." : {
+    "Add setup to summary (⇧⌘P)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add setup to summary (⇧⌘P)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "加入汇总（⇧⌘P）"
+          }
+        }
+      }
+    },
+    "Added to summary (%lld setups)." : {
 
     },
     "Adding frames would exceed the %d-frame project limit; none were added." : {
@@ -1457,9 +986,6 @@
     "cm" : {
 
     },
-    "Comparison is full (4/4). Remove a setup before adding another." : {
-
-    },
     "Compatibility adjusted: %@." : {
 
     },
@@ -2152,6 +1678,22 @@
     },
     "Enter the actual recording time." : {
 
+    },
+    "Estimate storage for ${camera} over ${duration}" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Estimate storage for ${camera} over ${duration}"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "估算 ${camera} 录制 ${duration} 所需容量"
+          }
+        }
+      }
     },
     "Export" : {
       "comment" : "macOS film workbench",
@@ -2930,6 +2472,218 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Imported: camera %1$@ fps · project %2$@ fps"
+          }
+        }
+      }
+    },
+    "intent.camera.type" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Camera"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "摄影机"
+          }
+        }
+      }
+    },
+    "intent.estimate.answer" : {
+      "comment" : "Siri answer: camera format, recording time, storage and hourly rate.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ for %2$@ needs about %3$@ (%4$@)."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ 录制 %2$@ 约需 %3$@（%4$@）。"
+          }
+        }
+      }
+    },
+    "intent.estimate.camera" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Camera"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "摄影机"
+          }
+        }
+      }
+    },
+    "intent.estimate.description" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Estimates the storage a camera needs for a recording time, using that camera's last format in FFFilm."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "按该摄影机在 FFFilm 中最近使用的格式，估算指定录制时长所需的存储容量。"
+          }
+        }
+      }
+    },
+    "intent.estimate.duration" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recording time"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "录制时长"
+          }
+        }
+      }
+    },
+    "intent.estimate.invalidDuration" : {
+      "comment" : "Siri answer when the requested duration is outside the supported range.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Give a recording time from one second to 24 hours."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请给出 1 秒到 24 小时之间的录制时长。"
+          }
+        }
+      }
+    },
+    "intent.estimate.shortTitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Estimate Storage"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "估算容量"
+          }
+        }
+      }
+    },
+    "intent.estimate.title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Estimate Storage"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "估算素材容量"
+          }
+        }
+      }
+    },
+    "intent.summary.answer" : {
+      "comment" : "Siri answer: number of summary entries and their total storage.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld setups in the summary need %2$@ in total."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "汇总共 %1$lld 条方案，合计 %2$@。"
+          }
+        }
+      }
+    },
+    "intent.summary.description" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reads the total storage of the setups in the FFFilm recording summary."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "读取 FFFilm 录制汇总中全部方案的存储合计。"
+          }
+        }
+      }
+    },
+    "intent.summary.empty" : {
+      "comment" : "Siri answer when no setups have been added to the summary.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The summary is empty."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "汇总为空。"
+          }
+        }
+      }
+    },
+    "intent.summary.shortTitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Summary Total"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "汇总合计"
+          }
+        }
+      }
+    },
+    "intent.summary.title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Summary Total"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "汇总合计"
           }
         }
       }
@@ -4877,6 +4631,9 @@
           }
         }
       }
+    },
+    "Recording summary (%lld setups)" : {
+
     },
     "Recording time: %@\nRequired storage: %@" : {
       "localizations" : {
@@ -7390,6 +7147,242 @@
         }
       }
     },
+    "Summary %lld · %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Summary %1$lld · %2$@"
+          }
+        }
+      }
+    },
+    "summary.add" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add to summary"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "加入汇总"
+          }
+        }
+      }
+    },
+    "summary.addHint" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adds this complete setup to the shooting-day summary."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将完整方案加入当日汇总。"
+          }
+        }
+      }
+    },
+    "summary.clear" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清空"
+          }
+        }
+      }
+    },
+    "summary.clearConfirm" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear summary"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清空汇总"
+          }
+        }
+      }
+    },
+    "summary.clearQuestion" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear every setup from the summary?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清空汇总中的全部方案？"
+          }
+        }
+      }
+    },
+    "summary.copy" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copy summary"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "复制汇总"
+          }
+        }
+      }
+    },
+    "summary.count" : {
+      "comment" : "Number of setups in the recording summary.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld setups"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 条"
+          }
+        }
+      }
+    },
+    "summary.empty" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Summary is empty"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "汇总为空"
+          }
+        }
+      }
+    },
+    "summary.emptyHint" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add setups from the recording result."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请从录制结果加入方案。"
+          }
+        }
+      }
+    },
+    "summary.line" : {
+      "comment" : "Compact summary line under the result: number of setups and their total storage.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Summary %1$lld · %2$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "汇总 %1$lld 条 · %2$@"
+          }
+        }
+      }
+    },
+    "summary.remove" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove from summary"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "从汇总移除"
+          }
+        }
+      }
+    },
+    "summary.title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Summary"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "汇总"
+          }
+        }
+      }
+    },
+    "summary.total" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Summary total"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "汇总合计"
+          }
+        }
+      }
+    },
+    "summary.view" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "View summary"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "查看汇总"
+          }
+        }
+      }
+    },
     "technical.videoEstimate" : {
       "localizations" : {
         "en" : {
@@ -7424,9 +7417,6 @@
       }
     },
     "Theoretical angle exceeds the %@° limit. Cannot realize this exposure within the limit." : {
-
-    },
-    "This configuration is already in comparison." : {
 
     },
     "This FFF cannot be read as a full 16-bit RGB image. Use a 16-bit RGB TIFF instead." : {
@@ -7464,6 +7454,9 @@
       }
     },
     "TIFF" : {
+
+    },
+    "Total: %@" : {
 
     },
     "Undo" : {

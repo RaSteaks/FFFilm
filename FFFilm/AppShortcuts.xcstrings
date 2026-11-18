@@ -2,10 +2,20 @@
   "sourceLanguage" : "en",
   "strings" : {
     "${applicationName} summary total" : {
+      "extractionState" : "extracted_with_value",
       "localizations" : {
+        "en" : {
+          "stringSet" : {
+            "state" : "new",
+            "values" : [
+              "${applicationName} summary total",
+              "Show the ${applicationName} summary total"
+            ]
+          }
+        },
         "zh-Hans" : {
           "stringSet" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "values" : [
               "${applicationName}汇总合计",
               "${applicationName}汇总一共多少"
@@ -27,10 +37,20 @@
       }
     },
     "Estimate storage with ${applicationName}" : {
+      "extractionState" : "extracted_with_value",
       "localizations" : {
+        "en" : {
+          "stringSet" : {
+            "state" : "new",
+            "values" : [
+              "Estimate storage with ${applicationName}",
+              "Estimate ${camera} storage with ${applicationName}"
+            ]
+          }
+        },
         "zh-Hans" : {
           "stringSet" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "values" : [
               "用${applicationName}估算素材容量",
               "${applicationName}估算素材容量"

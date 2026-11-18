@@ -233,12 +233,6 @@ enum CaptureParameter: String, CaseIterable, Hashable {
     }
 }
 
-enum ComparisonAddResult: Equatable {
-    case added
-    case duplicate
-    case full
-}
-
 struct Calculation: Hashable {
     let camera: CameraProfile
     let mode: SensorMode
@@ -257,12 +251,6 @@ struct Calculation: Hashable {
     let clipHeightMm: Double
     let imageCircleMm: Double
     let formatFactor: Double
-}
-
-struct PinnedSetup: Identifiable, Hashable {
-    let id: UUID
-    let settings: CaptureSettings
-    let calculation: Calculation
 }
 
 /// Two independent planning questions share one camera format without overwriting inputs.

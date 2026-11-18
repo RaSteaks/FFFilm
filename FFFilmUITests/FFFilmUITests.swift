@@ -19,7 +19,7 @@ final class FFFilmUITests: XCTestCase {
         // Identifiers only: the simulator language may differ from English.
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "app-title").firstMatch.waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["more-action"].firstMatch.exists)
-        XCTAssertTrue(app.buttons["pin-action"].firstMatch.exists)
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "summary-add").firstMatch.exists)
         let result = app.descendants(matching: .any).matching(identifier: "rate-results").firstMatch
         let controls = app.descendants(matching: .any).matching(identifier: "capture-controls").firstMatch
         XCTAssertTrue(result.exists)
@@ -28,8 +28,22 @@ final class FFFilmUITests: XCTestCase {
 
         #if os(iOS)
         let windowWidth = app.windows.firstMatch.frame.width
-        if windowWidth < splitWindowWidth, app.windows.firstMatch.frame.height > windowWidth {
-            // Narrow iPad windows and portrait phones keep the live result first.
+        let portrait = app.windows.firstMatch.frame.height > windowWidth
+        if windowWidth < 600, portrait {
+            // Portrait phones pin the answer in the thumb zone above the tab bar, wherever the page scrolls.
+            let tabBar = app.tabBars.firstMatch.frame
+            XCTAssertLessThanOrEqual(result.frame.maxY, tabBar.minY + 1)
+            XCTAssertGreaterThan(result.frame.minY, app.windows.firstMatch.frame.midY)
+            app.swipeUp()
+            app.swipeUp()
+            XCTAssertTrue(app.buttons["summary-add"].firstMatch.isHittable)
+            XCTAssertLessThanOrEqual(result.frame.maxY, tabBar.minY + 1)
+            let meter = XCTAttachment(screenshot: app.screenshot())
+            meter.name = "Recording meter above the tab bar"
+            meter.lifetime = .keepAlways
+            add(meter)
+        } else if windowWidth < splitWindowWidth, portrait {
+            // Narrow iPad windows keep the live result first.
             XCTAssertLessThan(result.frame.minY, controls.frame.minY)
         } else if windowWidth >= splitWindowWidth {
             // Wide iPad windows show parameters beside the live result.
@@ -439,43 +453,57 @@ final class FFFilmUITests: XCTestCase {
 
     #if os(iOS)
     /// XCTest sheet hit-testing is unreliable on the available macOS host, so
-    /// the comparison sheet flow runs on iOS only (AGENT.md, camera catalog).
+    /// the summary sheet flow runs on iOS only (AGENT.md, camera catalog).
     @MainActor
-    func testComparisonSheetAddsViewsAndRemovesSnapshots() throws {
+    func testSummaryAddsDuplicatesTotalsAndClears() throws {
         let app = XCUIApplication()
         app.launchArguments += ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launchEnvironment["FFFILM_UI_RESET_SUMMARY"] = "1"
         app.launch()
-        let view = app.buttons["comparison-view"].firstMatch
-        XCTAssertTrue(view.waitForExistence(timeout: 5))
-        XCTAssertFalse(view.isEnabled)
+        let addButton = app.buttons["summary-add"].firstMatch
+        XCTAssertTrue(addButton.waitForExistence(timeout: 5))
+        let open = app.buttons["summary-open"].firstMatch
 
         let proRes = app.buttons["PRORES"].firstMatch
-        XCTAssertTrue(proRes.waitForExistence(timeout: 3))
+        reveal(proRes, in: app)
         proRes.tap()
-        let add = app.buttons["comparison-add"].firstMatch
-        reveal(add, in: app)
-        add.tap()
-        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "feedback-banner").firstMatch.waitForExistence(timeout: 2))
-        XCTAssertTrue(view.isEnabled)
+        reveal(addButton, in: app)
+        // The same setup counts twice: two cameras recording one format both need storage.
+        addButton.tap()
+        addButton.tap()
+        XCTAssertTrue(open.waitForExistence(timeout: 2))
+        XCTAssertTrue(open.isEnabled)
+        reveal(open, in: app)
+        open.tap()
 
-        view.tap()
-        let snapshot = app.descendants(matching: .any)
-            .matching(NSPredicate(format: "identifier BEGINSWITH 'comparison-snapshot-'")).firstMatch
-        XCTAssertTrue(snapshot.waitForExistence(timeout: 3))
-        XCTAssertTrue(snapshot.staticTexts["Project FPS"].exists)
-        XCTAssertFalse(snapshot.staticTexts["Sensor FPS"].exists)
-        let remove = app.descendants(matching: .any)
-            .matching(NSPredicate(format: "identifier BEGINSWITH 'comparison-remove-'")).firstMatch
-        XCTAssertTrue(remove.exists)
-        remove.tap()
+        let entries = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier BEGINSWITH 'summary-entry-'"))
+        XCTAssertTrue(entries.firstMatch.waitForExistence(timeout: 3))
+        XCTAssertEqual(entries.count, 2)
+        XCTAssertTrue(entries.firstMatch.staticTexts["Project FPS"].exists)
+        XCTAssertFalse(entries.firstMatch.staticTexts["Sensor FPS"].exists)
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "summary-sheet-total").firstMatch.exists)
+        let sheet = XCTAttachment(screenshot: app.screenshot())
+        sheet.name = "Recording summary sheet"
+        sheet.lifetime = .keepAlways
+        add(sheet)
 
-        let done = app.buttons["comparison-done"].firstMatch
-        XCTAssertTrue(done.waitForExistence(timeout: 2))
-        done.tap()
-        let disabled = NSPredicate(format: "isEnabled == false")
-        let expectation = XCTNSPredicateExpectation(predicate: disabled, object: view)
-        XCTWaiter().wait(for: [expectation], timeout: 4)
-        XCTAssertFalse(view.isEnabled)
+        app.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier BEGINSWITH 'summary-remove-'")).firstMatch.tap()
+        let oneLeft = XCTNSPredicateExpectation(predicate: NSPredicate(format: "count == 1"), object: entries)
+        XCTAssertEqual(XCTWaiter.wait(for: [oneLeft], timeout: 3), .completed)
+
+        // Clearing every entry is destructive, so it asks once before emptying the list.
+        app.buttons["summary-clear"].firstMatch.tap()
+        let confirm = app.buttons["Clear summary"].firstMatch
+        XCTAssertTrue(confirm.waitForExistence(timeout: 2))
+        confirm.tap()
+        XCTAssertTrue(app.staticTexts["Summary is empty"].waitForExistence(timeout: 3))
+        app.buttons["summary-done"].firstMatch.tap()
+        // The meter hides its summary line when empty; wide panels disable the button.
+        let emptied = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false OR isEnabled == false"),
+                                                object: open)
+        XCTAssertEqual(XCTWaiter.wait(for: [emptied], timeout: 4), .completed)
     }
     #endif
 

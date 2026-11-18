@@ -1,14 +1,21 @@
+import AppIntents
 import SwiftUI
 
 @main
 struct FFFilmApp: App {
     init() {
+        // Siri learns the camera names used in "Estimate <camera> storage" phrases.
+        FFFilmShortcuts.updateAppShortcutParameters()
         #if DEBUG
         // UI regression launches opt into a clean shutter memory; normal launches restore it.
         if ProcessInfo.processInfo.environment["FFFILM_UI_RESET_SHUTTER"] == "1" {
             UserDefaults.standard.removeObject(forKey: ShutterSettingsMemory.key)
             UserDefaults.standard.removeObject(forKey: ShutterWorkspace.rigsKey)
             UserDefaults.standard.removeObject(forKey: ShutterWorkspace.libraryKey)
+        }
+        // Summary workflows start from an empty, persisted shooting-day list.
+        if ProcessInfo.processInfo.environment["FFFILM_UI_RESET_SUMMARY"] == "1" {
+            UserDefaults.standard.removeObject(forKey: RecordingSummary.key)
         }
         #endif
         #if DEBUG && targetEnvironment(simulator)

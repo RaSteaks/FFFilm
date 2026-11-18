@@ -6,6 +6,14 @@
 - UI 测试保留控件接线和完整用户流程；数值组合留在单元测试，语言切换集中验证。避免重复启动、按语言重复业务流程、无基准性能测试，以及测试辅助工具自身的平凡检查。
 - 测试职责与运行说明见 README 的“构建、运行与测试”。保留图像精度、导出防覆盖/取消恢复、持久化与窗口隔离等关键覆盖；大 TIFF 压力测试继续按需启用。
 
+## 拇指区结果、汇总清单与 Siri（2026-11-18）
+
+- 结果仪表：竖屏 iPhone（宽度 < 600pt 且非分栏）上，RATE 的结果改为 `RateMeter`，通过 ScrollView 的 `.safeAreaInset(edge: .bottom)` 固定在标签栏上方，滚到哪里、拨哪个拨盘答案都可见；显示任务、GB/h · Mb/s、主答案、推导行（时长 × 速率 / 卡容量 ÷ 速率）、加入汇总按钮和汇总行。沿用 `rate-results`、`plan-capacity-output`/`card-runtime-output`、`record-time-output` 标识。iPad、宽窗口、横屏手机和 macOS 保留页内结果面板。`RateView` 在两种模式下都保留 `AdaptiveWorkbenchLayout` 的第一个子视图，旋转时 `CaptureControls` 的滚轮状态不重建。删除了滚动吸顶摘要（`CompactRateSummary`、偏移量 preference、键盘可见性监听）。
+- 汇总取代对比（iOS 与 macOS）：`RecordingSummary` 持久化（`fffilm.recording-summary-v1`，版本化），不去重、不设上限；每次修改前从存储刷新，多窗口合并而非覆盖；只存设置、展示时重算；目录中已不存在的相机条目在读取时丢弃；RATE 重置不清空。表单先显示合计与条数，再逐条显示完整格式与两种估算，支持单条移除（图标按钮）、复制汇总、清空（确认对话框，放在导航栏左侧，远离“完成”）。加入时用计数、成功触感和辅助功能播报确认，不用横幅，避免在页面底部操作时顶部插入内容推动页面。macOS 工具栏改为“加入汇总”，保留 ⇧⌘P。删除 `PinnedSetup`、`ComparisonAddResult` 及对比文案。
+- Siri / 快捷指令：`RecordingIntents.swift` 放在主 App target，无扩展、无 App Group。“估算素材容量”取相机实体（收藏优先，按去空格/连字符匹配名称）与录制时长，使用该相机记忆的格式（`CalculatorStore.rememberedSettings`，与切换相机共用，不归一化以保留调整提示）；“汇总合计”读取持久化汇总。回答跟随系统语言（Siri 的语言），不读 App 内语言偏好，存储单位跟随设置。短语在 `AppShortcuts.xcstrings`（en / zh-Hans），构建时已为两种语言训练。`perform` 标注 `@MainActor`。启动时调用 `updateAppShortcutParameters()`。小组件与控制中心未做。
+- 滚轮实测修正：`UIPickerView` 的固有高度 216pt 会溢出 116pt 的三行区域并盖住标签，改为竖向压缩阻力降低、`sizeThatFits` 采用提议尺寸，并在 SwiftUI 侧 `.clipped()`。
+- 验证：iPhone 17 Pro（iOS 26.3）上 `CalculatorStoreTests` 10 个用例通过（含汇总持久化/合并/丢弃与 Siri 回答），UI 用例 `testCalculatorLaunchesWithCoreControls`（仪表不越过标签栏、滚动后仍可点）、`testSummaryAddsDuplicatesTotalsAndClears`、录制任务、时长校验/重置/撤销、底部标签、语言切换均通过；截图目视检查了仪表、汇总表单与三行滚轮。macOS `FFFilmTests` 173 个用例通过，macOS 与 iOS 构建通过。iPad Pro 13（M5，iOS 26.3）上启动、iPad 工作台与相机库、汇总、时长校验 4 个 UI 用例通过（宽布局仍为页内结果面板）。macOS UI 测试编译通过但未运行（会接管桌面）。Siri 语音、快捷指令 App 内实际运行、真机触感未验证。
+
 ## iOS 拨盘输入（2026-11-18）
 
 - 目标：片场快速计算。iOS（含 iPad）上 RATE 传感器/项目 FPS、存储介质和 SHUTTER 相机/项目 FPS 改为横向刻度拨盘 `RulerDial`；录制时长改为竖向三列滚轮 `DurationWheel`（单个 UIPickerView：时 0–24、分/秒 0–59，单位标签固定在选中行旁）。相机、模式、分辨率、编码、快门角度/时间和整个 macOS 端不变。

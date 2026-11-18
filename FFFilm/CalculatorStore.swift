@@ -19,6 +19,8 @@ final class CalculatorStore {
     // Invalid numeric drafts may live in a window, but never enter persisted rig snapshots.
     @ObservationIgnored private var shutterRigDrafts: [ShutterRigID: ShutterSettings] = [:]
     let shutterWorkspace: ShutterWorkspace
+    /// Persisted and shared by every window; each window refreshes it before changing it.
+    let summary: RecordingSummary
 
     let catalog: CatalogData
     // Writes must pass through the workflow methods to keep normalization,
@@ -29,7 +31,6 @@ final class CalculatorStore {
     var activeView: CalculatorView = .rate
     // Window-local task selection never changes the shared camera format or planning inputs.
     var recordingTask: RecordingTask = .capacity
-    private(set) var pinnedSetups: [PinnedSetup] = []
     private(set) var quickStartCameraIds: [String]
 
     /// The banner is deliberately modelled as state instead of a transient
@@ -53,6 +54,7 @@ final class CalculatorStore {
         let restored = memory.flatMap { $0.isValid ? $0.settings : nil } ?? ShutterSettings.default
         let workspace = ShutterWorkspace(defaults: defaults, migrating: restored)
         self.shutterWorkspace = workspace
+        self.summary = RecordingSummary(defaults: defaults, engine: CalculatorEngine(catalog: catalog))
         self.shutterSettings = workspace.active.settings
         self.rememberedShutterSettings = workspace.active.settings
 
@@ -201,20 +203,35 @@ final class CalculatorStore {
     }
 
     func selectCamera(_ id: String) {
-        let selectedCamera = engine.camera(id: id)
         // A different window may have edited this camera since this store opened.
         // Every format edit is already persisted, so switching need not save the outgoing state.
         cameraMemories = Self.loadCameraMemories(defaults: defaults, catalog: catalog)
+        commitFormatSettings(Self.proposedSettings(cameraID: id, base: settings, memories: cameraMemories, engine: engine))
+    }
 
-        var next = settings
+    /// The format a camera switch proposes: that camera's remembered choices, or its first mode.
+    /// Siri and Shortcuts reuse it so an answer matches what the calculator would show.
+    /// The result is not normalized, so callers can report adjustments made by normalization.
+    static func rememberedSettings(cameraID: String, base: CaptureSettings, defaults: UserDefaults,
+                                   catalog: CatalogData) -> CaptureSettings {
+        proposedSettings(cameraID: cameraID, base: base,
+                         memories: loadCameraMemories(defaults: defaults, catalog: catalog),
+                         engine: CalculatorEngine(catalog: catalog))
+    }
+
+    private static func proposedSettings(cameraID: String, base: CaptureSettings,
+                                         memories: [String: CameraSettingsMemory],
+                                         engine: CalculatorEngine) -> CaptureSettings {
+        let selectedCamera = engine.camera(id: cameraID)
+        var next = base
         next.cameraId = selectedCamera.id
-        if let memory = cameraMemories[selectedCamera.id] {
+        if let memory = memories[selectedCamera.id] {
             next = memory.applying(to: next)
         } else {
             next.modeId = selectedCamera.modes[0].id
             next.resolutionId = engine.preferredResolution(camera: selectedCamera, mode: selectedCamera.modes[0]).id
         }
-        commitFormatSettings(next)
+        return next
     }
 
     func selectMode(_ id: String) {
@@ -337,23 +354,31 @@ final class CalculatorStore {
         return (settings.sensorFps, settings.projectFps)
     }
 
-    @discardableResult
-    func pinCurrentSetup() -> ComparisonAddResult {
-        if pinnedSetups.contains(where: { $0.settings == settings }) {
-            feedbackMessage = AppText.comparisonDuplicate
-            return .duplicate
-        }
-        guard pinnedSetups.count < 4 else {
-            feedbackMessage = AppText.comparisonFull
-            return .full
-        }
-        pinnedSetups.append(PinnedSetup(id: UUID(), settings: settings, calculation: calculation))
-        feedbackMessage = AppText.comparisonAdded
-        return .added
+    /// Identical setups are added again on purpose: two cameras with one format both record.
+    /// The control's count and an accessibility announcement confirm the addition instead of
+    /// a banner, which would shift the page while the operator is working near the bottom.
+    func addCurrentToSummary() {
+        summary.add(settings)
     }
 
-    func removePinnedSetup(id: UUID) {
-        pinnedSetups.removeAll { $0.id == id }
+    func removeSummaryEntry(id: UUID) {
+        summary.remove(id)
+    }
+
+    func clearSummary() {
+        summary.clear()
+    }
+
+    var summaryItems: [SummaryItem] {
+        summary.entries.map { SummaryItem(entry: $0, calculation: engine.calculate(settings: $0.settings)) }
+    }
+
+    var summaryTotalGb: Double {
+        summaryItems.reduce(0) { $0 + $1.calculation.dayTotalGb }
+    }
+
+    func readableSummary(storageUnit: StorageUnit) -> String {
+        AppText.summaryText(items: summaryItems, total: summaryTotalGb, unit: storageUnit)
     }
 
     func clearTransientState() {

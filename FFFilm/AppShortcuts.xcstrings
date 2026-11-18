@@ -1,0 +1,56 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "${applicationName} summary total" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName}汇总合计",
+              "${applicationName}汇总一共多少"
+            ]
+          }
+        }
+      }
+    },
+    "Estimate ${camera} storage with ${applicationName}" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "用${applicationName}估算${camera}的素材容量"
+            ]
+          }
+        }
+      }
+    },
+    "Estimate storage with ${applicationName}" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "用${applicationName}估算素材容量",
+              "${applicationName}估算素材容量"
+            ]
+          }
+        }
+      }
+    },
+    "Show the ${applicationName} summary total" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "查看${applicationName}汇总合计"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

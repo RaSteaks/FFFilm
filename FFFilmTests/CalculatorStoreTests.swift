@@ -112,7 +112,7 @@ struct CalculatorStoreTests {
         store.selectMedia("1tb")
         store.setShootHours(4.5)
         let before = store.settings
-        #expect(store.pinCurrentSetup() == .added)
+        store.addCurrentToSummary()
         await confirmation("Reset enables undo") { changed in
             withObservationTracking { _ = store.resetUndoAvailable } onChange: { changed() }
             store.resetActiveView()
@@ -120,7 +120,7 @@ struct CalculatorStoreTests {
         #expect(defaults.string(forKey: StorageUnit.preferenceKey) == StorageUnit.binary.rawValue)
         #expect(store.resetUndoAvailable)
         #expect(store.settings == CalculatorEngine(catalog: store.catalog).normalized(.default))
-        #expect(store.pinnedSetups.count == 1)
+        #expect(store.summary.entries.count == 1)
         await confirmation("Undo consumes the snapshot") { changed in
             withObservationTracking { _ = store.resetUndoAvailable } onChange: { changed() }
             store.undoReset()
@@ -178,22 +178,67 @@ struct CalculatorStoreTests {
         #expect(second.settings == otherWindowMemory)
     }
 
-    @Test("Comparison snapshots deduplicate identical settings and stop at four")
-    func comparisonDeduplicationAndLimit() throws {
-        let suite = "FFFilm.Comparison.\(UUID().uuidString)"
+    @Test("Summary keeps duplicate setups, merges window edits and totals every entry")
+    func summaryPersistsAndTotals() throws {
+        let suite = "FFFilm.Summary.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
 
         let store = CalculatorStore(defaults: defaults)
-        #expect(store.pinCurrentSetup() == .added)
-        #expect(store.pinCurrentSetup() == .duplicate)
-        for camera in store.catalog.cameras where !camera.isStandaloneProRes {
-            guard store.pinnedSetups.count < 4 else { break }
-            store.selectCamera(camera.id)
-            _ = store.pinCurrentSetup()
-        }
-        #expect(store.pinnedSetups.count == 4)
-        #expect(store.pinCurrentSetup() == .full || store.pinCurrentSetup() == .duplicate)
+        store.addCurrentToSummary()
+        store.addCurrentToSummary()
+        store.setShootHours(2)
+        store.addCurrentToSummary()
+        #expect(store.summary.entries.count == 3)
+        #expect(store.summaryTotalGb == store.summaryItems.reduce(0) { $0 + $1.calculation.dayTotalGb })
+        #expect(store.summaryItems[2].calculation.dayTotalGb == store.calculation.dayTotalGb)
+
+        // Another window reads the same list; its removal survives this window's next addition.
+        let other = CalculatorStore(defaults: defaults)
+        #expect(other.summary.entries.map(\.id) == store.summary.entries.map(\.id))
+        other.removeSummaryEntry(id: other.summary.entries[0].id)
+        store.addCurrentToSummary()
+        #expect(store.summary.entries.count == 3)
+
+        // Entries for cameras the catalog no longer contains are dropped on load.
+        struct Payload: Encodable { var version = 1; var entries: [SummaryEntry] }
+        var retired = store.settings
+        retired.cameraId = "retired-camera"
+        let stored = [SummaryEntry(id: UUID(), settings: retired, added: .now)] + store.summary.entries
+        defaults.set(try JSONEncoder().encode(Payload(entries: stored)), forKey: RecordingSummary.key)
+        store.summary.refresh()
+        #expect(store.summary.entries.count == 3)
+
+        store.clearSummary()
+        #expect(CalculatorStore(defaults: defaults).summary.entries.isEmpty)
+    }
+
+    @Test("Siri answers use the camera's remembered format and the shared summary")
+    func recordingEstimateAnswers() throws {
+        let suite = "FFFilm.Intents.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let store = CalculatorStore(defaults: defaults)
+        let target = try #require(store.catalog.cameras.first(where: { !$0.isStandaloneProRes && $0.id != store.settings.cameraId }))
+        store.selectCamera(target.id)
+        if let codec = store.availableCodecs.last { store.selectCodec(codec.id) }
+        store.setShootHours(2)
+        let expected = store.calculation
+
+        let answer = RecordingEstimate.storageAnswer(cameraID: target.id, hours: 2, defaults: defaults, catalog: store.catalog)
+        #expect(answer.contains(target.name))
+        #expect(answer.contains(expected.codec.name))
+        #expect(answer.contains("02:00:00"))
+        #expect(answer.contains(DisplayFormat.compactStorage(expected.dayTotalGb)))
+        let invalid = RecordingEstimate.storageAnswer(cameraID: target.id, hours: 25, defaults: defaults, catalog: store.catalog)
+        #expect(!invalid.contains(target.name))
+
+        #expect(RecordingEstimate.summaryAnswer(defaults: defaults, catalog: store.catalog) != answer)
+        store.addCurrentToSummary()
+        store.addCurrentToSummary()
+        let summary = RecordingEstimate.summaryAnswer(defaults: defaults, catalog: store.catalog)
+        #expect(summary.contains(DisplayFormat.compactStorage(expected.dayTotalGb * 2)))
     }
 
     @Test("Duration setters reject invalid values without creating a new result")

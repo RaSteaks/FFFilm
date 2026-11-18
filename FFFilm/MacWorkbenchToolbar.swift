@@ -30,19 +30,18 @@ struct MacWorkbenchToolbar: ToolbarContent {
             SettingsButton()
             if store.activeView == .rate {
                 Button {
-                    store.pinCurrentSetup()
+                    store.addCurrentToSummary()
                 } label: {
                     Label {
-                        Text("nav.addComparison")
-                        Text("\(store.pinnedSetups.count)/4").monospacedDigit().foregroundStyle(.secondary)
+                        Text("summary.add")
+                        Text("\(store.summary.entries.count)").monospacedDigit().foregroundStyle(.secondary)
                     } icon: {
-                        Image(systemName: "pin")
+                        Image(systemName: "plus")
                     }
                 }
-                .disabled(store.pinnedSetups.count >= 4)
-                .help(Text("Pin setup for comparison (⇧⌘P)"))
+                .help(Text("Add setup to summary (⇧⌘P)"))
                 .keyboardShortcut("p", modifiers: [.command, .shift])
-                .accessibilityIdentifier("pin-action")
+                .accessibilityIdentifier("summary-add")
             }
             // Both calculator tabs expose Copy after the in-content header is removed.
             if store.activeView != .film {

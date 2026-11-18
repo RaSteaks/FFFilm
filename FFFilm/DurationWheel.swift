@@ -37,9 +37,18 @@ struct DurationWheel: UIViewRepresentable {
         picker.dataSource = context.coordinator
         picker.delegate = context.coordinator
         picker.accessibilityIdentifier = "duration-wheel"
+        // UIPickerView draws neighbouring rows beyond its bounds; keep them inside the field.
+        picker.clipsToBounds = true
         picker.setContentHuggingPriority(.defaultLow, for: .horizontal)
         picker.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        // The intrinsic 216pt height would overflow the three-row field.
+        picker.setContentCompressionResistancePriority(.defaultLow, for: .vertical)
         return picker
+    }
+
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: DurationPickerView, context: Context) -> CGSize? {
+        guard let width = proposal.width, let height = proposal.height else { return nil }
+        return CGSize(width: width, height: height)
     }
 
     func updateUIView(_ picker: DurationPickerView, context: Context) {

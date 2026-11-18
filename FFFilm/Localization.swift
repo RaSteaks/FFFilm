@@ -50,16 +50,33 @@ enum AppText {
         resolve("feedback.resetUndone", defaultValue: "Reset undone.", comment: "Undo reset success feedback.")
     }
 
-    static var comparisonAdded: String {
-        resolve("feedback.comparisonAdded", defaultValue: "Added to comparison.", comment: "Comparison add success feedback.")
+    static func summaryAdded(count: Int) -> String {
+        resolve("feedback.summaryAdded", defaultValue: "Added to summary (\(count) setups).",
+                comment: "Announcement after adding the current setup to the recording summary.")
     }
 
-    static var comparisonDuplicate: String {
-        resolve("feedback.comparisonDuplicate", defaultValue: "This configuration is already in comparison.", comment: "Duplicate comparison feedback.")
+    static func summaryCount(_ count: Int) -> String {
+        resolve("summary.count", defaultValue: "\(count) setups", comment: "Number of setups in the recording summary.")
     }
 
-    static var comparisonFull: String {
-        resolve("feedback.comparisonFull", defaultValue: "Comparison is full (4/4). Remove a setup before adding another.", comment: "Comparison limit feedback.")
+    static func summaryLine(count: Int, total: String) -> String {
+        resolve("summary.line", defaultValue: "Summary \(count) · \(total)",
+                comment: "Compact summary line under the result: number of setups and their total storage.")
+    }
+
+    /// Clipboard text for the whole summary: one line per setup, then the total and the estimate caveat.
+    static func summaryText(items: [SummaryItem], total: Double, unit: StorageUnit) -> String {
+        let lines = items.enumerated().map { index, item in
+            let settings = item.entry.settings
+            let calculation = item.calculation
+            let fps = calculation.camera.isStandaloneProRes ? settings.projectFps : settings.sensorFps
+            return "\(index + 1). \(calculation.camera.name) · \(calculation.mode.label) · \(calculation.resolution.label) · \(calculation.codec.name) · \(DisplayFormat.fps(fps)) fps · \(DisplayFormat.duration(settings.shootHours)) → \(DisplayFormat.compactStorage(calculation.dayTotalGb, unit: unit))"
+        }
+        let header = resolve("copy.summaryHeader", defaultValue: "Recording summary (\(items.count) setups)",
+                             comment: "First line of the copied recording summary.")
+        let footer = resolve("copy.summaryTotal", defaultValue: "Total: \(DisplayFormat.compactStorage(total, unit: unit))",
+                             comment: "Total line of the copied recording summary.")
+        return ([header] + lines + [footer, localized("technical.videoEstimate")]).joined(separator: "\n")
     }
 
     static func imported(sensorFps: Double, projectFps: Double) -> String {

@@ -4,14 +4,6 @@ import SwiftUI
 import UIKit
 #endif
 
-private struct RateResultOffsetKey: PreferenceKey {
-    static let defaultValue: CGFloat = 0
-
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = nextValue()
-    }
-}
-
 struct ContentView: View {
     // Both calculator tabs share their model, while each page retains its own editor state.
     @State private var store = CalculatorStore()
@@ -173,8 +165,6 @@ private struct CalculatorWorkbench: View {
     let store: CalculatorStore
     let view: CalculatorView
     @Binding var showsCameras: Bool
-    @State private var keyboardVisible = false
-    @State private var compactSummaryVisible = false
 
     var body: some View {
         GeometryReader { geometry in
@@ -193,7 +183,12 @@ private struct CalculatorWorkbench: View {
             #else
             let shutterWide = false
             #endif
-            let isCompactPhone = geometry.size.width < 600
+            #if os(iOS)
+            // Portrait phones pin the RATE answer in the thumb zone above the tab bar.
+            let usesMeter = geometry.size.width < 600 && !isWide
+            #else
+            let usesMeter = false
+            #endif
 
             ZStack(alignment: .top) {
                 Palette.background.ignoresSafeArea()
@@ -202,31 +197,15 @@ private struct CalculatorWorkbench: View {
                                     maximumWidth: maximumWidth,
                                     isWide: isWide,
                                     shutterWide: shutterWide,
-                                    isCompactPhone: isCompactPhone)
+                                    usesMeter: usesMeter)
             }
-            .animation(.snappy(duration: 0.18), value: compactSummaryVisible)
         }
-        .onChange(of: view) { _, _ in compactSummaryVisible = false }
-        .onDisappear {
-            compactSummaryVisible = false
-            keyboardVisible = false
-        }
-        #if os(iOS)
-        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
-            keyboardVisible = true
-            compactSummaryVisible = false
-        }
-        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
-            keyboardVisible = false
-        }
-        #endif
     }
 
     /// The scrolling RATE/SHUTTER workbench; kept separate from the full-bleed film editor.
     private func calculatorWorkbench(contentWidth: CGFloat, maximumWidth: CGFloat, isWide: Bool,
-                                     shutterWide: Bool, isCompactPhone: Bool) -> some View {
-        ZStack(alignment: .top) {
-            ScrollViewReader { proxy in
+                                     shutterWide: Bool, usesMeter: Bool) -> some View {
+        ScrollViewReader { proxy in
                 ScrollView {
                     VStack(spacing: Layout.sectionSpacing) {
                         #if os(iOS)
@@ -240,7 +219,7 @@ private struct CalculatorWorkbench: View {
                                      showsCameras: $showsCameras,
                                      contentWidth: contentWidth,
                                      isWide: isWide,
-                                     scrollProxy: proxy)
+                                     usesMeter: usesMeter)
                         } else {
                             ShutterView(store: store, isWide: shutterWide, scrollProxy: proxy)
                         }
@@ -268,24 +247,19 @@ private struct CalculatorWorkbench: View {
                     .padding(.bottom, 28)
                     .frame(maxWidth: .infinity)
                 }
-                .coordinateSpace(.named("workbenchScroll"))
                 .scrollDismissesKeyboard(.interactively)
-                .onPreferenceChange(RateResultOffsetKey.self) { offset in
-                    guard isCompactPhone, view == .rate else {
-                        compactSummaryVisible = false
-                        return
+                // The inset reserves scroll space, so the last controls stay reachable above the meter.
+                .safeAreaInset(edge: .bottom, spacing: 0) {
+                    #if os(iOS)
+                    if usesMeter && view == .rate {
+                        RateMeter(store: store)
+                            .frame(maxWidth: maximumWidth)
+                            .padding(.horizontal, Layout.pageGutter)
+                            .padding(.top, 6)
+                            .padding(.bottom, 8)
                     }
-                    compactSummaryVisible = offset < -8 && !keyboardVisible
+                    #endif
                 }
-            }
-
-            if compactSummaryVisible && view == .rate && !keyboardVisible {
-                CompactRateSummary(store: store)
-                    .padding(.horizontal, Layout.pageGutter)
-                    .padding(.top, 6)
-                    .transition(.move(edge: .top).combined(with: .opacity))
-                    .accessibilityAddTraits(.isHeader)
-            }
         }
     }
 }
@@ -335,29 +309,25 @@ private struct HeaderView: View {
     private var actions: some View {
         HStack(spacing: 7) {
             if view == .rate {
-                Button {
-                    store.pinCurrentSetup()
-                } label: {
-                    HStack(spacing: 4) {
-                        // Compact headers use the symbol and count so Chinese labels do not wrap.
-                        if usesCompactLayout {
-                            Image(systemName: "plus")
-                                .font(.system(size: 15, weight: .semibold))
-                        } else {
-                            Label("nav.addComparison", systemImage: "plus")
+                // Compact layouts add from the result itself (meter or panel), next to the answer.
+                if !usesCompactLayout {
+                    Button {
+                        store.addCurrentToSummary()
+                    } label: {
+                        HStack(spacing: 4) {
+                            Label("summary.add", systemImage: "plus")
+                            Text("\(store.summary.entries.count)")
+                                .monospacedDigit()
+                                .foregroundStyle(Palette.muted)
                         }
-                        Text("\(store.pinnedSetups.count)/4")
-                            .monospacedDigit()
-                            .foregroundStyle(Palette.muted)
+                        .fixedSize(horizontal: true, vertical: false)
+                        .frame(minWidth: 44, minHeight: 44)
                     }
-                    .fixedSize(horizontal: true, vertical: false)
-                    .frame(minWidth: 44, minHeight: 44)
+                    .accessibilityLabel(Text("summary.add"))
+                    .accessibilityValue("\(store.summary.entries.count)")
+                    .accessibilityIdentifier("summary-add-header")
+                    .accessibilityHint(Text("summary.addHint"))
                 }
-                .disabled(store.pinnedSetups.count >= 4)
-                .accessibilityLabel(Text("nav.addComparison"))
-                .accessibilityValue("\(store.pinnedSetups.count)/4")
-                .accessibilityIdentifier("pin-action")
-                .accessibilityHint(Text("comparison.addHint"))
 
                 Button(action: copyCurrent) {
                     actionLabel(copied ? "nav.copied" : "nav.copy", systemImage: copied ? "checkmark" : "doc.on.doc")
@@ -484,7 +454,8 @@ private struct RateView: View {
     @Binding var showsCameras: Bool
     let contentWidth: CGFloat
     let isWide: Bool
-    let scrollProxy: ScrollViewProxy
+    /// Portrait phones show the answer in the pinned meter instead of an in-page panel.
+    let usesMeter: Bool
 
     var body: some View {
         VStack(spacing: Layout.sectionSpacing) {
@@ -502,13 +473,16 @@ private struct RateView: View {
                 .accessibilityHint(Text(store.recordingTask.hint))
             }
             QuickStartView(store: store, showsCameras: $showsCameras)
-            AdaptiveWorkbenchLayout(wide: isWide, resultFirstWhenStacked: true, leadingFraction: 0.55) {
+            // Controls keep one layout identity whether or not the meter is used, so rotating
+            // a phone never resets the duration wheel or other editor state.
+            AdaptiveWorkbenchLayout(wide: isWide, resultFirstWhenStacked: !usesMeter, leadingFraction: 0.55) {
                 CaptureControls(store: store, availableWidth: isWide ? (contentWidth - Layout.workbenchColumnSpacing) * 0.55 : contentWidth)
-                RateResults(store: store, showsScrollOffset: !isWide)
-                    .accessibilitySortPriority(isWide ? 0 : 1)
-            }
-            if !store.pinnedSetups.isEmpty {
-                PinnedSetups(store: store)
+                if usesMeter {
+                    Color.clear.frame(height: 0)
+                } else {
+                    RateResults(store: store)
+                        .accessibilitySortPriority(isWide ? 0 : 1)
+                }
             }
         }
     }
@@ -767,6 +741,7 @@ private struct CaptureControls: View {
                 DurationWheel(components: $wheel, onCommit: commitWheel)
                     .frame(maxWidth: .infinity)
                     .frame(height: wheelHeight)
+                    .clipped()
             }
             .background(Palette.surface)
             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
@@ -940,10 +915,10 @@ private struct CaptureControls: View {
 private struct RateResults: View {
     @AppStorage(StorageUnit.preferenceKey) private var unit: StorageUnit = .decimal
     let store: CalculatorStore
-    let showsScrollOffset: Bool
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var showsComparison = false
+    @State private var showsSummary = false
+    @State private var additions = 0
     private var usesCompactLayout: Bool {
         #if os(iOS)
         horizontalSizeClass == .compact
@@ -985,12 +960,21 @@ private struct RateResults: View {
             planningRow(title: "recording.hourlyData",
                         value: "\(DisplayFormat.number(unit.converted(decimalGB: result.sensorGbPerHour))) \(unit.symbol)/h",
                         detail: "\(DisplayFormat.number(result.sensorMbps)) Mb/s")
+            if !store.summary.entries.isEmpty {
+                planningRow(title: "summary.total",
+                            value: DisplayFormat.compactStorage(store.summaryTotalGb, unit: unit),
+                            detail: AppText.summaryCount(store.summary.entries.count))
+                    .accessibilityIdentifier("summary-total")
+            }
 
             HStack(spacing: 8) {
-                Button { store.pinCurrentSetup() } label: {
+                Button {
+                    store.addCurrentToSummary()
+                    additions += 1
+                } label: {
                     Label {
-                        Text("nav.addComparison")
-                        Text("\(store.pinnedSetups.count)/4")
+                        Text("summary.add")
+                        Text("\(store.summary.entries.count)")
                             .monospacedDigit()
                             .foregroundStyle(Palette.muted)
                     } icon: {
@@ -998,13 +982,13 @@ private struct RateResults: View {
                     }
                 }
                 .buttonStyle(.bordered)
-                .disabled(store.pinnedSetups.count >= 4)
-                .accessibilityIdentifier("comparison-add")
+                .accessibilityHint(Text("summary.addHint"))
+                .accessibilityIdentifier("summary-add")
 
-                Button("nav.viewComparison") { showsComparison = true }
+                Button("summary.view") { showsSummary = true }
                     .buttonStyle(.bordered)
-                    .disabled(store.pinnedSetups.isEmpty)
-                    .accessibilityIdentifier("comparison-view")
+                    .disabled(store.summary.entries.isEmpty)
+                    .accessibilityIdentifier("summary-open")
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -1015,16 +999,9 @@ private struct RateResults: View {
         .textSelection(.enabled)
         .accessibilityIdentifier("rate-results")
         .animation(reduceMotion ? nil : .snappy(duration: 0.22), value: result.sensorGbPerHour)
-        .background {
-            if showsScrollOffset {
-                GeometryReader { proxy in
-                    Color.clear.preference(key: RateResultOffsetKey.self,
-                                           value: proxy.frame(in: .named("workbenchScroll")).minY)
-                }
-            }
-        }
-        .sheet(isPresented: $showsComparison) {
-            ComparisonSheet(store: store)
+        .sensoryFeedback(.success, trigger: additions)
+        .sheet(isPresented: $showsSummary) {
+            SummarySheet(store: store)
         }
     }
 
@@ -1053,116 +1030,201 @@ private struct RateResults: View {
         }
         .fixedSize(horizontal: false, vertical: true)
     }
-
 }
 
-private struct CompactRateSummary: View {
+#if os(iOS)
+/// iPhone keeps the answer in the thumb zone above the tab bar, next to the dials that move it,
+/// so scrolling to any control never hides the result.
+private struct RateMeter: View {
     @AppStorage(StorageUnit.preferenceKey) private var unit: StorageUnit = .decimal
     let store: CalculatorStore
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var showsSummary = false
+    @State private var additions = 0
 
     var body: some View {
         let result = store.calculation
-        let taskLabel = AppText.resource(store.recordingTask.label)
-        let answer = store.recordingTask == .capacity
-            ? DisplayFormat.compactStorage(result.dayTotalGb, unit: unit)
-            : DisplayFormat.duration(result.captureRuntimeHours)
-        HStack(spacing: 10) {
-            Text(answer)
-                .font(.system(.callout, design: .monospaced))
-                .monospacedDigit()
-            Spacer(minLength: 8)
-            Text(taskLabel)
-                .font(.system(.caption, design: .monospaced))
-                .foregroundStyle(Palette.muted)
-                .lineLimit(1)
-        }
-        .padding(.horizontal, 12)
-        .frame(minHeight: 44)
-        .background(.ultraThinMaterial, in: Capsule())
-        .overlay { Capsule().stroke(Palette.line) }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(Text("\(taskLabel), \(answer)"))
-        .accessibilityIdentifier("rate-compact-summary")
-    }
-}
-
-private struct PinnedSetups: View {
-    let store: CalculatorStore
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("nav.viewComparison")
-                .font(.system(.caption, weight: .semibold))
-                .foregroundStyle(Palette.muted)
-            ForEach(Array(store.pinnedSetups.enumerated()), id: \.element.id) { index, pin in
-                PinnedSetupRow(index: index, pin: pin) {
-                    store.removePinnedSetup(id: pin.id)
+        let capacity = store.recordingTask == .capacity
+        let rate = "\(DisplayFormat.number(unit.converted(decimalGB: result.sensorGbPerHour))) \(unit.symbol)/h"
+        let count = store.summary.entries.count
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(store.recordingTask.label)
+                    .font(.caption)
+                    .foregroundStyle(Palette.muted)
+                Spacer(minLength: 8)
+                Text(verbatim: "\(rate) · \(DisplayFormat.number(result.sensorMbps)) Mb/s")
+                    .font(.system(.caption, design: .monospaced))
+                    .monospacedDigit()
+                    .foregroundStyle(Palette.muted)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+            }
+            HStack(alignment: .center, spacing: 10) {
+                Text(capacity ? DisplayFormat.compactStorage(result.dayTotalGb, unit: unit)
+                              : DisplayFormat.duration(result.captureRuntimeHours))
+                    .font(.system(size: 34, weight: .light, design: .monospaced))
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                    .contentTransition(.numericText())
+                    .accessibilityIdentifier(capacity ? "plan-capacity-output" : "card-runtime-output")
+                Spacer(minLength: 8)
+                Button {
+                    store.addCurrentToSummary()
+                    additions += 1
+                    AccessibilityNotification.Announcement(AppText.summaryAdded(count: store.summary.entries.count)).post()
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: "plus")
+                        Text("summary.add")
+                        if count > 0 {
+                            Text(verbatim: "\(count)")
+                                .monospacedDigit()
+                                .foregroundStyle(Palette.muted)
+                                .contentTransition(.numericText())
+                        }
+                    }
+                    .font(.system(.footnote, weight: .semibold))
+                    .lineLimit(1)
+                    .frame(minHeight: Layout.controlHeight)
+                }
+                .buttonStyle(.bordered)
+                .fixedSize()
+                .accessibilityHint(Text("summary.addHint"))
+                .accessibilityIdentifier("summary-add")
+            }
+            // How the answer is derived: planned time × rate, or card capacity ÷ rate.
+            HStack(spacing: 4) {
+                if capacity {
+                    Text(verbatim: DisplayFormat.duration(store.settings.shootHours))
+                        .accessibilityIdentifier("record-time-output")
+                    Text(verbatim: "× \(rate)")
+                } else {
+                    Text(verbatim: result.media.label)
+                    Text(verbatim: "÷ \(rate)")
+                }
+                Spacer(minLength: 8)
+                if count > 0 {
+                    Button { showsSummary = true } label: {
+                        HStack(spacing: 4) {
+                            Text(verbatim: AppText.summaryLine(count: count,
+                                                               total: DisplayFormat.compactStorage(store.summaryTotalGb, unit: unit)))
+                            Image(systemName: "chevron.right")
+                                .font(.caption2.weight(.semibold))
+                        }
+                        .foregroundStyle(Palette.text)
+                        .frame(minHeight: Layout.controlHeight)
+                        .contentShape(.rect)
+                    }
+                    .buttonStyle(WorkbenchPressStyle())
+                    .accessibilityIdentifier("summary-open")
                 }
             }
+            .font(.system(.caption, design: .monospaced))
+            .monospacedDigit()
+            .foregroundStyle(Palette.muted)
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
+            .frame(minHeight: count > 0 ? Layout.controlHeight : nil)
         }
-        .font(.system(size: 10, weight: .medium, design: .monospaced))
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .workbenchSurface(cornerRadius: 14)
-        .textSelection(.enabled)
-        .accessibilityIdentifier("pinned-setups")
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .workbenchSurface(cornerRadius: 18)
+        .animation(reduceMotion ? nil : .snappy(duration: 0.22), value: result.dayTotalGb)
+        .animation(reduceMotion ? nil : .snappy(duration: 0.22), value: result.captureRuntimeHours)
+        .animation(reduceMotion ? nil : .snappy(duration: 0.22), value: count)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("rate-results")
+        .sensoryFeedback(.success, trigger: additions)
+        .sheet(isPresented: $showsSummary) {
+            SummarySheet(store: store)
+        }
     }
 }
+#endif
 
-private struct PinnedSetupRow: View {
-    @AppStorage(StorageUnit.preferenceKey) private var unit: StorageUnit = .decimal
-    let index: Int
-    let pin: PinnedSetup
-    let remove: () -> Void
-
-    var body: some View {
-        HStack(spacing: 10) {
-            Text(String(format: "%02d", index + 1)).foregroundStyle(Palette.muted)
-            VStack(alignment: .leading, spacing: 3) {
-                Text("\(pin.calculation.camera.name) · \(pin.calculation.codec.name)")
-                    .lineLimit(2)
-                Text("\(DisplayFormat.fps(pin.calculation.camera.isStandaloneProRes ? pin.settings.projectFps : pin.settings.sensorFps)) · \(DisplayFormat.humanDuration(pin.calculation.captureRuntimeHours)) / \(pin.calculation.media.label)")
-                    .foregroundStyle(Palette.muted)
-                    .lineLimit(2)
-            }
-            Spacer(minLength: 6)
-            Text("\(DisplayFormat.number(unit.converted(decimalGB: pin.calculation.sensorGbPerHour)))\n\(unit.symbol)/h")
-                .multilineTextAlignment(.trailing)
-            Button(action: remove) {
-                Image(systemName: "xmark")
-                    .frame(width: 44, height: 44)
-            }
-            .buttonStyle(WorkbenchPressStyle())
-            .accessibilityLabel(Text("comparison.remove"))
-        }
-        .padding(.vertical, 4)
-    }
-}
-
-private struct ComparisonSheet: View {
+/// The shooting-day summary: every added setup with its complete format and both estimates,
+/// so the list still serves format comparison while its total answers "how much today".
+private struct SummarySheet: View {
     @Environment(\.dismiss) private var dismiss
     @AppStorage(StorageUnit.preferenceKey) private var unit: StorageUnit = .decimal
     let store: CalculatorStore
+    @State private var confirmsClear = false
+    @State private var copied = false
+    @State private var copyResetTask: Task<Void, Never>?
+
+    private var clearPlacement: ToolbarItemPlacement {
+        #if os(iOS)
+        .topBarLeading
+        #else
+        .destructiveAction
+        #endif
+    }
 
     var body: some View {
+        let items = store.summaryItems
         NavigationStack {
             List {
-                if store.pinnedSetups.isEmpty {
-                    ContentUnavailableView("comparison.empty", systemImage: "square.stack.3d.up.slash")
+                if items.isEmpty {
+                    ContentUnavailableView {
+                        Label("summary.empty", systemImage: "sum")
+                    } description: {
+                        Text("summary.emptyHint")
+                    }
                 } else {
-                    ForEach(store.pinnedSetups) { pin in
-                        ComparisonSnapshotRow(store: store, pin: pin, unit: unit)
+                    Section {
+                        LabeledContent("summary.total",
+                                       value: DisplayFormat.compactStorage(store.summaryTotalGb, unit: unit))
+                            .font(.headline.monospacedDigit())
+                            .accessibilityIdentifier("summary-sheet-total")
+                    } footer: {
+                        Text(verbatim: AppText.summaryCount(items.count))
+                    }
+                    Section {
+                        ForEach(items) { item in
+                            SummaryEntryRow(store: store, item: item, unit: unit)
+                        }
                     }
                 }
             }
-            .navigationTitle(AppText.localized("nav.viewComparison"))
+            .navigationTitle(AppText.localized("summary.title"))
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("nav.done") { dismiss() }
-                        .accessibilityIdentifier("comparison-done")
+                        .accessibilityIdentifier("summary-done")
+                }
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        PlatformClipboard.copy(store.readableSummary(storageUnit: unit))
+                        copied = true
+                        copyResetTask?.cancel()
+                        copyResetTask = Task { @MainActor in
+                            try? await Task.sleep(for: .seconds(1.2))
+                            guard !Task.isCancelled else { return }
+                            copied = false
+                        }
+                    } label: {
+                        Label(copied ? "nav.copied" : "summary.copy", systemImage: copied ? "checkmark" : "doc.on.doc")
+                    }
+                    .disabled(items.isEmpty)
+                    .accessibilityIdentifier("summary-copy")
+                }
+                // Keep the destructive action away from Done.
+                ToolbarItem(placement: clearPlacement) {
+                    Button("summary.clear", role: .destructive) { confirmsClear = true }
+                        .disabled(items.isEmpty)
+                        .accessibilityIdentifier("summary-clear")
                 }
             }
+            .confirmationDialog("summary.clearQuestion", isPresented: $confirmsClear, titleVisibility: .visible) {
+                Button("summary.clearConfirm", role: .destructive) { store.clearSummary() }
+                    .accessibilityIdentifier("summary-clear-confirm")
+            }
         }
+        .onAppear { store.summary.refresh() }
+        .onDisappear { copyResetTask?.cancel() }
+        .sensoryFeedback(.success, trigger: copied) { _, newValue in newValue }
         .tint(Palette.text)
         .preferredColorScheme(.dark)
         #if os(macOS)
@@ -1173,42 +1235,47 @@ private struct ComparisonSheet: View {
     }
 }
 
-private struct ComparisonSnapshotRow: View {
+private struct SummaryEntryRow: View {
     let store: CalculatorStore
-    let pin: PinnedSetup
+    let item: SummaryItem
     let unit: StorageUnit
 
     var body: some View {
+        let settings = item.entry.settings
+        let calculation = item.calculation
         // Catalog mode names are verbatim technical terms and never localized.
-        let modeLabel = pin.calculation.mode.label
-        let fps = pin.calculation.camera.isStandaloneProRes ? pin.settings.projectFps : pin.settings.sensorFps
+        let modeLabel = calculation.mode.label
+        let fps = calculation.camera.isStandaloneProRes ? settings.projectFps : settings.sensorFps
         // Standalone ProRes captures at project cadence; camera profiles use sensor cadence.
-        let fpsLabel: LocalizedStringKey = pin.calculation.camera.isStandaloneProRes ? "field.projectFps" : "field.sensorFps"
+        let fpsLabel: LocalizedStringKey = calculation.camera.isStandaloneProRes ? "field.projectFps" : "field.sensorFps"
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline) {
-                Text(pin.calculation.camera.name)
+                Text(calculation.camera.name)
                     .font(.headline)
                 Spacer()
                 Button(role: .destructive) {
-                    store.removePinnedSetup(id: pin.id)
+                    store.removeSummaryEntry(id: item.id)
                 } label: {
-                    Label("comparison.remove", systemImage: "trash")
+                    // The symbol names the action visually; VoiceOver keeps the full label.
+                    Label("summary.remove", systemImage: "trash")
+                        .labelStyle(.iconOnly)
+                        .frame(minWidth: Layout.controlHeight, minHeight: Layout.controlHeight)
                 }
                 .buttonStyle(.borderless)
-                .accessibilityIdentifier("comparison-remove-\(pin.id.uuidString)")
+                .accessibilityIdentifier("summary-remove-\(item.id.uuidString)")
             }
-            Text("\(modeLabel) · \(pin.calculation.resolution.label) · \(pin.calculation.codec.name)")
+            Text("\(modeLabel) · \(calculation.resolution.label) · \(calculation.codec.name)")
                 .font(.subheadline)
                 .fixedSize(horizontal: false, vertical: true)
             LabeledContent(fpsLabel, value: "\(DisplayFormat.fps(fps)) fps")
-            LabeledContent("result.perHour", value: "\(DisplayFormat.number(unit.converted(decimalGB: pin.calculation.sensorGbPerHour))) \(unit.symbol)/h · \(DisplayFormat.number(pin.calculation.sensorMbps)) Mb/s")
-            LabeledContent("result.planCapacity", value: "\(DisplayFormat.number(pin.settings.shootHours, decimals: 2)) h · \(DisplayFormat.compactStorage(pin.calculation.dayTotalGb, unit: unit))")
-            LabeledContent("result.cardDuration", value: "\(DisplayFormat.duration(pin.calculation.captureRuntimeHours)) · \(pin.calculation.media.label)")
+            LabeledContent("result.perHour", value: "\(DisplayFormat.number(unit.converted(decimalGB: calculation.sensorGbPerHour))) \(unit.symbol)/h · \(DisplayFormat.number(calculation.sensorMbps)) Mb/s")
+            LabeledContent("result.planCapacity", value: "\(DisplayFormat.duration(settings.shootHours)) · \(DisplayFormat.compactStorage(calculation.dayTotalGb, unit: unit))")
+            LabeledContent("result.cardDuration", value: "\(DisplayFormat.duration(calculation.captureRuntimeHours)) · \(calculation.media.label)")
         }
         .padding(.vertical, 6)
         .textSelection(.enabled)
         .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("comparison-snapshot-\(pin.id.uuidString)")
+        .accessibilityIdentifier("summary-entry-\(item.id.uuidString)")
     }
 }
 

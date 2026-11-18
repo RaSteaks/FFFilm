@@ -18,6 +18,8 @@ final class CalculatorStore {
     @ObservationIgnored private var rememberedShutterSettings: ShutterSettings
     // Invalid numeric drafts may live in a window, but never enter persisted rig snapshots.
     @ObservationIgnored private var shutterRigDrafts: [ShutterRigID: ShutterSettings] = [:]
+    // Results are recomputed only when the shared entries change, not on every render.
+    @ObservationIgnored private var summaryCache: (entries: [SummaryEntry], items: [SummaryItem])?
     let shutterWorkspace: ShutterWorkspace
     /// Persisted and shared by every window; each window refreshes it before changing it.
     let summary: RecordingSummary
@@ -37,9 +39,11 @@ final class CalculatorStore {
     /// toast so VoiceOver and keyboard users can discover important changes.
     var feedbackMessage: String?
     var resetUndoAvailable: Bool { resetUndoSnapshot != nil }
+    /// Counts additions to the summary so every add control shares one confirmation.
+    private(set) var summaryAdditions = 0
 
     private static let quickStartKey = "fffilm.quick-start-camera-ids"
-    private static let cameraMemoryKey = "fffilm.camera-settings-memory"
+    static let cameraMemoryKey = "fffilm.camera-settings-memory"
     private static let defaultQuickStarts = ["alexa35", "alexa265", "venice2", "burano"]
 
     init(catalog suppliedCatalog: CatalogData? = nil, defaults: UserDefaults = .standard) {
@@ -58,12 +62,7 @@ final class CalculatorStore {
         self.shutterSettings = workspace.active.settings
         self.rememberedShutterSettings = workspace.active.settings
 
-        let stored = defaults.stringArray(forKey: Self.quickStartKey) ?? Self.defaultQuickStarts
-        let validIDs = stored.filter { id in
-            catalog.cameras.contains(where: { $0.id == id && !$0.isStandaloneProRes })
-        }
-        // Preserve existing shortcuts as favorites, including an intentionally empty saved list.
-        self.quickStartCameraIds = validIDs.uniqued()
+        self.quickStartCameraIds = Self.favoriteCameraIDs(defaults: defaults, catalog: catalog)
 
         let defaultSettings = engine.normalized(.default)
         if let memory = cameraMemories[defaultSettings.cameraId] {
@@ -250,12 +249,18 @@ final class CalculatorStore {
         updateFormatSettings { $0.codecId = id }
     }
 
-    func selectProjectFps(_ fps: Double) {
-        updateFormatSettings { $0.projectFps = fps }
+    /// Dials pass `persisting: false` for each detent and call `persistFormatSettings()` when they
+    /// settle, so a fling recalculates live without re-encoding camera memory at every stop.
+    func selectProjectFps(_ fps: Double, persisting: Bool = true) {
+        updateFormatSettings(persisting: persisting) { $0.projectFps = fps }
     }
 
-    func selectSensorFps(_ fps: Double) {
-        updateFormatSettings { $0.sensorFps = fps }
+    func selectSensorFps(_ fps: Double, persisting: Bool = true) {
+        updateFormatSettings(persisting: persisting) { $0.sensorFps = fps }
+    }
+
+    func persistFormatSettings() {
+        rememberCurrentCamera()
     }
 
     func selectMedia(_ id: String) {
@@ -276,9 +281,15 @@ final class CalculatorStore {
 
     /// Shutter controls edit through the store so a new input invalidates the
     /// one-step reset undo before it could overwrite that input.
-    func updateShutterSettings<Value>(_ value: Value, at keyPath: WritableKeyPath<ShutterSettings, Value>) {
+    /// Dials pass `persisting: false` for each detent and call `persistShutterChanges()` on settle.
+    func updateShutterSettings<Value>(_ value: Value, at keyPath: WritableKeyPath<ShutterSettings, Value>,
+                                      persisting: Bool = true) {
         clearTransientState()
         shutterSettings[keyPath: keyPath] = value
+        if persisting { persistShutterSettings() }
+    }
+
+    func persistShutterChanges() {
         persistShutterSettings()
     }
 
@@ -359,6 +370,7 @@ final class CalculatorStore {
     /// a banner, which would shift the page while the operator is working near the bottom.
     func addCurrentToSummary() {
         summary.add(settings)
+        summaryAdditions += 1
     }
 
     func removeSummaryEntry(id: UUID) {
@@ -370,7 +382,12 @@ final class CalculatorStore {
     }
 
     var summaryItems: [SummaryItem] {
-        summary.entries.map { SummaryItem(entry: $0, calculation: engine.calculate(settings: $0.settings)) }
+        // Read the observed entries even on cache hits so views still track summary changes.
+        let entries = summary.entries
+        if let summaryCache, summaryCache.entries == entries { return summaryCache.items }
+        let items = entries.map { SummaryItem(entry: $0, calculation: engine.calculate(settings: $0.settings)) }
+        summaryCache = (entries, items)
+        return items
     }
 
     var summaryTotalGb: Double {
@@ -435,18 +452,18 @@ final class CalculatorStore {
         persistQuickStarts()
     }
 
-    private func updateFormatSettings(_ mutation: (inout CaptureSettings) -> Void) {
+    private func updateFormatSettings(persisting: Bool = true, _ mutation: (inout CaptureSettings) -> Void) {
         var next = settings
         mutation(&next)
-        commitFormatSettings(next)
+        commitFormatSettings(next, persisting: persisting)
     }
 
-    private func commitFormatSettings(_ proposed: CaptureSettings) {
+    private func commitFormatSettings(_ proposed: CaptureSettings, persisting: Bool = true) {
         clearTransientState()
         let normalized = engine.normalized(proposed)
         let adjusted = adjustedParameters(from: proposed, to: normalized)
         settings = normalized
-        rememberCurrentCamera()
+        if persisting { rememberCurrentCamera() }
         if !adjusted.isEmpty {
             feedbackMessage = AppText.adjusted(parameters: adjusted)
         }
@@ -470,6 +487,16 @@ final class CalculatorStore {
         cameraMemories = Self.loadCameraMemories(defaults: defaults, catalog: catalog)
         cameraMemories[settings.cameraId] = CameraSettingsMemory(settings: settings)
         persistCameraMemories()
+    }
+
+    /// Saved favorites in order, or the default strip before the operator has changed it.
+    /// Siri's camera suggestions read the same list so both surfaces rank cameras alike.
+    static func favoriteCameraIDs(defaults: UserDefaults, catalog: CatalogData) -> [String] {
+        let stored = defaults.stringArray(forKey: quickStartKey) ?? defaultQuickStarts
+        // Preserve existing shortcuts as favorites, including an intentionally empty saved list.
+        return stored.filter { id in
+            catalog.cameras.contains(where: { $0.id == id && !$0.isStandaloneProRes })
+        }.uniqued()
     }
 
     private func persistQuickStarts() {

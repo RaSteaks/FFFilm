@@ -34,8 +34,11 @@ final class FFFilmUITests: XCTestCase {
             let tabBar = app.tabBars.firstMatch.frame
             XCTAssertLessThanOrEqual(result.frame.maxY, tabBar.minY + 1)
             XCTAssertGreaterThan(result.frame.minY, app.windows.firstMatch.frame.midY)
-            app.swipeUp()
-            app.swipeUp()
+            // Scroll from the gutter so the gesture moves the page rather than a dial or wheel.
+            for _ in 0 ..< 2 {
+                app.coordinate(withNormalizedOffset: CGVector(dx: 0.02, dy: 0.7))
+                    .press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.02, dy: 0.2)))
+            }
             XCTAssertTrue(app.buttons["summary-add"].firstMatch.isHittable)
             XCTAssertLessThanOrEqual(result.frame.maxY, tabBar.minY + 1)
             let meter = XCTAttachment(screenshot: app.screenshot())
@@ -63,6 +66,13 @@ final class FFFilmUITests: XCTestCase {
         // Camera formats persist per camera; restore the rate so later workflows see the default.
         stepDial(dial, by: -step)
         XCTAssertEqual(dial.value as? String, rateBefore)
+        // The dial saves camera memory when it settles, so a relaunch shows the restored rate.
+        Thread.sleep(forTimeInterval: 0.5)
+        app.terminate()
+        app.launch()
+        let relaunched = app.descendants(matching: .any).matching(identifier: "capture-sensor-fps-dial").firstMatch
+        XCTAssertTrue(relaunched.waitForExistence(timeout: 5))
+        XCTAssertEqual(relaunched.value as? String, rateBefore)
         #endif
     }
 
@@ -114,7 +124,7 @@ final class FFFilmUITests: XCTestCase {
         // on macOS that includes an invalid draft.
         #if os(iOS)
         assertDuration(4, 0, 0, in: app)
-        setDuration(2, 30, 15, in: app)
+        setDuration(5, 1, 1, in: app)
         #else
         XCTAssertEqual(duration.value as? String, "4.00")
         enterText("30", into: duration, in: app)
@@ -124,7 +134,7 @@ final class FFFilmUITests: XCTestCase {
         runtime.tap()
         capacity.tap()
         #if os(iOS)
-        assertDuration(2, 30, 15, in: app)
+        assertDuration(5, 1, 1, in: app)
         #else
         XCTAssertEqual(duration.value as? String, "30")
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "duration-error").firstMatch.exists)
@@ -194,16 +204,16 @@ final class FFFilmUITests: XCTestCase {
         XCTAssertEqual(app.textFields["shutter-sensorFps"].value as? String, "60")
         selectTab("rate", in: app)
         assertDuration(4, 0, 0, in: app)
-        setDuration(2, 30, 15, in: app)
+        setDuration(5, 1, 1, in: app)
         // Wheel column names and the pinned result follow the app language; the wheel keeps its position.
-        XCTAssertTrue(durationWheel(in: app).pickerWheels.element(boundBy: 0).label.contains("小时"))
+        XCTAssertTrue(durationWheel(in: app).label.contains("小时"))
         XCTAssertTrue(app.staticTexts["拍摄容量"].exists)
         selectTab("settings", in: app)
         choose("English", picker: "app-language-picker", in: app)
         XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 3))
         selectTab("rate", in: app)
-        assertDuration(2, 30, 15, in: app)
-        XCTAssertTrue(durationWheel(in: app).pickerWheels.element(boundBy: 0).label.contains("Hours"))
+        assertDuration(5, 1, 1, in: app)
+        XCTAssertTrue(durationWheel(in: app).label.contains("Hours"))
         XCTAssertTrue(app.staticTexts["Storage needed"].exists)
         selectTab("settings", in: app)
         let english = XCTAttachment(screenshot: app.screenshot())
@@ -400,18 +410,24 @@ final class FFFilmUITests: XCTestCase {
         assertDuration(8, 0, 0, in: app)
 
         // Every wheel column commits whole seconds to the live plan.
-        setDuration(2, 30, 15, in: app)
-        XCTAssertEqual(recorded.label, "02:30:15")
+        setDuration(9, 1, 2, in: app)
+        XCTAssertEqual(recorded.label, "09:01:02")
 
         // A full day has no minutes or seconds left: those columns return to 0, so the wheel
         // can never show a total beyond 24 hours and needs no error state.
-        durationWheel(in: app).pickerWheels.element(boundBy: 0).adjust(toPickerWheelValue: "24")
+        let quick12 = app.buttons["duration-quick-12"].firstMatch
+        reveal(quick12, in: app)
+        quick12.tap()
+        setDuration(24, 0, 0, in: app)
         assertDuration(24, 0, 0, in: app)
         XCTAssertEqual(recorded.label, "24:00:00")
         // Leaving 24 hours restores the full minute and second columns.
-        setDuration(23, 59, 59, in: app)
-        XCTAssertEqual(recorded.label, "23:59:59")
+        setDuration(23, 1, 1, in: app)
+        XCTAssertEqual(recorded.label, "23:01:01")
         // 00:00:00 is a valid plan: nothing recorded yet.
+        let quick1 = app.buttons["duration-quick-1"].firstMatch
+        reveal(quick1, in: app)
+        quick1.tap()
         setDuration(0, 0, 0, in: app)
         XCTAssertEqual(recorded.label, "00:00:00")
         XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "duration-error").firstMatch.exists)
@@ -524,6 +540,8 @@ final class FFFilmUITests: XCTestCase {
         let app = XCUIApplication()
         // Each workflow starts clean; the relaunch test explicitly removes this opt-in.
         app.launchEnvironment["FFFILM_UI_RESET_SHUTTER"] = "1"
+        // FPS import copies RATE's cadence; start from the default camera format.
+        app.launchEnvironment["FFFILM_UI_RESET_CAMERA_MEMORY"] = "1"
         app.launchEnvironment["FFFILM_UI_RESET_LANGUAGE"] = "1"
         // Stable English labels make these interaction tests independent of the host test-plan locale.
         app.launchArguments += ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
@@ -543,12 +561,13 @@ final class FFFilmUITests: XCTestCase {
     private func reveal(_ element: XCUIElement, in app: XCUIApplication) {
         let window = app.windows.firstMatch.frame
         for _ in 0 ..< 10 {
-            if element.isHittable { break }
+            if element.isHittable, !coveredByMeter(element, in: app) { break }
             guard element.exists else { break }
-            // Short center drags avoid the momentum oscillation full swipes
-            // cause around partially clipped fields.
-            let upper = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.52))
-            let lower = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.72))
+            // Short drags avoid the momentum oscillation full swipes cause around partially
+            // clipped fields. They run in the page gutter: a drag that starts on a dial or the
+            // duration wheel turns that control instead of scrolling the page.
+            let upper = app.coordinate(withNormalizedOffset: CGVector(dx: 0.02, dy: 0.52))
+            let lower = app.coordinate(withNormalizedOffset: CGVector(dx: 0.02, dy: 0.72))
             if element.frame.midY < window.midY {
                 upper.press(forDuration: 0.05, thenDragTo: lower)
             } else {
@@ -556,6 +575,21 @@ final class FFFilmUITests: XCTestCase {
             }
         }
         XCTAssertTrue(element.isHittable, "never became hittable: \(element)")
+        XCTAssertFalse(coveredByMeter(element, in: app), "still under the result meter: \(element)")
+    }
+
+    /// XCTest reports elements under the pinned iPhone result meter as hittable, so taps would
+    /// land on the meter or whatever it covers. Elements inside the meter (or an in-page result
+    /// panel, which never overlaps other content) are not covered.
+    @MainActor
+    private func coveredByMeter(_ element: XCUIElement, in app: XCUIApplication) -> Bool {
+        #if os(iOS)
+        let meter = app.descendants(matching: .any).matching(identifier: "rate-results").firstMatch
+        guard meter.exists, !meter.frame.contains(element.frame) else { return false }
+        return element.frame.intersects(meter.frame)
+        #else
+        return false
+        #endif
     }
 
     @MainActor
@@ -682,28 +716,40 @@ final class FFFilmUITests: XCTestCase {
     }
     #else
     @MainActor
-    private func durationWheel(in app: XCUIApplication) -> XCUIElement {
-        app.pickers["duration-wheel"].firstMatch
+    private func durationColumn(_ index: Int, in app: XCUIApplication) -> XCUIElement {
+        app.descendants(matching: .any)
+            .matching(identifier: ["duration-hours", "duration-minutes", "duration-seconds"][index]).firstMatch
     }
 
     @MainActor
+    private func durationWheel(in app: XCUIApplication) -> XCUIElement {
+        durationColumn(0, in: app)
+    }
+
+    /// Taps the row just below or above the band, as an operator would, until each column shows
+    /// its target. Rows are 36pt at the default text size.
+    @MainActor
     private func setDuration(_ hours: Int, _ minutes: Int, _ seconds: Int, in app: XCUIApplication) {
-        let wheel = durationWheel(in: app)
-        reveal(wheel, in: app)
-        for (index, value) in [hours, minutes, seconds].enumerated() {
-            wheel.pickerWheels.element(boundBy: index).adjust(toPickerWheelValue: String(value))
+        reveal(durationWheel(in: app), in: app)
+        for (index, target) in [hours, minutes, seconds].enumerated() {
+            let column = durationColumn(index, in: app)
+            for _ in 0 ..< 70 {
+                guard let current = Int(column.value as? String ?? ""), current != target else { break }
+                column.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+                    .withOffset(CGVector(dx: 0, dy: target > current ? 36 : -36))
+                    .tap()
+                // Let the column recentre on the new row before the next tap.
+                Thread.sleep(forTimeInterval: 0.3)
+            }
+            XCTAssertEqual(column.value as? String, String(target))
         }
     }
 
     @MainActor
     private func assertDuration(_ hours: Int, _ minutes: Int, _ seconds: Int, in app: XCUIApplication,
                                 file: StaticString = #filePath, line: UInt = #line) {
-        let wheel = durationWheel(in: app)
-        XCTAssertTrue(wheel.waitForExistence(timeout: 3), file: file, line: line)
-        // Column values lead with the selected number; any appended column name is ignored.
-        let values = wheel.pickerWheels.allElementsBoundByIndex.map {
-            String(($0.value as? String ?? "").prefix(while: \.isNumber))
-        }
+        XCTAssertTrue(durationWheel(in: app).waitForExistence(timeout: 3), file: file, line: line)
+        let values = (0 ..< 3).map { durationColumn($0, in: app).value as? String ?? "" }
         XCTAssertEqual(values, [hours, minutes, seconds].map(String.init), file: file, line: line)
     }
 

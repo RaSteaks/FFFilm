@@ -20,8 +20,7 @@ enum RecordingEstimate {
         let settings = engine.normalized(proposed)
         let result = engine.calculate(settings: settings)
         let unit = storageUnit(defaults)
-        let fps = result.camera.isStandaloneProRes ? settings.projectFps : settings.sensorFps
-        let format = "\(result.camera.name) · \(result.codec.name) · \(DisplayFormat.fps(fps)) fps"
+        let format = "\(result.camera.name) · \(result.codec.name) · \(DisplayFormat.fps(result.captureFps)) fps"
         let duration = DisplayFormat.plannedDuration(settings.shootHours)
         let storage = DisplayFormat.compactStorage(result.dayTotalGb, unit: unit)
         let rate = "\(DisplayFormat.number(unit.converted(decimalGB: result.sensorGbPerHour))) \(unit.symbol)/h"
@@ -82,8 +81,9 @@ struct CameraQuery: EntityStringQuery {
     }
 
     /// Favorites first, matching the calculator's quick-start strip, then the rest of the catalog.
+    @MainActor
     func suggestedEntities() async throws -> [CameraEntity] {
-        let favorites = UserDefaults.standard.stringArray(forKey: "fffilm.quick-start-camera-ids") ?? []
+        let favorites = CalculatorStore.favoriteCameraIDs(defaults: .standard, catalog: .bundled)
         let ranked = cameras.sorted { lhs, rhs in
             let left = favorites.firstIndex(of: lhs.id) ?? .max
             let right = favorites.firstIndex(of: rhs.id) ?? .max

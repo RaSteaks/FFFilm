@@ -69,7 +69,7 @@ enum AppText {
         let lines = items.enumerated().map { index, item in
             let settings = item.entry.settings
             let calculation = item.calculation
-            let fps = calculation.camera.isStandaloneProRes ? settings.projectFps : settings.sensorFps
+            let fps = calculation.captureFps
             return "\(index + 1). \(calculation.camera.name) · \(calculation.mode.label) · \(calculation.resolution.label) · \(calculation.codec.name) · \(DisplayFormat.fps(fps)) fps · \(DisplayFormat.plannedDuration(settings.shootHours)) → \(DisplayFormat.compactStorage(calculation.dayTotalGb, unit: unit))"
         }
         let header = resolve("copy.summaryHeader", defaultValue: "Recording summary (\(items.count) setups)",
@@ -89,7 +89,7 @@ enum AppText {
     static func recordingSummary(settings: CaptureSettings, calculation: Calculation, unit: StorageUnit, task: RecordingTask) -> String {
         // Catalog mode names are verbatim technical terms and never localized.
         let mode = calculation.mode.label
-        let fps = calculation.camera.isStandaloneProRes ? settings.projectFps : settings.sensorFps
+        let fps = calculation.captureFps
         let rate = DisplayFormat.number(unit.converted(decimalGB: calculation.sensorGbPerHour))
         let plan = DisplayFormat.compactStorage(calculation.dayTotalGb, unit: unit)
         let runtime = DisplayFormat.duration(calculation.captureRuntimeHours)

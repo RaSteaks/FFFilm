@@ -252,6 +252,8 @@ struct Calculation: Hashable {
     let clipHeightMm: Double
     let imageCircleMm: Double
     let formatFactor: Double
+    /// The cadence that is actually recorded: project fps for standalone ProRes, sensor fps otherwise.
+    let captureFps: Double
 }
 
 /// Two independent planning questions share one camera format without overwriting inputs.

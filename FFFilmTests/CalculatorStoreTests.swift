@@ -193,9 +193,15 @@ struct CalculatorStoreTests {
         #expect(store.summaryTotalGb == store.summaryItems.reduce(0) { $0 + $1.calculation.dayTotalGb })
         #expect(store.summaryItems[2].calculation.dayTotalGb == store.calculation.dayTotalGb)
 
-        // Another window reads the same list; its removal survives this window's next addition.
+        // Another window reads the same list and follows later additions without reopening it;
+        // its removal survives this window's next addition.
         let other = CalculatorStore(defaults: defaults)
         #expect(other.summary.entries.map(\.id) == store.summary.entries.map(\.id))
+        store.addCurrentToSummary()
+        #expect(other.summary.entries.count == 4)
+        #expect(store.summaryAdditions == 4)
+        store.removeSummaryEntry(id: store.summary.entries[3].id)
+        #expect(other.summary.entries.count == 3)
         other.removeSummaryEntry(id: other.summary.entries[0].id)
         store.addCurrentToSummary()
         #expect(store.summary.entries.count == 3)
@@ -211,6 +217,27 @@ struct CalculatorStoreTests {
 
         store.clearSummary()
         #expect(CalculatorStore(defaults: defaults).summary.entries.isEmpty)
+    }
+
+    @Test("Dial detents recalculate live but save camera and shutter memory once they settle")
+    func dialDetentsPersistOnSettle() throws {
+        let suite = "FFFilm.DialPersistence.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let store = CalculatorStore(defaults: defaults)
+        let target = try #require(store.availableSensorFrameRates.first { $0 != store.settings.sensorFps })
+        store.selectSensorFps(target, persisting: false)
+        #expect(store.settings.sensorFps == target)
+        #expect(CalculatorStore(defaults: defaults).settings.sensorFps != target)
+        store.persistFormatSettings()
+        #expect(CalculatorStore(defaults: defaults).settings.sensorFps == target)
+
+        store.updateShutterSettings(50, at: \.sensorFps, persisting: false)
+        #expect(store.shutterCalculation.exposure != nil)
+        #expect(CalculatorStore(defaults: defaults).shutterSettings.sensorFps != 50)
+        store.persistShutterChanges()
+        #expect(CalculatorStore(defaults: defaults).shutterSettings.sensorFps == 50)
     }
 
     @Test("Siri answers use the camera's remembered format and the shared summary")

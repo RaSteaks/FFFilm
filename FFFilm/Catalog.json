@@ -5789,6 +5789,16 @@
       "id": "4tb",
       "label": "4 TB",
       "capacityGb": 4000
+    },
+    {
+      "id": "8tb",
+      "label": "8 TB",
+      "capacityGb": 8000
+    },
+    {
+      "id": "16tb",
+      "label": "16 TB",
+      "capacityGb": 16000
     }
   ],
   "frameRates": [

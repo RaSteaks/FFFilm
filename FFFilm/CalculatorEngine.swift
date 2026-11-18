@@ -175,7 +175,8 @@ struct CalculatorEngine {
             clipWidthMm: clipWidth,
             clipHeightMm: clipHeight,
             imageCircleMm: imageCircle,
-            formatFactor: selectedCamera.isStandaloneProRes ? 0 : imageCircle / super35Diagonal
+            formatFactor: selectedCamera.isStandaloneProRes ? 0 : imageCircle / super35Diagonal,
+            captureFps: effectiveSensorFps
         )
     }
 

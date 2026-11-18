@@ -13,6 +13,10 @@ struct FFFilmApp: App {
             UserDefaults.standard.removeObject(forKey: ShutterWorkspace.rigsKey)
             UserDefaults.standard.removeObject(forKey: ShutterWorkspace.libraryKey)
         }
+        // Workflows that read RATE values (such as FPS import) start from default camera formats.
+        if ProcessInfo.processInfo.environment["FFFILM_UI_RESET_CAMERA_MEMORY"] == "1" {
+            UserDefaults.standard.removeObject(forKey: CalculatorStore.cameraMemoryKey)
+        }
         // Summary workflows start from an empty, persisted shooting-day list.
         if ProcessInfo.processInfo.environment["FFFILM_UI_RESET_SUMMARY"] == "1" {
             UserDefaults.standard.removeObject(forKey: RecordingSummary.key)

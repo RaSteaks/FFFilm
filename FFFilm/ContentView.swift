@@ -84,6 +84,11 @@ struct ContentView: View {
         .sheet(isPresented: $showsCameras) { CameraLibraryView(store: store) }
         .tint(Palette.text)
         .preferredColorScheme(.dark)
+        // Every add-to-summary control (meter, panel, header, macOS toolbar) shares one confirmation.
+        .sensoryFeedback(.success, trigger: store.summaryAdditions)
+        .onChange(of: store.summaryAdditions) { _, _ in
+            AccessibilityNotification.Announcement(AppText.summaryAdded(count: store.summary.entries.count)).post()
+        }
         .sensoryFeedback(.selection, trigger: store.settings) { old, new in
             #if os(iOS)
             // Dials and the duration wheel play their own detent feedback, and duration presets
@@ -165,6 +170,8 @@ private struct CalculatorWorkbench: View {
     let store: CalculatorStore
     let view: CalculatorView
     @Binding var showsCameras: Bool
+    // Owned here rather than by the meter or panel, which swap when a phone rotates.
+    @State private var showsSummary = false
 
     var body: some View {
         GeometryReader { geometry in
@@ -200,6 +207,9 @@ private struct CalculatorWorkbench: View {
                                     usesMeter: usesMeter)
             }
         }
+        .sheet(isPresented: $showsSummary) {
+            SummarySheet(store: store)
+        }
     }
 
     /// The scrolling RATE/SHUTTER workbench; kept separate from the full-bleed film editor.
@@ -217,6 +227,7 @@ private struct CalculatorWorkbench: View {
                         if view == .rate {
                             RateView(store: store,
                                      showsCameras: $showsCameras,
+                                     showsSummary: $showsSummary,
                                      contentWidth: contentWidth,
                                      isWide: isWide,
                                      usesMeter: usesMeter)
@@ -252,7 +263,7 @@ private struct CalculatorWorkbench: View {
                 .safeAreaInset(edge: .bottom, spacing: 0) {
                     #if os(iOS)
                     if usesMeter && view == .rate {
-                        RateMeter(store: store)
+                        RateMeter(store: store, showsSummary: $showsSummary)
                             .frame(maxWidth: maximumWidth)
                             .padding(.horizontal, Layout.pageGutter)
                             .padding(.top, 6)
@@ -452,6 +463,7 @@ private struct FeedbackBanner: View {
 private struct RateView: View {
     let store: CalculatorStore
     @Binding var showsCameras: Bool
+    @Binding var showsSummary: Bool
     let contentWidth: CGFloat
     let isWide: Bool
     /// Portrait phones show the answer in the pinned meter instead of an in-page panel.
@@ -480,7 +492,7 @@ private struct RateView: View {
                 if usesMeter {
                     Color.clear.frame(height: 0)
                 } else {
-                    RateResults(store: store)
+                    RateResults(store: store, showsSummary: $showsSummary)
                         .accessibilitySortPriority(isWide ? 0 : 1)
                 }
             }
@@ -498,6 +510,7 @@ private struct CaptureControls: View {
     // The wheel position is editor state: an invalid total survives task and tab switches.
     @State private var wheel = DurationComponents(hours: CaptureSettings.default.shootHours)
     @State private var quickDurationTaps = 0
+    @State private var menuPicks = 0
     // Three rows: the selection and one neighbour on each side.
     @ScaledMetric(relativeTo: .title2) private var wheelHeight: CGFloat = 116
     #else
@@ -527,6 +540,9 @@ private struct CaptureControls: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("capture-controls")
+        #if os(iOS)
+        .sensoryFeedback(.selection, trigger: menuPicks)
+        #endif
         .onAppear {
             // Seed once: an unfinished duration must survive returning from another tab.
             guard !durationInitialized else { return }
@@ -593,7 +609,7 @@ private struct CaptureControls: View {
             let labels = Dictionary(uniqueKeysWithValues: store.catalog.mediaOptions.map { ($0.id, $0.label) })
             dialField("field.media", values: store.catalog.mediaOptions.map(\.id), selection: store.settings.mediaId,
                       spacing: 64, identifier: "capture-media-dial", label: { labels[$0] ?? $0 },
-                      select: store.selectMedia) { mediaPicker }
+                      select: { store.selectMedia($0) }) { mediaPicker }
             #else
             FieldCard("field.media") { mediaPicker }
             #endif
@@ -661,7 +677,8 @@ private struct CaptureControls: View {
                 #if os(iOS)
                 dialField("field.projectFps", values: store.catalog.projectFrameRates, selection: store.settings.projectFps,
                           identifier: "capture-project-fps-dial", label: { DisplayFormat.fps($0) },
-                          isNotch: { FrameRateNotch.contains($0) }, select: store.selectProjectFps) { projectFpsPicker }
+                          isNotch: { FrameRateNotch.contains($0) }, select: { store.selectProjectFps($0, persisting: false) },
+                          settle: store.persistFormatSettings) { projectFpsPicker }
                 #else
                 FieldCard("field.projectFps") { projectFpsPicker }
                 #endif
@@ -669,7 +686,8 @@ private struct CaptureControls: View {
                 #if os(iOS)
                 dialField("field.sensorFps", values: store.availableSensorFrameRates, selection: store.settings.sensorFps,
                           identifier: "capture-sensor-fps-dial", label: { DisplayFormat.fps($0) },
-                          isNotch: { FrameRateNotch.contains($0) }, select: store.selectSensorFps) { sensorFpsPicker }
+                          isNotch: { FrameRateNotch.contains($0) }, select: { store.selectSensorFps($0, persisting: false) },
+                          settle: store.persistFormatSettings) { sensorFpsPicker }
                 #else
                 FieldCard("field.sensorFps") { sensorFpsPicker }
                 #endif
@@ -684,7 +702,7 @@ private struct CaptureControls: View {
     }
 
     private var projectFpsPicker: some View {
-        Picker("field.projectFps", selection: Binding(get: { store.settings.projectFps }, set: store.selectProjectFps)) {
+        Picker("field.projectFps", selection: Binding(get: { store.settings.projectFps }, set: { pickFromMenu(); store.selectProjectFps($0) })) {
             ForEach(store.catalog.projectFrameRates, id: \.self) { fps in
                 Text(DisplayFormat.fps(fps)).tag(fps)
             }
@@ -694,7 +712,7 @@ private struct CaptureControls: View {
     }
 
     private var sensorFpsPicker: some View {
-        Picker("field.sensorFps", selection: Binding(get: { store.settings.sensorFps }, set: store.selectSensorFps)) {
+        Picker("field.sensorFps", selection: Binding(get: { store.settings.sensorFps }, set: { pickFromMenu(); store.selectSensorFps($0) })) {
             ForEach(store.availableSensorFrameRates, id: \.self) { fps in
                 Text(DisplayFormat.fps(fps)).tag(fps)
             }
@@ -704,7 +722,7 @@ private struct CaptureControls: View {
     }
 
     private var mediaPicker: some View {
-        Picker("field.media", selection: Binding(get: { store.settings.mediaId }, set: store.selectMedia)) {
+        Picker("field.media", selection: Binding(get: { store.settings.mediaId }, set: { pickFromMenu(); store.selectMedia($0) })) {
             ForEach(store.catalog.mediaOptions) { media in
                 Text(verbatim: media.label).tag(media.id)
             }
@@ -720,13 +738,15 @@ private struct CaptureControls: View {
         _ title: LocalizedStringKey, values: [Value], selection: Value, spacing: CGFloat = 56,
         identifier: String, label: @escaping (Value) -> String,
         isNotch: @escaping (Value) -> Bool = { _ in false }, select: @escaping (Value) -> Void,
-        @ViewBuilder readout: () -> Readout
+        settle: @escaping () -> Void = {}, @ViewBuilder readout: () -> Readout
     ) -> some View {
         DialFieldCard(title, readout: readout) {
             // The dial owns detent feedback; the root skips settings changes the dials make.
+            // Each detent recalculates; camera memory is saved once the dial settles.
             RulerDial(values: values, selection: values.contains(selection) ? selection : nil,
                       spacing: spacing, identifier: identifier, accessibilityLabel: Text(title),
-                      label: label, accessibilityValue: label, isNotch: isNotch, onSelect: select)
+                      label: label, accessibilityValue: label, isNotch: isNotch,
+                      onSelect: select, onSettle: settle)
         }
     }
 
@@ -752,10 +772,16 @@ private struct CaptureControls: View {
         .id("capture-duration-field")
     }
 
+    /// Menu readouts beside the dials own their selection tick; the root feedback skips
+    /// changes confined to dial-owned fields so dial detents do not tick twice.
+    private func pickFromMenu() {
+        menuPicks += 1
+    }
+
     /// Every wheel position is a valid plan (24 hours collapses minutes and seconds to 0,
     /// and 00:00:00 means nothing recorded yet), so the wheel always shows the plan in use.
-    private func commitWheel() {
-        store.setShootHours(wheel.totalHours)
+    private func commitWheel(_ duration: DurationComponents) {
+        store.setShootHours(duration.totalHours)
     }
 
     private func applyQuickDuration(_ hours: Double) {
@@ -764,6 +790,8 @@ private struct CaptureControls: View {
         store.setShootHours(hours)
     }
     #else
+    private func pickFromMenu() {}
+
     private var durationField: some View {
         VStack(alignment: .leading, spacing: 4) {
             FieldCard("field.duration") {
@@ -891,10 +919,9 @@ private struct CaptureControls: View {
 private struct RateResults: View {
     @AppStorage(StorageUnit.preferenceKey) private var unit: StorageUnit = .decimal
     let store: CalculatorStore
+    @Binding var showsSummary: Bool
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var showsSummary = false
-    @State private var additions = 0
     private var usesCompactLayout: Bool {
         #if os(iOS)
         horizontalSizeClass == .compact
@@ -946,7 +973,6 @@ private struct RateResults: View {
             HStack(spacing: 8) {
                 Button {
                     store.addCurrentToSummary()
-                    additions += 1
                 } label: {
                     Label {
                         Text("summary.add")
@@ -975,10 +1001,6 @@ private struct RateResults: View {
         .textSelection(.enabled)
         .accessibilityIdentifier("rate-results")
         .animation(reduceMotion ? nil : .snappy(duration: 0.22), value: result.sensorGbPerHour)
-        .sensoryFeedback(.success, trigger: additions)
-        .sheet(isPresented: $showsSummary) {
-            SummarySheet(store: store)
-        }
     }
 
     private func planningRow(title: LocalizedStringKey, value: String, detail: String? = nil,
@@ -1014,9 +1036,8 @@ private struct RateResults: View {
 private struct RateMeter: View {
     @AppStorage(StorageUnit.preferenceKey) private var unit: StorageUnit = .decimal
     let store: CalculatorStore
+    @Binding var showsSummary: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var showsSummary = false
-    @State private var additions = 0
 
     var body: some View {
         let result = store.calculation
@@ -1048,8 +1069,6 @@ private struct RateMeter: View {
                 Spacer(minLength: 8)
                 Button {
                     store.addCurrentToSummary()
-                    additions += 1
-                    AccessibilityNotification.Announcement(AppText.summaryAdded(count: store.summary.entries.count)).post()
                 } label: {
                     HStack(spacing: 5) {
                         Image(systemName: "plus")
@@ -1112,10 +1131,6 @@ private struct RateMeter: View {
         .animation(reduceMotion ? nil : .snappy(duration: 0.22), value: count)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("rate-results")
-        .sensoryFeedback(.success, trigger: additions)
-        .sheet(isPresented: $showsSummary) {
-            SummarySheet(store: store)
-        }
     }
 }
 #endif
@@ -1221,7 +1236,7 @@ private struct SummaryEntryRow: View {
         let calculation = item.calculation
         // Catalog mode names are verbatim technical terms and never localized.
         let modeLabel = calculation.mode.label
-        let fps = calculation.camera.isStandaloneProRes ? settings.projectFps : settings.sensorFps
+        let fps = calculation.captureFps
         // Standalone ProRes captures at project cadence; camera profiles use sensor cadence.
         let fpsLabel: LocalizedStringKey = calculation.camera.isStandaloneProRes ? "field.projectFps" : "field.sensorFps"
         VStack(alignment: .leading, spacing: 8) {
@@ -1888,8 +1903,11 @@ private struct ShutterView: View {
                       customValueDescription: value.isFinite ? "\(DisplayFormat.shutterNumber(value)) fps" : nil,
                       isNotch: { FrameRateNotch.contains($0.fps) },
                       onSelect: { preset in dialFrameRate(preset.fps, field: field) },
-                      // History records the settled cadence, not each detent passed on the way.
-                      onSettle: { store.rememberShutterResult() })
+                      // Persistence and history record the settled cadence, not each detent passed.
+                      onSettle: {
+                          store.persistShutterChanges()
+                          store.rememberShutterResult()
+                      })
         }
     }
 
@@ -1898,7 +1916,7 @@ private struct ShutterView: View {
         focusedInput = nil
         drafts.removeValue(forKey: field)
         validatedFields.remove(field)
-        store.updateShutterSettings(fps, at: field.keyPath)
+        store.updateShutterSettings(fps, at: field.keyPath, persisting: false)
     }
     #endif
 

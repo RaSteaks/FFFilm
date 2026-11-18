@@ -23,7 +23,8 @@ struct RulerDial<Value: Hashable>: View {
     let customValueDescription: String?
     /// Production-standard stops get a longer tick and a firmer detent, like a dial's click stops.
     let isNotch: (Value) -> Bool
-    let haptics: Bool
+    /// Plays the shared soft click and haptic (`DialFeedback`) for each detent the operator turns.
+    let feedback: Bool
     /// Called once per detent while the user scrolls, and for taps and VoiceOver adjustments.
     let onSelect: (Value) -> Void
     /// Called when a user-driven change comes to rest.
@@ -36,12 +37,11 @@ struct RulerDial<Value: Hashable>: View {
     /// True only while the operator's finger moves the ruler or its fling decelerates;
     /// programmatic animations and a touch that never moves do not select.
     @State private var userDriven = false
-    @State private var tapCount = 0
 
     init(values: [Value], selection: Value?, parking: Value? = nil, spacing: CGFloat = 56,
          identifier: String, accessibilityLabel: Text, label: @escaping (Value) -> String,
          accessibilityValue: @escaping (Value) -> String, customValueDescription: String? = nil,
-         isNotch: @escaping (Value) -> Bool = { _ in false }, haptics: Bool = true,
+         isNotch: @escaping (Value) -> Bool = { _ in false }, feedback: Bool = true,
          onSelect: @escaping (Value) -> Void, onSettle: @escaping () -> Void = {}) {
         self.values = values
         self.selection = selection
@@ -53,7 +53,7 @@ struct RulerDial<Value: Hashable>: View {
         self.accessibilityValue = accessibilityValue
         self.customValueDescription = customValueDescription
         self.isNotch = isNotch
-        self.haptics = haptics
+        self.feedback = feedback
         self.onSelect = onSelect
         self.onSettle = onSettle
         let resting = Self.index(of: selection ?? parking, in: values)
@@ -92,10 +92,14 @@ struct RulerDial<Value: Hashable>: View {
                 let index = min(max(raw, 0), values.count - 1)
                 guard index != centered else { return }
                 centered = index
-                if userDriven, values[index] != selection { onSelect(values[index]) }
+                guard userDriven else { return }
+                if feedback { DialFeedback.shared.detent(notch: isNotch(values[index])) }
+                if values[index] != selection { onSelect(values[index]) }
             }
             .onScrollPhaseChange { _, phase in
                 switch phase {
+                case .tracking:
+                    if feedback { DialFeedback.shared.prepare() }
                 case .interacting:
                     userDriven = true
                 case .animating:
@@ -143,11 +147,6 @@ struct RulerDial<Value: Hashable>: View {
             guard !userDriven else { return }
             scroll(to: restingIndex, animated: false)
         }
-        .sensoryFeedback(trigger: centered) { _, index in
-            guard haptics, userDriven, let index, values.indices.contains(index) else { return nil }
-            return isNotch(values[index]) ? .impact(weight: .medium) : .selection
-        }
-        .sensoryFeedback(.selection, trigger: tapCount) { _, _ in haptics }
         // The scrolling content's accessibility frame spans the whole ruler, far wider than
         // the visible dial; a clear overlay gives VoiceOver and tests the dial's real frame.
         .accessibilityHidden(true)
@@ -158,9 +157,15 @@ struct RulerDial<Value: Hashable>: View {
                 .accessibilityLabel(accessibilityLabel)
                 .accessibilityValue(Text(verbatim: selection.map(accessibilityValue) ?? customValueDescription ?? ""))
                 .accessibilityAdjustableAction { direction in
-                    // A custom value moves to the neighbour of the stop the ruler is parked on.
-                    let base = restingIndex ?? 0
-                    let target = direction == .increment ? base + 1 : base - 1
+                    // A custom value moves to the neighbour of the stop the ruler is parked on;
+                    // with no usable value at all, increment starts at the first stop and
+                    // decrement at the last.
+                    let target: Int
+                    if let base = restingIndex {
+                        target = direction == .increment ? base + 1 : base - 1
+                    } else {
+                        target = direction == .increment ? 0 : values.count - 1
+                    }
                     guard values.indices.contains(target) else { return }
                     onSelect(values[target])
                     onSettle()
@@ -202,7 +207,7 @@ struct RulerDial<Value: Hashable>: View {
         .contentShape(.rect)
         .onTapGesture {
             guard value != selection else { return }
-            tapCount += 1
+            if feedback { DialFeedback.shared.detent(notch: notch) }
             onSelect(value)
             onSettle()
         }

@@ -30,10 +30,25 @@ final class RecordingSummary {
         var entries: [SummaryEntry]
     }
 
+    static let didChange = Notification.Name("FFFilmRecordingSummaryDidChange")
+    @ObservationIgnored private var observer: NSObjectProtocol?
+
     init(defaults: UserDefaults, engine: CalculatorEngine) {
         self.defaults = defaults
         self.engine = engine
         entries = Self.load(defaults, engine: engine)
+        // Every window owns a summary; reload when another one writes the same shared list.
+        observer = NotificationCenter.default.addObserver(forName: Self.didChange, object: nil, queue: .main) { [weak self] note in
+            MainActor.assumeIsolated {
+                guard let self, note.object as AnyObject? !== self,
+                      (note.userInfo?["defaults"] as AnyObject?) === self.defaults else { return }
+                self.refresh()
+            }
+        }
+    }
+
+    isolated deinit {
+        if let observer { NotificationCenter.default.removeObserver(observer) }
     }
 
     /// Picks up edits made by another window before this one changes the shared list.
@@ -62,6 +77,7 @@ final class RecordingSummary {
         if let data = try? JSONEncoder().encode(Payload(entries: entries)) {
             defaults.set(data, forKey: Self.key)
         }
+        NotificationCenter.default.post(name: Self.didChange, object: self, userInfo: ["defaults": defaults])
     }
 
     /// Unknown versions and corrupt payloads read as empty; entries for cameras the catalog

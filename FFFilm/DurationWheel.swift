@@ -1,6 +1,5 @@
 #if os(iOS)
 import SwiftUI
-import UIKit
 
 /// Whole-second recording duration as shown on the wheel.
 struct DurationComponents: Equatable {
@@ -20,213 +19,242 @@ struct DurationComponents: Equatable {
     var totalHours: Double { Double(totalSeconds) / 3_600 }
 }
 
-/// Hours, minutes and seconds on one native three-component wheel, like Clock's timer.
-/// A single UIPickerView keeps each column's touch region separate, which side-by-side
-/// SwiftUI wheel pickers do not, and supplies native momentum, detent ticks and VoiceOver.
+/// Hours, minutes and seconds on three vertical wheels in the style of the system timer.
+/// They are drawn in SwiftUI rather than UIPickerView so detents share the dials' soft click
+/// and haptic (`DialFeedback`) instead of the system tick, and the wheel fits its field.
 ///
 /// Every position the wheel can reach is a valid plan: at 24 hours the minute and second
-/// columns hold only 0, so the wheel never shows a total the result does not use.
-struct DurationWheel: UIViewRepresentable {
+/// columns hold only 0, so the wheel never shows a total the result does not use. A column
+/// commits when it settles.
+struct DurationWheel: View {
     @Binding var components: DurationComponents
-    /// Called after the operator settles a column; programmatic updates never call it.
-    let onCommit: () -> Void
+    /// Called with the new duration after the operator settles a column, taps a row or adjusts
+    /// with VoiceOver. The value is passed explicitly: reading the binding's owner back in the
+    /// same event can still see the previous state.
+    let onCommit: (DurationComponents) -> Void
+    @ScaledMetric(relativeTo: .title2) private var rowHeight: CGFloat = 36
 
-    static func rows(component: Int, hours: Int) -> Int {
-        component == 0 ? 25 : (hours == 24 ? 1 : 60)
+    private enum Column: Int, CaseIterable {
+        case hours, minutes, seconds
+
+        var identifier: String {
+            switch self {
+            case .hours: "duration-hours"
+            case .minutes: "duration-minutes"
+            case .seconds: "duration-seconds"
+            }
+        }
+
+        var unit: String {
+            switch self {
+            case .hours: AppText.resolve("duration.unit.hours", defaultValue: "hours", comment: "Unit beside the hours column of the duration wheel.")
+            case .minutes: AppText.resolve("duration.unit.minutes", defaultValue: "min", comment: "Unit beside the minutes column of the duration wheel.")
+            case .seconds: AppText.resolve("duration.unit.seconds", defaultValue: "sec", comment: "Unit beside the seconds column of the duration wheel.")
+            }
+        }
+
+        var accessibilityName: String {
+            switch self {
+            case .hours: AppText.resolve("duration.wheel.hours", defaultValue: "Hours", comment: "VoiceOver name of the duration wheel's hours column.")
+            case .minutes: AppText.resolve("duration.wheel.minutes", defaultValue: "Minutes", comment: "VoiceOver name of the duration wheel's minutes column.")
+            case .seconds: AppText.resolve("duration.wheel.seconds", defaultValue: "Seconds", comment: "VoiceOver name of the duration wheel's seconds column.")
+            }
+        }
     }
 
-    func makeCoordinator() -> Coordinator { Coordinator(parent: self) }
-
-    func makeUIView(context: Context) -> DurationPickerView {
-        let picker = DurationPickerView()
-        picker.dataSource = context.coordinator
-        picker.delegate = context.coordinator
-        picker.accessibilityIdentifier = "duration-wheel"
-        // UIPickerView draws neighbouring rows beyond its bounds; keep them inside the field.
-        picker.clipsToBounds = true
-        picker.setContentHuggingPriority(.defaultLow, for: .horizontal)
-        picker.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-        // The intrinsic 216pt height would overflow the three-row field.
-        picker.setContentCompressionResistancePriority(.defaultLow, for: .vertical)
-        return picker
+    var body: some View {
+        let fullDay = components.hours == 24
+        HStack(spacing: 0) {
+            WheelColumn(values: Array(0 ... 24), selection: components.hours, rowHeight: rowHeight,
+                        unit: Column.hours.unit, accessibilityName: Column.hours.accessibilityName,
+                        identifier: Column.hours.identifier) { select(.hours, $0) }
+            // A full day has no minutes or seconds left; those columns hold only 0.
+            WheelColumn(values: fullDay ? [0] : Array(0 ... 59), selection: components.minutes, rowHeight: rowHeight,
+                        unit: Column.minutes.unit, accessibilityName: Column.minutes.accessibilityName,
+                        identifier: Column.minutes.identifier) { select(.minutes, $0) }
+            WheelColumn(values: fullDay ? [0] : Array(0 ... 59), selection: components.seconds, rowHeight: rowHeight,
+                        unit: Column.seconds.unit, accessibilityName: Column.seconds.accessibilityName,
+                        identifier: Column.seconds.identifier) { select(.seconds, $0) }
+        }
+        .background {
+            // The selection band spans all three columns, as on the system wheel.
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Palette.controlSurface)
+                .frame(height: rowHeight)
+                .padding(.horizontal, 8)
+        }
     }
 
-    func sizeThatFits(_ proposal: ProposedViewSize, uiView: DurationPickerView, context: Context) -> CGSize? {
-        guard let width = proposal.width, let height = proposal.height else { return nil }
-        return CGSize(width: width, height: height)
+    private func select(_ column: Column, _ value: Int) {
+        var next = components
+        switch column {
+        case .hours:
+            next.hours = value
+            // Reaching a full day visibly returns minutes and seconds to 0.
+            if value == 24 {
+                next.minutes = 0
+                next.seconds = 0
+            }
+        case .minutes: next.minutes = value
+        case .seconds: next.seconds = value
+        }
+        components = next
+        onCommit(next)
+    }
+}
+
+/// One vertical wheel column: rows snap under the centre band, each detent plays the shared
+/// soft cue, and the value commits once the column comes to rest.
+private struct WheelColumn: View {
+    let values: [Int]
+    let selection: Int
+    let rowHeight: CGFloat
+    let unit: String
+    let accessibilityName: String
+    let identifier: String
+    let onSelect: (Int) -> Void
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var position: ScrollPosition
+    @State private var centered: Int?
+    @State private var userDriven = false
+    private let unitWidth: CGFloat = 46
+
+    init(values: [Int], selection: Int, rowHeight: CGFloat, unit: String, accessibilityName: String,
+         identifier: String, onSelect: @escaping (Int) -> Void) {
+        self.values = values
+        self.selection = selection
+        self.rowHeight = rowHeight
+        self.unit = unit
+        self.accessibilityName = accessibilityName
+        self.identifier = identifier
+        self.onSelect = onSelect
+        let resting = values.firstIndex(of: selection)
+        _position = State(initialValue: ScrollPosition(id: resting ?? 0, anchor: .center))
+        _centered = State(initialValue: resting)
     }
 
-    func updateUIView(_ picker: DurationPickerView, context: Context) {
-        context.coordinator.parent = self
-        // Unit titles follow the in-app language, which can change while the wheel is visible.
-        picker.unitTitles = Coordinator.unitTitles
-        context.coordinator.matchFullDay(picker)
-        let values = [components.hours, components.minutes, components.seconds]
-        for (component, value) in values.enumerated() where picker.selectedRow(inComponent: component) != value {
-            picker.selectRow(value, inComponent: component, animated: false)
-        }
-        picker.setNeedsLayout()
-    }
+    private var restingIndex: Int? { values.firstIndex(of: selection) }
 
-    final class Coordinator: NSObject, UIPickerViewDataSource, UIPickerViewAccessibilityDelegate {
-        var parent: DurationWheel
-        /// Whether the minute and second columns are collapsed to the single 0 row of a full day.
-        private var showsFullDay: Bool
-
-        init(parent: DurationWheel) {
-            self.parent = parent
-            showsFullDay = parent.components.hours == 24
-        }
-
-        /// Reloads the minute and second columns when the hours cross into or out of 24.
-        func matchFullDay(_ picker: UIPickerView) {
-            let fullDay = parent.components.hours == 24
-            guard fullDay != showsFullDay else { return }
-            showsFullDay = fullDay
-            picker.reloadComponent(1)
-            picker.reloadComponent(2)
-        }
-
-        static var unitTitles: [String] {
-            [AppText.resolve("duration.unit.hours", defaultValue: "hours", comment: "Unit beside the hours column of the duration wheel."),
-             AppText.resolve("duration.unit.minutes", defaultValue: "min", comment: "Unit beside the minutes column of the duration wheel."),
-             AppText.resolve("duration.unit.seconds", defaultValue: "sec", comment: "Unit beside the seconds column of the duration wheel.")]
-        }
-
-        func numberOfComponents(in pickerView: UIPickerView) -> Int { 3 }
-
-        func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {
-            DurationWheel.rows(component: component, hours: showsFullDay ? 24 : 0)
-        }
-
-        func pickerView(_ pickerView: UIPickerView, widthForComponent component: Int) -> CGFloat {
-            // Equal columns; UIKit adds its own spacing between components.
-            max(64, (pickerView.bounds.width - 24) / 3)
-        }
-
-        func pickerView(_ pickerView: UIPickerView, rowHeightForComponent component: Int) -> CGFloat {
-            DurationPickerView.rowHeight
-        }
-
-        func pickerView(_ pickerView: UIPickerView, viewForRow row: Int, forComponent component: Int,
-                        reusing view: UIView?) -> UIView {
-            let rowView = (view as? DurationRowView) ?? DurationRowView()
-            rowView.value = row
-            return rowView
-        }
-
-        func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
-            switch component {
-            case 0:
-                parent.components.hours = row
-                // A full day has no minutes or seconds left; the columns visibly return to 0.
-                if row == 24 {
-                    parent.components.minutes = 0
-                    parent.components.seconds = 0
+    var body: some View {
+        GeometryReader { proxy in
+            ScrollView(.vertical) {
+                LazyVStack(spacing: 0) {
+                    ForEach(values.indices, id: \.self) { index in
+                        row(index)
+                            .id(index)
+                    }
                 }
-                matchFullDay(pickerView)
-            case 1: parent.components.minutes = row
-            default: parent.components.seconds = row
+                .scrollTargetLayout()
             }
-            parent.onCommit()
-        }
-
-        func pickerView(_ pickerView: UIPickerView, accessibilityLabelForComponent component: Int) -> String? {
-            switch component {
-            case 0: AppText.resolve("duration.wheel.hours", defaultValue: "Hours", comment: "VoiceOver name of the duration wheel's hours column.")
-            case 1: AppText.resolve("duration.wheel.minutes", defaultValue: "Minutes", comment: "VoiceOver name of the duration wheel's minutes column.")
-            default: AppText.resolve("duration.wheel.seconds", defaultValue: "Seconds", comment: "VoiceOver name of the duration wheel's seconds column.")
+            .scrollIndicators(.hidden)
+            .scrollTargetBehavior(.viewAligned(limitBehavior: .never))
+            .scrollPosition($position, anchor: .center)
+            .contentMargins(.vertical, max(0, (proxy.size.height - rowHeight) / 2), for: .scrollContent)
+            .onScrollGeometryChange(for: Int.self) { geometry in
+                Int(((geometry.contentOffset.y + geometry.contentInsets.top) / rowHeight).rounded())
+            } action: { _, raw in
+                guard !values.isEmpty else { return }
+                let index = min(max(raw, 0), values.count - 1)
+                guard index != centered else { return }
+                centered = index
+                if userDriven { DialFeedback.shared.detent() }
+            }
+            .onScrollPhaseChange { _, phase in
+                switch phase {
+                case .tracking:
+                    DialFeedback.shared.prepare()
+                case .interacting:
+                    userDriven = true
+                case .animating:
+                    userDriven = false
+                case .idle:
+                    guard userDriven else { return }
+                    userDriven = false
+                    if let centered, values.indices.contains(centered), values[centered] != selection {
+                        onSelect(values[centered])
+                    }
+                default:
+                    break
+                }
+            }
+            .onChange(of: proxy.size.height) { _, _ in
+                guard !userDriven else { return }
+                scroll(to: restingIndex, animated: false)
             }
         }
-    }
-}
-
-/// Places a fixed unit label to the right of each column's selected number.
-final class DurationPickerView: UIPickerView {
-    static var numberFont: UIFont {
-        UIFontMetrics(forTextStyle: .title2)
-            .scaledFont(for: .monospacedSystemFont(ofSize: 22, weight: .regular), maximumPointSize: 32)
-    }
-
-    static var rowHeight: CGFloat {
-        min(UIFontMetrics(forTextStyle: .title2).scaledValue(for: 36), 46)
-    }
-
-    private let unitLabels: [UILabel] = (0 ..< 3).map { _ in
-        let label = UILabel()
-        label.font = UIFontMetrics(forTextStyle: .subheadline)
-            .scaledFont(for: .systemFont(ofSize: 15, weight: .semibold), maximumPointSize: 22)
-        label.textColor = UIColor(Palette.muted)
-        label.adjustsFontForContentSizeCategory = true
-        // Each column already announces its own name, so the units stay visual.
-        label.isAccessibilityElement = false
-        return label
-    }
-
-    var unitTitles: [String] = [] {
-        didSet {
-            guard unitTitles != oldValue else { return }
-            for (label, title) in zip(unitLabels, unitTitles) { label.text = title }
-            setNeedsLayout()
+        // The unit stays beside the selected row while the numbers move.
+        .overlay(alignment: .trailing) {
+            Text(verbatim: unit)
+                .font(.system(.subheadline, weight: .semibold))
+                .foregroundStyle(Palette.muted)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+                .frame(width: unitWidth, alignment: .leading)
+                .allowsHitTesting(false)
+        }
+        .onAppear { scroll(to: restingIndex, animated: false) }
+        .onChange(of: restingIndex) { _, index in
+            guard !userDriven else { return }
+            scroll(to: index, animated: true)
+        }
+        .onChange(of: values) { _, _ in
+            guard !userDriven else { return }
+            scroll(to: restingIndex, animated: false)
+        }
+        // The scroll content's accessibility frame is the whole column of rows; a clear overlay
+        // exposes one adjustable element with the visible column's frame.
+        .accessibilityHidden(true)
+        .overlay {
+            Color.clear
+                .allowsHitTesting(false)
+                .accessibilityElement()
+                .accessibilityLabel(Text(verbatim: accessibilityName))
+                .accessibilityValue(Text(verbatim: "\(selection)"))
+                .accessibilityAdjustableAction { direction in
+                    guard let base = restingIndex else { return }
+                    let target = direction == .increment ? base + 1 : base - 1
+                    guard values.indices.contains(target) else { return }
+                    onSelect(values[target])
+                }
+                .accessibilityIdentifier(identifier)
         }
     }
 
-    override init(frame: CGRect) {
-        super.init(frame: frame)
-        unitLabels.forEach(addSubview)
-    }
-
-    @available(*, unavailable)
-    required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
-
-    override func layoutSubviews() {
-        super.layoutSubviews()
-        let columnWidth = bounds.width / 3
-        for (component, label) in unitLabels.enumerated() {
-            // Prefer the column's real frame; fall back to an equal split before rows exist.
-            var column = CGRect(x: CGFloat(component) * columnWidth, y: 0, width: columnWidth, height: bounds.height)
-            if let row = view(forRow: selectedRow(inComponent: component), forComponent: component) {
-                column = row.convert(row.bounds, to: self)
-            }
-            let height = label.font.lineHeight
-            label.frame = CGRect(x: column.midX + DurationRowView.numberGap,
-                                 y: bounds.midY - height / 2,
-                                 width: max(0, column.width / 2 - DurationRowView.numberGap),
-                                 height: height)
-            bringSubviewToFront(label)
+    private func row(_ index: Int) -> some View {
+        let value = values[index]
+        let isCentered = index == centered
+        return HStack(spacing: 6) {
+            Text(verbatim: "\(value)")
+                .font(.system(.title2, design: .monospaced))
+                .dynamicTypeSize(...DynamicTypeSize.accessibility1)
+                .monospacedDigit()
+                .foregroundStyle(isCentered ? Palette.text : Palette.muted)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+            Color.clear.frame(width: unitWidth)
         }
-    }
-}
-
-/// Right-aligns the number just left of the column centre, leaving room for the unit.
-final class DurationRowView: UIView {
-    static let numberGap: CGFloat = 8
-    private let label = UILabel()
-
-    var value = 0 {
-        didSet {
-            label.text = String(value)
-            // XCUITest and VoiceOver read the selected row's label as the column value.
-            accessibilityLabel = String(value)
+        .frame(height: rowHeight)
+        .contentShape(.rect)
+        // Rows further from the band recede, as on the system wheel.
+        .scrollTransition(.interactive.threshold(.centered), axis: .vertical) { content, phase in
+            content
+                .opacity(1 - min(1, abs(phase.value)) * 0.55)
+                .scaleEffect(1 - min(1, abs(phase.value)) * 0.12)
+        }
+        .onTapGesture {
+            guard value != selection else { return }
+            DialFeedback.shared.detent()
+            onSelect(value)
         }
     }
 
-    override init(frame: CGRect) {
-        super.init(frame: frame)
-        label.font = DurationPickerView.numberFont
-        label.textColor = UIColor(Palette.text)
-        label.textAlignment = .right
-        label.adjustsFontForContentSizeCategory = true
-        addSubview(label)
-        isAccessibilityElement = true
-    }
-
-    @available(*, unavailable)
-    required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
-
-    override func layoutSubviews() {
-        super.layoutSubviews()
-        label.frame = CGRect(x: 0, y: 0, width: bounds.width / 2 + Self.numberGap / 2, height: bounds.height)
+    private func scroll(to index: Int?, animated: Bool) {
+        guard let index, values.indices.contains(index) else { return }
+        if animated, !reduceMotion {
+            withAnimation(.snappy(duration: 0.22)) { position.scrollTo(id: index, anchor: .center) }
+        } else {
+            position.scrollTo(id: index, anchor: .center)
+        }
     }
 }
 #endif

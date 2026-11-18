@@ -6,6 +6,16 @@
 - UI 测试保留控件接线和完整用户流程；数值组合留在单元测试，语言切换集中验证。避免重复启动、按语言重复业务流程、无基准性能测试，以及测试辅助工具自身的平凡检查。
 - 测试职责与运行说明见 README 的“构建、运行与测试”。保留图像精度、导出防覆盖/取消恢复、持久化与窗口隔离等关键覆盖；大 TIFF 压力测试继续按需启用。
 
+## iOS 拨盘输入（2026-11-18）
+
+- 目标：片场快速计算。iOS（含 iPad）上 RATE 传感器/项目 FPS、存储介质和 SHUTTER 相机/项目 FPS 改为横向刻度拨盘 `RulerDial`；录制时长改为竖向三列滚轮 `DurationWheel`（单个 UIPickerView：时 0–24、分/秒 0–59，单位标签固定在选中行旁）。相机、模式、分辨率、编码、快门角度/时间和整个 macOS 端不变。
+- 拨盘：`ScrollView` + `viewAligned` 吸附，`ScrollPosition` 程序定位，`onScrollGeometryChange` 由偏移量换算居中档位，`onScrollPhaseChange` 区分用户拖动与程序滚动。只有用户驱动的档位变化才回写模型，所以重置、导入、键入等外部改值只移动刻度；键入的非档位值（如 37.5 fps）停靠最近档位而不被改写。点按刻度标签直接选中。整体是一个可调节辅助功能元素。
+- 读数：RATE 保留原生菜单（目录值都在拨盘上，无需键入）；SHUTTER 保留 TextField，可键入任意帧率。iOS 上移除 FPS 的 `list.bullet` 菜单和快捷芯片行；角度/时间芯片保留。SHUTTER 历史在拨盘停稳时记录（`onSettle` → `rememberShutterResult`）。
+- 时长：范围改为 1 秒–24 小时（`CaptureSettings.shootHoursRange`，引擎、存储和 macOS 字段共用）。滚轮停稳时提交；合计为 0 或超过 24 小时显示内联错误和待输入提示，保留上次有效结果，不静默钳制。iOS 移除小数小时键盘、步进器和 `durationInputToolbar`（及 `duration.done` 文案）。复制的容量答案改为 HH:MM:SS。
+- 触感与刻度：拨盘自带档位触感，常用档位（`FrameRateNotch`：23.976/24/25/50/60，容差 0.01 以匹配 24000/1001）用更长刻度和 `.impact(weight: .medium)`，其他档位 `.selection`。原生滚轮自带刻度触感；iOS 根视图对仅涉及拨盘/滚轮字段（时长、传感器/项目 FPS、介质，见 `CaptureSettings.ignoringDialFields`）的变化不再播放 `.selection`，快捷时长按钮自带触感。时长滚轮高 116pt（3 行，随字号缩放）。
+- 实测修正（iPhone 17 Pro / iOS 26.3）：拨盘外层 `.accessibilityElement` 的辅助功能 frame 会扩展到整条刻度（700pt 宽），改为在可见区域上叠加透明 overlay 承载 label/value/adjustable/identifier，内部 `accessibilityHidden`；初始 `ScrollPosition` 会在宽度两次布局后丢失，改为在 `onAppear` 和宽度变化时重新定位；只有 `.interacting` 视为用户拖动（`.tracking`、`.animating` 不选择），避免键入时的停靠滚动改写数值。`contentInsets` 确认包含 `contentMargins`；XCUITest 读取滚轮列 value 为行的 accessibilityLabel。
+- 验证：macOS `FFFilmTests` 172 个用例通过；iPhone 17 Pro 上第一轮 9 个 UI 用例全部通过（启动、录制任务、时长校验/重置/撤销、语言、底部标签、DIT 机位、时间输入与有理帧率、自定义帧率与 100/3、FPS 导入），截图目视检查了快门 FPS 拨盘的常用档位与居中。测试注意：RATE 帧率按相机持久化，修改它的用例需复原；滚轮逐列停稳即提交，拨到 24 小时途经的 23 小时会成为最后有效值。iOS 上 XCUIElement 没有 increment/decrement，UI 测试按 56pt 点按相邻刻度。iPad、真机触感、大字号未实测。
+
 ## macOS 工作台切换器滑动选中（2026-11-01）
 
 - 原生 `.segmented` 由 NSSegmentedControl 绘制，选中态只能原地切换，因此 `MacWorkbenchToolbar.swift` 改用自绘 `WorkbenchSwitcher`：单个常驻滑块 + `offset`，弹簧 response 0.3、damping 1；未用 `matchedGeometryEffect`，避免条件视图交叉淡化。动画绑定 `selection` 值，⌘1/2/3 同样滑动，工作台内容不被带动。

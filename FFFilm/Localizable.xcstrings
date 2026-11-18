@@ -1098,13 +1098,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Recording time: %@ h\nRequired storage: %@"
+            "value" : "Recording time: %@\nRequired storage: %@"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "实际拍摄时间：%@ h\n所需容量：%@"
+            "value" : "实际拍摄时间：%@\n所需容量：%@"
           }
         }
       }
@@ -1451,29 +1451,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Actual recording time, from 0.25 to 24 hours."
+            "value" : "Actual recording time, up to 24 hours."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "实际录制时长，范围为 0.25–24 小时。"
-          }
-        }
-      }
-    },
-    "duration.done" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "DONE"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "完成"
+            "value" : "实际录制时长，最长 24 小时。"
           }
         }
       }
@@ -1501,13 +1485,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Enter a value from 0.25 to 24 hours."
+            "value" : "Enter a duration up to 24 hours."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "请输入 0.25–24 小时范围内的数值。"
+            "value" : "请输入不超过 24 小时的时长。"
           }
         }
       }
@@ -1533,13 +1517,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "0.25–24"
+            "value" : "0–24"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "0.25–24"
+            "value" : "0–24"
           }
         }
       }
@@ -1572,6 +1556,108 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "调整录制时长"
+          }
+        }
+      }
+    },
+    "duration.unit.hours" : {
+      "comment" : "Unit beside the hours column of the duration wheel.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "hours"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "小时"
+          }
+        }
+      }
+    },
+    "duration.unit.minutes" : {
+      "comment" : "Unit beside the minutes column of the duration wheel.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "min"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "分"
+          }
+        }
+      }
+    },
+    "duration.unit.seconds" : {
+      "comment" : "Unit beside the seconds column of the duration wheel.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "sec"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "秒"
+          }
+        }
+      }
+    },
+    "duration.wheel.hours" : {
+      "comment" : "VoiceOver name of the duration wheel's hours column.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hours"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "小时"
+          }
+        }
+      }
+    },
+    "duration.wheel.minutes" : {
+      "comment" : "VoiceOver name of the duration wheel's minutes column.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Minutes"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "分钟"
+          }
+        }
+      }
+    },
+    "duration.wheel.seconds" : {
+      "comment" : "VoiceOver name of the duration wheel's seconds column.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seconds"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "秒"
           }
         }
       }
@@ -1616,13 +1702,13 @@
     "Enter 2–16 refresh rates (0.001–1000000 Hz, up to three decimals), separated by commas. Use . for decimals." : {
 
     },
+    "Enter a duration up to 24 hours." : {
+
+    },
     "Enter a finite number greater than zero." : {
 
     },
     "Enter a valid value to calculate." : {
-
-    },
-    "Enter a value from 0.25 to 24 hours." : {
 
     },
     "Enter the actual recording time." : {
@@ -2321,6 +2407,12 @@
         }
       }
     },
+    "hours" : {
+
+    },
+    "Hours" : {
+
+    },
     "Import" : {
       "comment" : "macOS film workbench",
       "localizations" : {
@@ -2581,6 +2673,12 @@
           }
         }
       }
+    },
+    "min" : {
+
+    },
+    "Minutes" : {
+
     },
     "Mode: %@\nAngle: %@°\nShutter time: %@\nExposure: %@\nResult is a theoretical estimate; verify camera and lighting behavior with test footage." : {
       "localizations" : {
@@ -4421,12 +4519,12 @@
         }
       }
     },
-    "Recording time: %@ h\nRequired storage: %@" : {
+    "Recording time: %@\nRequired storage: %@" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Recording time: %1$@ h\nRequired storage: %2$@"
+            "value" : "Recording time: %1$@\nRequired storage: %2$@"
           }
         }
       }
@@ -4964,6 +5062,12 @@
       }
     },
     "Screen-cycle model: %@ Hz · PWM and scan synchronization are not modeled." : {
+
+    },
+    "sec" : {
+
+    },
+    "Seconds" : {
 
     },
     "Select" : {

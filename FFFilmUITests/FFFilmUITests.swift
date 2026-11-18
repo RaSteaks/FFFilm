@@ -35,6 +35,20 @@ final class FFFilmUITests: XCTestCase {
             // Wide iPad windows show parameters beside the live result.
             XCTAssertLessThan(controls.frame.maxX, result.frame.minX)
         }
+        // One detent on the frame-rate dial changes the menu readout and the live answer.
+        let dial = app.descendants(matching: .any).matching(identifier: "capture-sensor-fps-dial").firstMatch
+        reveal(dial, in: app)
+        let answer = app.descendants(matching: .any).matching(identifier: "plan-capacity-output").firstMatch
+        let rateBefore = dial.value as? String
+        let answerBefore = answer.label
+        var step = 1
+        stepDial(dial, by: step)
+        if dial.value as? String == rateBefore { step = -1; stepDial(dial, by: step) }
+        XCTAssertNotEqual(dial.value as? String, rateBefore)
+        XCTAssertNotEqual(answer.label, answerBefore)
+        // Camera formats persist per camera; restore the rate so later workflows see the default.
+        stepDial(dial, by: -step)
+        XCTAssertEqual(dial.value as? String, rateBefore)
         #endif
     }
 
@@ -47,11 +61,19 @@ final class FFFilmUITests: XCTestCase {
         XCTAssertTrue(picker.waitForExistence(timeout: 5))
         let capacity = picker.buttons["Storage needed"]
         let runtime = picker.buttons["Recording time"]
+        #if os(iOS)
+        let duration = durationWheel(in: app)
+        #else
         let duration = app.textFields["capture-duration"].firstMatch
+        #endif
         let preset = app.buttons["duration-quick-4"].firstMatch
         reveal(preset, in: app)
         preset.tap()
+        #if os(iOS)
+        assertDuration(4, 0, 0, in: app)
+        #else
         XCTAssertEqual(duration.value as? String, "4.00")
+        #endif
         reveal(picker, in: app)
         let capacityScreenshot = XCTAttachment(screenshot: app.screenshot())
         capacityScreenshot.name = "Storage needed"
@@ -74,14 +96,23 @@ final class FFFilmUITests: XCTestCase {
         XCTAssertFalse(media.exists)
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "plan-capacity-output").firstMatch.exists)
         XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "card-runtime-output").firstMatch.exists)
-        XCTAssertEqual(duration.value as? String, "4.00")
         // An invalid draft must survive hiding its field and returning to capacity planning.
+        #if os(iOS)
+        assertDuration(4, 0, 0, in: app)
+        setDuration(24, 30, 0, in: app)
+        #else
+        XCTAssertEqual(duration.value as? String, "4.00")
         enterText("30", into: duration, in: app)
         finishDurationEditing(app)
+        #endif
         reveal(picker, in: app)
         runtime.tap()
         capacity.tap()
+        #if os(iOS)
+        assertDuration(24, 30, 0, in: app)
+        #else
         XCTAssertEqual(duration.value as? String, "30")
+        #endif
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "duration-error").firstMatch.exists)
         let copy = app.buttons["copy-action"].firstMatch
         reveal(copy, in: app)
@@ -126,7 +157,6 @@ final class FFFilmUITests: XCTestCase {
             app.launch()
             app.terminate()
         }
-        let duration = app.textFields["capture-duration"].firstMatch
         let preset = app.buttons["duration-quick-4"].firstMatch
         reveal(preset, in: app)
         preset.tap()
@@ -148,16 +178,15 @@ final class FFFilmUITests: XCTestCase {
         selectTab("shutter", in: app)
         XCTAssertEqual(app.textFields["shutter-sensorFps"].value as? String, "60")
         selectTab("rate", in: app)
-        XCTAssertEqual(duration.value as? String, "4.00")
-        enterText("30", into: duration, in: app)
-        finishDurationEditing(app)
-        XCTAssertTrue(app.staticTexts["请输入 0.25–24 小时范围内的数值。"].exists)
+        assertDuration(4, 0, 0, in: app)
+        setDuration(24, 30, 0, in: app)
+        XCTAssertTrue(app.staticTexts["请输入不超过 24 小时的时长。"].exists)
         selectTab("settings", in: app)
         choose("English", picker: "app-language-picker", in: app)
         XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 3))
         selectTab("rate", in: app)
-        XCTAssertEqual(duration.value as? String, "30")
-        XCTAssertTrue(app.staticTexts["Enter a value from 0.25 to 24 hours."].exists)
+        assertDuration(24, 30, 0, in: app)
+        XCTAssertTrue(app.staticTexts["Enter a duration up to 24 hours."].exists)
         selectTab("settings", in: app)
         let english = XCTAttachment(screenshot: app.screenshot())
         english.name = "Settings - English"
@@ -201,11 +230,10 @@ final class FFFilmUITests: XCTestCase {
         calculateScreenshot.lifetime = .keepAlways
         add(calculateScreenshot)
 
-        let duration = app.textFields["capture-duration"].firstMatch
         let quick12 = app.buttons["duration-quick-12"].firstMatch
         reveal(quick12, in: app)
         quick12.tap()
-        XCTAssertEqual(duration.value as? String, "12.00")
+        assertDuration(12, 0, 0, in: app)
         selectTab("shutter", in: app)
         enter("60", field: "sensorFps", in: app)
         finishEditing(app)
@@ -237,19 +265,18 @@ final class FFFilmUITests: XCTestCase {
 
         selectTab("rate", in: app)
         XCTAssertFalse(app.navigationBars["Settings"].exists)
-        XCTAssertEqual(duration.value as? String, "12.00")
+        assertDuration(12, 0, 0, in: app)
         // The result displays the abbreviated hourly unit after the preference changes.
         let expectedUnit = wasBinary ? "GB/h" : "GiB/h"
         let result = app.descendants(matching: .any).matching(identifier: "rate-results").firstMatch
         XCTAssertTrue(result.descendants(matching: .any)
             .matching(NSPredicate(format: "label CONTAINS %@", expectedUnit)).firstMatch.waitForExistence(timeout: 3))
-        // An empty duration is still an editor draft, not a request to reload the model.
-        enterText("", into: duration, in: app)
-        finishDurationEditing(app)
+        // A zero total is still an editor draft, not a request to reload the model.
+        setDuration(0, 0, 0, in: app)
         selectTab("settings", in: app)
         selectTab("rate", in: app)
-        let durationDraft = duration.value as? String ?? ""
-        XCTAssertTrue(durationDraft.isEmpty || durationDraft == duration.placeholderValue)
+        assertDuration(0, 0, 0, in: app)
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "duration-error").firstMatch.exists)
         selectTab("shutter", in: app)
         XCTAssertEqual(app.textFields["shutter-sensorFps"].value as? String, "60")
 
@@ -348,6 +375,21 @@ final class FFFilmUITests: XCTestCase {
         // Number formatting is locale-dependent; pin the language for value checks.
         app.launchArguments += ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()
+        let recorded = app.descendants(matching: .any).matching(identifier: "record-time-output").firstMatch
+        #if os(iOS)
+        XCTAssertTrue(durationWheel(in: app).waitForExistence(timeout: 5))
+        assertDuration(8, 0, 0, in: app)
+
+        // Every wheel column commits whole seconds to the live plan.
+        setDuration(2, 30, 15, in: app)
+        XCTAssertEqual(recorded.label, "02:30:15")
+
+        // A total beyond one day surfaces an inline error and never becomes the plan. Columns
+        // commit as they settle, so the last valid plan is whatever the wheel passed before 24.
+        setDuration(24, 30, 15, in: app)
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "duration-error").firstMatch.waitForExistence(timeout: 2))
+        XCTAssertNotEqual(recorded.label, "24:30:15")
+        #else
         let field = app.textFields["capture-duration"].firstMatch
         XCTAssertTrue(field.waitForExistence(timeout: 5))
         XCTAssertEqual(field.value as? String ?? "", "8.00")
@@ -362,13 +404,18 @@ final class FFFilmUITests: XCTestCase {
         finishDurationEditing(app)
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "duration-error").firstMatch.waitForExistence(timeout: 2))
         XCTAssertEqual(field.value as? String ?? "", "30")
+        #endif
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "rate-results").firstMatch.exists)
 
         // Quick presets share the store path and clear the error.
         let quick = app.buttons["duration-quick-4"].firstMatch
         reveal(quick, in: app)
         quick.tap()
+        #if os(iOS)
+        assertDuration(4, 0, 0, in: app)
+        #else
         XCTAssertEqual(field.value as? String ?? "", "4.00")
+        #endif
         XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "duration-error").firstMatch.exists)
         #if os(macOS)
         app.typeKey("r", modifierFlags: [.command, .shift])
@@ -378,9 +425,15 @@ final class FFFilmUITests: XCTestCase {
         #endif
         let undo = app.buttons["reset-undo"].firstMatch
         XCTAssertTrue(undo.waitForExistence(timeout: 3))
+        #if os(iOS)
+        assertDuration(8, 0, 0, in: app)
+        undo.tap()
+        assertDuration(4, 0, 0, in: app)
+        #else
         XCTAssertEqual(field.value as? String, "8.00")
         undo.tap()
         XCTAssertEqual(field.value as? String, "4.00")
+        #endif
         XCTAssertFalse(undo.exists)
     }
 
@@ -504,7 +557,7 @@ final class FFFilmUITests: XCTestCase {
     @MainActor
     private func dismissKeyboardFocus(in app: XCUIApplication) {
         #if os(iOS)
-        for identifier in ["shutter-done", "duration-done", "DONE"] where app.buttons[identifier].exists {
+        for identifier in ["shutter-done", "DONE"] where app.buttons[identifier].exists {
             app.buttons[identifier].tap()
             Thread.sleep(forTimeInterval: 0.3)
             return
@@ -581,15 +634,94 @@ final class FFFilmUITests: XCTestCase {
         #endif
     }
 
+    #if os(macOS)
     @MainActor
     private func finishDurationEditing(_ app: XCUIApplication) {
-        // The duration draft commits through the keyboard toolbar on iOS.
-        #if os(iOS)
-        let done = app.buttons["duration-done"].firstMatch
-        XCTAssertTrue(done.waitForExistence(timeout: 2), app.debugDescription)
-        done.tap()
-        #else
+        // The desktop duration draft commits when focus leaves the field.
         app.typeKey(.tab, modifierFlags: [])
+    }
+    #else
+    @MainActor
+    private func durationWheel(in app: XCUIApplication) -> XCUIElement {
+        app.pickers["duration-wheel"].firstMatch
+    }
+
+    @MainActor
+    private func setDuration(_ hours: Int, _ minutes: Int, _ seconds: Int, in app: XCUIApplication) {
+        let wheel = durationWheel(in: app)
+        reveal(wheel, in: app)
+        for (index, value) in [hours, minutes, seconds].enumerated() {
+            wheel.pickerWheels.element(boundBy: index).adjust(toPickerWheelValue: String(value))
+        }
+    }
+
+    @MainActor
+    private func assertDuration(_ hours: Int, _ minutes: Int, _ seconds: Int, in app: XCUIApplication,
+                                file: StaticString = #filePath, line: UInt = #line) {
+        let wheel = durationWheel(in: app)
+        XCTAssertTrue(wheel.waitForExistence(timeout: 3), file: file, line: line)
+        // Column values lead with the selected number; any appended column name is ignored.
+        let values = wheel.pickerWheels.allElementsBoundByIndex.map {
+            String(($0.value as? String ?? "").prefix(while: \.isNumber))
+        }
+        XCTAssertEqual(values, [hours, minutes, seconds].map(String.init), file: file, line: line)
+    }
+
+    /// Taps the tick `steps` stops away from the indicator; the dial selects it and recentres.
+    /// iOS XCUIElement has no increment/decrement, and a tap is a real operator gesture.
+    @MainActor
+    private func stepDial(_ dial: XCUIElement, by steps: Int, spacing: CGFloat = 56) {
+        dial.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            .withOffset(CGVector(dx: CGFloat(steps) * spacing, dy: 0))
+            .tap()
+        // Let the ruler finish recentring before the next tap targets a tick.
+        Thread.sleep(forTimeInterval: 0.4)
+    }
+
+    /// Steps a dial toward an accessibility value, first upward, then downward.
+    @MainActor
+    private func setDial(_ dial: XCUIElement, to target: String) {
+        for direction in [1, -1] {
+            for _ in 0 ..< 40 {
+                if dial.value as? String == target { return }
+                let before = dial.value as? String
+                stepDial(dial, by: direction)
+                if dial.value as? String == before { break }
+            }
+        }
+        XCTAssertEqual(dial.value as? String, target)
+    }
+
+    /// Every accessibility value a dial reaches, from its lowest stop to its highest.
+    @MainActor
+    private func dialValues(_ dial: XCUIElement) -> [String] {
+        for _ in 0 ..< 40 {
+            let before = dial.value as? String
+            stepDial(dial, by: -1)
+            if dial.value as? String == before { break }
+        }
+        var values = [dial.value as? String ?? ""]
+        for _ in 0 ..< 40 {
+            stepDial(dial, by: 1)
+            let value = dial.value as? String ?? ""
+            if value == values.last { break }
+            values.append(value)
+        }
+        return values
+    }
+    #endif
+
+    /// Chooses a shutter frame-rate preset: the dial on iOS, the quick chip on macOS.
+    @MainActor
+    private func chooseFrameRate(_ fps: Double, label: String, field: String, in app: XCUIApplication) {
+        #if os(iOS)
+        let dial = app.descendants(matching: .any).matching(identifier: "shutter-dial-\(field)").firstMatch
+        reveal(dial, in: app)
+        setDial(dial, to: label)
+        #else
+        let chip = app.buttons.matching(identifier: "shutter-quick-\(field)-\(fps)").firstMatch
+        reveal(chip, in: app)
+        chip.tap()
         #endif
     }
 
@@ -632,12 +764,10 @@ final class FFFilmUITests: XCTestCase {
             let picker = app.segmentedControls["shutter-rig"]
             reveal(picker, in: app); picker.buttons[name].tap()
         }
-        let quick50 = app.buttons["shutter-quick-sensorFps-50.0"]
-        reveal(quick50, in: app); quick50.tap()
+        chooseFrameRate(50, label: "50 fps", field: "sensorFps", in: app)
         rig("B")
         XCTAssertEqual(app.textFields["shutter-sensorFps"].value as? String, "24")
-        let quick60 = app.buttons["shutter-quick-sensorFps-60.0"]
-        reveal(quick60, in: app); quick60.tap()
+        chooseFrameRate(60, label: "60 fps", field: "sensorFps", in: app)
         rig("A")
         XCTAssertEqual(app.textFields["shutter-sensorFps"].value as? String, "50")
         let configure = app.buttons["shutter-rig-configure"]
@@ -655,7 +785,7 @@ final class FFFilmUITests: XCTestCase {
         rig("A")
         XCTAssertEqual(app.textFields["shutter-sensorFps"].value as? String, "23.")
         XCTAssertFalse(app.staticTexts["shutter-time-primary"].exists)
-        reveal(quick50, in: app); quick50.tap()
+        chooseFrameRate(50, label: "50 fps", field: "sensorFps", in: app)
         let save = app.buttons["shutter-save-setup"]
         reveal(save, in: app); save.tap()
         let name = app.textFields["shutter-record-name"]
@@ -710,9 +840,7 @@ final class FFFilmUITests: XCTestCase {
             finishEditing(app)
             XCTAssertEqual(app.staticTexts["shutter-angle-output"].label, "172.8°")
         }
-        let rational = app.buttons.matching(identifier: "shutter-quick-sensorFps-23.976023976023978").firstMatch
-        reveal(rational, in: app)
-        rational.tap()
+        chooseFrameRate(24_000.0 / 1_001, label: "23.976 (24000/1001)", field: "sensorFps", in: app)
         XCTAssertEqual(app.staticTexts["shutter-angle-output"].label, "172.627373°")
         // Changing tasks keeps the unfinished editor owner and all unrelated settings alive.
         choose("Frame rate", picker: "shutter-mode", in: app)
@@ -757,6 +885,18 @@ final class FFFilmUITests: XCTestCase {
         add(attachment)
 
         // Preset selection replaces the decimal draft and retains the unrounded 100/3 cadence.
+        #if os(iOS)
+        let dial = app.descendants(matching: .any).matching(identifier: "shutter-dial-sensorFps").firstMatch
+        reveal(dial, in: app)
+        // A typed cadence parks the dial without being rewritten to a stop.
+        XCTAssertEqual(dial.value as? String, "23.976 fps")
+        XCTAssertEqual(app.textFields["shutter-sensorFps"].value as? String, "23.976")
+        setDial(dial, to: "33.333 (100/3)")
+        let presetAttachment = XCTAttachment(screenshot: app.screenshot())
+        presetAttachment.name = "Camera FPS 100 over 3 on the dial"
+        presetAttachment.lifetime = .keepAlways
+        add(presetAttachment)
+        #else
         let presets = app.buttons["shutter-presets-sensorFps"].firstMatch
         reveal(presets, in: app)
         presets.tap()
@@ -767,18 +907,28 @@ final class FFFilmUITests: XCTestCase {
         presetAttachment.lifetime = .keepAlways
         add(presetAttachment)
         fractionalPreset.tap()
+        #endif
         enter("120", field: "angle", in: app)
         finishEditing(app)
         XCTAssertTrue(app.staticTexts["shutter-time-primary"].label.contains("1/100 s"))
 
-        // The new capture preset must not leak into the delivery/project-rate menu.
+        // The new capture preset must not leak into the delivery/project-rate presets.
         choose("Frame rate", picker: "shutter-mode", in: app)
+        #if os(iOS)
+        let projectDial = app.descendants(matching: .any).matching(identifier: "shutter-dial-projectFps").firstMatch
+        reveal(projectDial, in: app)
+        let projectStops = dialValues(projectDial)
+        XCTAssertTrue(projectStops.contains("25 fps"), "\(projectStops)")
+        XCTAssertFalse(projectStops.contains("33.333 (100/3)"))
+        setDial(projectDial, to: "25 fps")
+        #else
         let projectPresets = app.buttons["shutter-presets-projectFps"].firstMatch
         reveal(projectPresets, in: app)
         projectPresets.tap()
         XCTAssertTrue(app.buttons["25 fps"].firstMatch.waitForExistence(timeout: 3))
         XCTAssertFalse(app.buttons["33.333 (100/3)"].firstMatch.exists)
         app.buttons["25 fps"].firstMatch.tap()
+        #endif
     }
 
     @MainActor

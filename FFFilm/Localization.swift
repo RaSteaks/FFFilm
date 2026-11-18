@@ -83,7 +83,7 @@ enum AppText {
         let answer: String
         switch task {
         case .capacity:
-            answer = resolve("copy.capacityAnswer", defaultValue: "Recording time: \(DisplayFormat.number(settings.shootHours, decimals: 2)) h\nRequired storage: \(plan)")
+            answer = resolve("copy.capacityAnswer", defaultValue: "Recording time: \(DisplayFormat.duration(settings.shootHours))\nRequired storage: \(plan)")
         case .runtime:
             answer = resolve("copy.runtimeAnswer", defaultValue: "Media: \(calculation.media.label)\nAvailable recording time: \(runtime)")
         }

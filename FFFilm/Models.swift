@@ -131,6 +131,16 @@ private enum CatalogError: LocalizedError {
 
 // MARK: - Calculator state
 
+/// Production-standard cadences that act as click stops on frame-rate dials. The tolerance
+/// lets both the catalog's 23.976 and the exact 24000/1001 preset count as the same stop.
+enum FrameRateNotch {
+    static let rates: [Double] = [23.976, 24, 25, 50, 60]
+
+    static func contains(_ fps: Double) -> Bool {
+        rates.contains { abs($0 - fps) < 0.01 }
+    }
+}
+
 struct CaptureSettings: Codable, Equatable, Hashable {
     var cameraId: String
     var modeId: String
@@ -153,6 +163,20 @@ struct CaptureSettings: Codable, Equatable, Hashable {
         mediaId: "2tb",
         shootHours: 8
     )
+
+    /// One second to a full day. The iOS wheel edits whole seconds, so the lower
+    /// bound is a single second rather than the former quarter-hour step.
+    static let shootHoursRange: ClosedRange<Double> = (1.0 / 3_600) ... 24
+
+    /// Settings with the iOS dial- and wheel-owned fields blanked, for feedback comparisons.
+    var ignoringDialFields: CaptureSettings {
+        var copy = self
+        copy.shootHours = 0
+        copy.sensorFps = 0
+        copy.projectFps = 0
+        copy.mediaId = ""
+        return copy
+    }
 }
 
 /// The camera-scoped part of a capture setup. Media and planned duration stay
@@ -356,7 +380,22 @@ enum ShutterFramePreset: String, CaseIterable, Identifiable {
 
     /// Frequent production cadences stay one tap away; the menu retains every exact preset.
     static let quick: [Self] = [.fractional24, .fps24, .fps25, .fps50, .fps60]
-    var shortLabel: String { self == .fractional24 ? "23.976" : String(Int(fps)) }
+    var shortLabel: String {
+        switch self {
+        case .fractional24: "23.976"
+        case .fractional30: "29.97"
+        case .fractional60: "59.94"
+        case .fractional100Over3: "33.333"
+        default: String(Int(fps))
+        }
+    }
+
+    /// Dial stops in ascending cadence. 100/3 is a capture cadence only, matching the presets menu.
+    static func dialPresets(for field: ShutterInputField) -> [Self] {
+        allCases
+            .filter { field == .sensorFps || $0 != .fractional100Over3 }
+            .sorted { $0.fps < $1.fps }
+    }
 }
 
 struct ShutterSettings: Equatable, Hashable, Codable {

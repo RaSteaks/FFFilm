@@ -92,7 +92,15 @@ struct ContentView: View {
         .sheet(isPresented: $showsCameras) { CameraLibraryView(store: store) }
         .tint(Palette.text)
         .preferredColorScheme(.dark)
-        .sensoryFeedback(.selection, trigger: store.settings)
+        .sensoryFeedback(.selection, trigger: store.settings) { old, new in
+            #if os(iOS)
+            // Dials and the duration wheel play their own detent feedback, and duration presets
+            // play theirs; changes confined to those fields must not add a second tick.
+            return old.ignoringDialFields != new.ignoringDialFields
+            #else
+            true
+            #endif
+        }
     }
 
     #if os(macOS)
@@ -511,11 +519,19 @@ private struct CaptureControls: View {
     let availableWidth: CGFloat
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @State private var durationInitialized = false
+    #if os(iOS)
+    // The wheel position is editor state: an invalid total survives task and tab switches.
+    @State private var wheel = DurationComponents(hours: CaptureSettings.default.shootHours)
+    @State private var quickDurationTaps = 0
+    // Three rows: the selection and one neighbour on each side.
+    @ScaledMetric(relativeTo: .title2) private var wheelHeight: CGFloat = 116
+    #else
     @FocusState private var durationFocused: Bool
     @State private var durationDraft = ""
-    @State private var durationInitialized = false
     @State private var durationError: String?
     @State private var durationPending = false
+    #endif
 
     private var usesCompactLayout: Bool {
         #if os(iOS)
@@ -538,11 +554,16 @@ private struct CaptureControls: View {
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("capture-controls")
         .onAppear {
-            // Seed once: an empty draft must survive returning from another tab.
+            // Seed once: an unfinished duration must survive returning from another tab.
             guard !durationInitialized else { return }
+            #if os(iOS)
+            wheel = DurationComponents(hours: store.settings.shootHours)
+            #else
             durationDraft = DisplayFormat.number(store.settings.shootHours, decimals: 2)
+            #endif
             durationInitialized = true
         }
+        #if os(macOS)
         // Leaving a tab dismisses editing without discarding an unfinished duration.
         .onDisappear { durationFocused = false }
         .onChange(of: store.recordingTask) { _, _ in
@@ -554,10 +575,17 @@ private struct CaptureControls: View {
         .onChange(of: AppLanguagePreference.shared.language) { _, _ in
             if durationError != nil { validateDuration(durationDraft) }
         }
+        #endif
         .onChange(of: store.settings.shootHours) { _, value in
+            #if os(iOS)
+            // Presets, reset and undo move the wheel; a total the wheel just committed already matches.
+            let stored = DurationComponents(hours: value)
+            if stored.totalSeconds != wheel.totalSeconds { wheel = stored }
+            #else
             durationDraft = DisplayFormat.number(value, decimals: 2)
             durationError = nil
             durationPending = false
+            #endif
         }
     }
 
@@ -587,7 +615,14 @@ private struct CaptureControls: View {
         if store.recordingTask == .capacity {
             durationField
         } else {
+            #if os(iOS)
+            let labels = Dictionary(uniqueKeysWithValues: store.catalog.mediaOptions.map { ($0.id, $0.label) })
+            dialField("field.media", values: store.catalog.mediaOptions.map(\.id), selection: store.settings.mediaId,
+                      spacing: 64, identifier: "capture-media-dial", label: { labels[$0] ?? $0 },
+                      select: store.selectMedia) { mediaPicker }
+            #else
             FieldCard("field.media") { mediaPicker }
+            #endif
         }
     }
 
@@ -649,25 +684,21 @@ private struct CaptureControls: View {
     private var cadenceField: some View {
         Group {
             if store.currentCamera.isStandaloneProRes {
-                FieldCard("field.projectFps") {
-                    Picker("field.projectFps", selection: Binding(get: { store.settings.projectFps }, set: store.selectProjectFps)) {
-                        ForEach(store.catalog.projectFrameRates, id: \.self) { fps in
-                            Text(DisplayFormat.fps(fps)).tag(fps)
-                        }
-                    }
-                    .fieldPicker(compact: usesCompactLayout)
-                    .accessibilityIdentifier("capture-project-fps")
-                }
+                #if os(iOS)
+                dialField("field.projectFps", values: store.catalog.projectFrameRates, selection: store.settings.projectFps,
+                          identifier: "capture-project-fps-dial", label: { DisplayFormat.fps($0) },
+                          isNotch: { FrameRateNotch.contains($0) }, select: store.selectProjectFps) { projectFpsPicker }
+                #else
+                FieldCard("field.projectFps") { projectFpsPicker }
+                #endif
             } else {
-                FieldCard("field.sensorFps") {
-                    Picker("field.sensorFps", selection: Binding(get: { store.settings.sensorFps }, set: store.selectSensorFps)) {
-                        ForEach(store.availableSensorFrameRates, id: \.self) { fps in
-                            Text(DisplayFormat.fps(fps)).tag(fps)
-                        }
-                    }
-                    .fieldPicker(compact: usesCompactLayout)
-                    .accessibilityIdentifier("capture-sensor-fps")
-                }
+                #if os(iOS)
+                dialField("field.sensorFps", values: store.availableSensorFrameRates, selection: store.settings.sensorFps,
+                          identifier: "capture-sensor-fps-dial", label: { DisplayFormat.fps($0) },
+                          isNotch: { FrameRateNotch.contains($0) }, select: store.selectSensorFps) { sensorFpsPicker }
+                #else
+                FieldCard("field.sensorFps") { sensorFpsPicker }
+                #endif
             }
             if store.currentCamera.supportsSensorOverdrive == true {
                 FieldCard("field.overdrive") {
@@ -676,6 +707,26 @@ private struct CaptureControls: View {
                 }
             }
         }
+    }
+
+    private var projectFpsPicker: some View {
+        Picker("field.projectFps", selection: Binding(get: { store.settings.projectFps }, set: store.selectProjectFps)) {
+            ForEach(store.catalog.projectFrameRates, id: \.self) { fps in
+                Text(DisplayFormat.fps(fps)).tag(fps)
+            }
+        }
+        .fieldPicker(compact: usesCompactLayout)
+        .accessibilityIdentifier("capture-project-fps")
+    }
+
+    private var sensorFpsPicker: some View {
+        Picker("field.sensorFps", selection: Binding(get: { store.settings.sensorFps }, set: store.selectSensorFps)) {
+            ForEach(store.availableSensorFrameRates, id: \.self) { fps in
+                Text(DisplayFormat.fps(fps)).tag(fps)
+            }
+        }
+        .fieldPicker(compact: usesCompactLayout)
+        .accessibilityIdentifier("capture-sensor-fps")
     }
 
     private var mediaPicker: some View {
@@ -688,15 +739,87 @@ private struct CaptureControls: View {
         .accessibilityIdentifier("capture-media")
     }
 
+    #if os(iOS)
+    /// Catalog choices keep their native menu as the readout; the dial below reaches every
+    /// stop with one swipe. Only supported catalog values are stops, so no typing is needed.
+    private func dialField<Value: Hashable, Readout: View>(
+        _ title: LocalizedStringKey, values: [Value], selection: Value, spacing: CGFloat = 56,
+        identifier: String, label: @escaping (Value) -> String,
+        isNotch: @escaping (Value) -> Bool = { _ in false }, select: @escaping (Value) -> Void,
+        @ViewBuilder readout: () -> Readout
+    ) -> some View {
+        DialFieldCard(title, readout: readout) {
+            // The dial owns detent feedback; the root skips settings changes the dials make.
+            RulerDial(values: values, selection: values.contains(selection) ? selection : nil,
+                      spacing: spacing, identifier: identifier, accessibilityLabel: Text(title),
+                      label: label, accessibilityValue: label, isNotch: isNotch, onSelect: select)
+        }
+    }
+
+    private var durationField: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 0) {
+                Text("field.duration")
+                    .font(.system(.caption2, weight: .semibold))
+                    .foregroundStyle(Palette.muted)
+                    .padding(.horizontal, 12)
+                    .padding(.top, 8)
+                DurationWheel(components: $wheel, onCommit: commitWheel)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: wheelHeight)
+            }
+            .background(Palette.surface)
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+
+            if let wheelError {
+                Label(wheelError, systemImage: "exclamationmark.circle")
+                    .font(.caption)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("duration-error")
+                Label("duration.pending", systemImage: "clock")
+                    .font(.caption)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("duration-pending")
+            }
+
+            quickDurations
+        }
+        .sensoryFeedback(.selection, trigger: quickDurationTaps)
+        .id("capture-duration-field")
+    }
+
+    /// Derived from the wheel so the message always describes what the wheel shows.
+    private var wheelError: String? {
+        let total = wheel.totalSeconds
+        if total == 0 {
+            return AppText.resolve("duration.empty", defaultValue: "Enter the actual recording time.", comment: "Empty recording-duration validation.")
+        }
+        guard CaptureSettings.shootHoursRange.contains(wheel.totalHours) else {
+            return AppText.resolve("duration.invalid", defaultValue: "Enter a duration up to 24 hours.", comment: "Recording-duration validation range.")
+        }
+        return nil
+    }
+
+    private func commitWheel() {
+        // Out-of-range totals stay on the wheel with their message; the plan keeps the last
+        // valid calculation instead of being silently corrected.
+        guard wheelError == nil else { return }
+        store.setShootHours(wheel.totalHours)
+    }
+
+    private func applyQuickDuration(_ hours: Double) {
+        quickDurationTaps += 1
+        wheel = DurationComponents(hours: hours)
+        store.setShootHours(hours)
+    }
+    #else
     private var durationField: some View {
         VStack(alignment: .leading, spacing: 4) {
             FieldCard("field.duration") {
                 HStack(spacing: 8) {
                     TextField("duration.placeholder", text: $durationDraft)
                         .workbenchNumberStyle()
-                        .numericKeyboard()
                         .focused($durationFocused)
-                        .multilineTextAlignment(usesCompactLayout ? .trailing : .leading)
                         .frame(maxWidth: .infinity, minHeight: Layout.controlHeight)
                         .onChange(of: durationDraft) { _, newValue in
                             validateDuration(newValue)
@@ -706,11 +829,9 @@ private struct CaptureControls: View {
                             durationFocused = false
                         }
                         .onChange(of: durationFocused) { _, focused in
-                            // Losing focus with a valid draft commits it; iOS
-                            // decimalPad offers no return key of its own.
+                            // Losing focus with a valid draft commits it.
                             if !focused { commitDurationDraft() }
                         }
-                        .durationInputToolbar(commit: commitDurationDraft, focus: $durationFocused)
                         .accessibilityLabel(Text("field.duration"))
                         .accessibilityHint(Text("duration.actualHint"))
                         .accessibilityIdentifier("capture-duration")
@@ -736,27 +857,7 @@ private struct CaptureControls: View {
                     .accessibilityIdentifier("duration-pending")
             }
 
-            HStack(spacing: 6) {
-                Text("duration.quick")
-                    .font(.caption)
-                    .foregroundStyle(Palette.muted)
-                ForEach([1.0, 4.0, 8.0, 12.0], id: \.self) { hours in
-                    Button {
-                        durationDraft = DisplayFormat.number(hours, decimals: 2)
-                        durationError = nil
-                        durationPending = false
-                        store.setShootHours(hours)
-                    } label: {
-                        Text(DisplayFormat.number(hours, decimals: 0))
-                            .monospacedDigit()
-                            .frame(minWidth: 38, minHeight: Layout.controlHeight)
-                    }
-                    .buttonStyle(PresetButtonStyle(selected: store.settings.shootHours == hours))
-                    .accessibilityLabel(Text("\(DisplayFormat.number(hours, decimals: 0)) hours"))
-                    .accessibilityIdentifier("duration-quick-\(Int(hours))")
-                }
-            }
-            .fixedSize(horizontal: false, vertical: true)
+            quickDurations
         }
         .id("capture-duration-field")
     }
@@ -779,12 +880,12 @@ private struct CaptureControls: View {
         guard let value = parsedDuration(text) else {
             durationError = text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                 ? AppText.resolve("duration.empty", defaultValue: "Enter the actual recording time.", comment: "Empty recording-duration validation.")
-                : AppText.resolve("duration.invalid", defaultValue: "Enter a value from 0.25 to 24 hours.", comment: "Recording-duration validation range.")
+                : AppText.resolve("duration.invalid", defaultValue: "Enter a duration up to 24 hours.", comment: "Recording-duration validation range.")
             durationPending = true
             return
         }
         durationError = nil
-        // A valid draft stays uncommitted until submit, DONE or focus loss.
+        // A valid draft stays uncommitted until submit or focus loss.
         durationPending = value != store.settings.shootHours
     }
 
@@ -792,7 +893,7 @@ private struct CaptureControls: View {
         let normalized = text.trimmingCharacters(in: .whitespacesAndNewlines)
             .replacingOccurrences(of: Locale.current.decimalSeparator ?? ".", with: ".")
         guard !normalized.isEmpty, let value = Double(normalized),
-              value.isFinite, (0.25 ... 24).contains(value) else { return nil }
+              value.isFinite, CaptureSettings.shootHoursRange.contains(value) else { return nil }
         return value
     }
 
@@ -804,6 +905,35 @@ private struct CaptureControls: View {
         durationError = nil
         durationPending = false
         store.setShootHours(value)
+    }
+
+    private func applyQuickDuration(_ hours: Double) {
+        durationDraft = DisplayFormat.number(hours, decimals: 2)
+        durationError = nil
+        durationPending = false
+        store.setShootHours(hours)
+    }
+    #endif
+
+    private var quickDurations: some View {
+        HStack(spacing: 6) {
+            Text("duration.quick")
+                .font(.caption)
+                .foregroundStyle(Palette.muted)
+            ForEach([1.0, 4.0, 8.0, 12.0], id: \.self) { hours in
+                Button {
+                    applyQuickDuration(hours)
+                } label: {
+                    Text(DisplayFormat.number(hours, decimals: 0))
+                        .monospacedDigit()
+                        .frame(minWidth: 38, minHeight: Layout.controlHeight)
+                }
+                .buttonStyle(PresetButtonStyle(selected: store.settings.shootHours == hours))
+                .accessibilityLabel(Text("\(DisplayFormat.number(hours, decimals: 0)) hours"))
+                .accessibilityIdentifier("duration-quick-\(Int(hours))")
+            }
+        }
+        .fixedSize(horizontal: false, vertical: true)
     }
 }
 
@@ -845,8 +975,8 @@ private struct RateResults: View {
 
             if store.recordingTask == .capacity {
                 planningRow(title: "field.duration",
-                            value: DisplayFormat.duration(store.settings.shootHours))
-                    .accessibilityIdentifier("record-time-output")
+                            value: DisplayFormat.duration(store.settings.shootHours),
+                            valueIdentifier: "record-time-output")
             } else {
                 planningRow(title: "field.media",
                             value: DisplayFormat.compactStorage(result.media.capacityGb, unit: unit),
@@ -898,7 +1028,8 @@ private struct RateResults: View {
         }
     }
 
-    private func planningRow(title: LocalizedStringKey, value: String, detail: String? = nil) -> some View {
+    private func planningRow(title: LocalizedStringKey, value: String, detail: String? = nil,
+                             valueIdentifier: String = "") -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
             Text(title)
                 .font(.system(.caption, weight: .semibold))
@@ -906,9 +1037,11 @@ private struct RateResults: View {
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 8)
             VStack(alignment: .trailing, spacing: 2) {
+                // The value carries the identifier so it reads as the value, not the row title.
                 Text(value)
                     .font(.system(.body, design: .monospaced))
                     .monospacedDigit()
+                    .accessibilityIdentifier(valueIdentifier)
                 // Secondary text is optional when the row label already explains the value.
                 if let detail {
                     Text(detail)
@@ -1589,59 +1722,20 @@ private struct ShutterView: View {
     private func numberField(_ title: LocalizedStringKey, field: ShutterInputField, suffix: String,
                              presets: Bool = false) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            FieldCard(title) {
-                HStack {
-                    TextField(title, text: draft(field))
-                        .workbenchNumberStyle()
-                        .frame(minHeight: Layout.controlHeight)
-                        .multilineTextAlignment(usesCompactLayout ? .trailing : .leading)
-                        .numericKeyboard(allowsTimeExpression: field == .shutterDenominator)
-                        .focused($focusedInput, equals: field)
-                        .submitLabel(.done)
-                        .onSubmit { validatedFields.insert(field); focusedInput = nil }
-                        .accessibilityLabel(Text(title))
-                        .accessibilityHint(Text(suffix))
-                        .accessibilityIdentifier("shutter-\(field.rawValue)")
-                    if field == .shutterDenominator {
-                        // Expressions contain separators/units; clear explicitly without losing
-                        // focus or asking the operator to select individual text tokens.
-                        Button {
-                            showsCopyConfirmation = false
-                            drafts[field] = ""
-                            validatedFields.remove(field)
-                            store.updateShutterSettings(Double.nan, at: field.keyPath)
-                            focusedInput = field
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .frame(minWidth: Layout.controlHeight, minHeight: Layout.controlHeight)
-                        }
-                        .buttonStyle(WorkbenchPressStyle())
-                        .disabled(draft(field).wrappedValue.isEmpty)
-                        .accessibilityLabel(Text("shutter.clearTime"))
-                        .accessibilityIdentifier("shutter-clear-time")
-                    }
-                    if !suffix.isEmpty { Text(verbatim: suffix).foregroundStyle(Palette.muted) }
-                    if presets {
-                        Menu {
-                            // 100/3 is a capture cadence; keep the project-rate preset choices unchanged.
-                            ForEach(ShutterFramePreset.allCases.filter { field == .sensorFps || $0 != .fractional100Over3 }) { preset in
-                                Button(preset.label) { setNumber(preset.fps, field: field) }
-                            }
-                        } label: {
-                            Image(systemName: "list.bullet")
-                                .frame(minWidth: Layout.controlHeight, minHeight: Layout.controlHeight)
-                        }
-                        .fixedSize(horizontal: true, vertical: false)
-                        // Two preset menus can share the screen in matching mode, so
-                        // the label names its field; both halves stay localized.
-                        .accessibilityLabel(Text(title) + Text(verbatim: " · ") + Text("shutter.presets"))
-                        .accessibilityIdentifier("shutter-presets-\(field.rawValue)")
-                    }
-                    if field == .sensorFps { importFrameRatesButton }
-                }
-            }
+            #if os(iOS)
+            // Frame rates swipe through every exact preset; the readout still accepts typed cadences.
             if presets {
+                frameRateDialCard(title, field: field, suffix: suffix)
+            } else {
+                numberCard(title, field: field, suffix: suffix, presets: false)
+            }
+            #else
+            numberCard(title, field: field, suffix: suffix, presets: presets)
+            #endif
+            if presets {
+                #if os(macOS)
                 quickPresets(field: field, values: ShutterFramePreset.quick.map { ($0.shortLabel, $0.fps, $0.label) })
+                #endif
             } else if [.angle, .targetAngle, .preferredAngle].contains(field) {
                 quickPresets(field: field, values: [90.0, 172.8, 180, 270].map {
                     (DisplayFormat.shutterNumber($0) + "°", $0, DisplayFormat.shutterNumber($0) + "°")
@@ -1668,6 +1762,102 @@ private struct ShutterView: View {
         }
         .id(field)
     }
+
+    private func numberCard(_ title: LocalizedStringKey, field: ShutterInputField, suffix: String,
+                            presets: Bool) -> some View {
+        FieldCard(title) {
+            HStack {
+                numberInput(title, field: field, suffix: suffix,
+                            alignment: usesCompactLayout ? .trailing : .leading)
+                if field == .shutterDenominator {
+                    // Expressions contain separators/units; clear explicitly without losing
+                    // focus or asking the operator to select individual text tokens.
+                    Button {
+                        showsCopyConfirmation = false
+                        drafts[field] = ""
+                        validatedFields.remove(field)
+                        store.updateShutterSettings(Double.nan, at: field.keyPath)
+                        focusedInput = field
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .frame(minWidth: Layout.controlHeight, minHeight: Layout.controlHeight)
+                    }
+                    .buttonStyle(WorkbenchPressStyle())
+                    .disabled(draft(field).wrappedValue.isEmpty)
+                    .accessibilityLabel(Text("shutter.clearTime"))
+                    .accessibilityIdentifier("shutter-clear-time")
+                }
+                if !suffix.isEmpty { Text(verbatim: suffix).foregroundStyle(Palette.muted) }
+                if presets {
+                    Menu {
+                        // 100/3 is a capture cadence; keep the project-rate preset choices unchanged.
+                        ForEach(ShutterFramePreset.allCases.filter { field == .sensorFps || $0 != .fractional100Over3 }) { preset in
+                            Button(preset.label) { setNumber(preset.fps, field: field) }
+                        }
+                    } label: {
+                        Image(systemName: "list.bullet")
+                            .frame(minWidth: Layout.controlHeight, minHeight: Layout.controlHeight)
+                    }
+                    .fixedSize(horizontal: true, vertical: false)
+                    // Two preset menus can share the screen in matching mode, so
+                    // the label names its field; both halves stay localized.
+                    .accessibilityLabel(Text(title) + Text(verbatim: " · ") + Text("shutter.presets"))
+                    .accessibilityIdentifier("shutter-presets-\(field.rawValue)")
+                }
+                if field == .sensorFps { importFrameRatesButton }
+            }
+        }
+    }
+
+    private func numberInput(_ title: LocalizedStringKey, field: ShutterInputField, suffix: String,
+                             alignment: TextAlignment) -> some View {
+        TextField(title, text: draft(field))
+            .workbenchNumberStyle()
+            .frame(minHeight: Layout.controlHeight)
+            .multilineTextAlignment(alignment)
+            .numericKeyboard(allowsTimeExpression: field == .shutterDenominator)
+            .focused($focusedInput, equals: field)
+            .submitLabel(.done)
+            .onSubmit { validatedFields.insert(field); focusedInput = nil }
+            .accessibilityLabel(Text(title))
+            .accessibilityHint(Text(suffix))
+            .accessibilityIdentifier("shutter-\(field.rawValue)")
+    }
+
+    #if os(iOS)
+    private func frameRateDialCard(_ title: LocalizedStringKey, field: ShutterInputField, suffix: String) -> some View {
+        let presets = ShutterFramePreset.dialPresets(for: field)
+        let value = store.shutterSettings[keyPath: field.keyPath]
+        // Exact rational presets match exactly; typed cadences park beside the nearest stop.
+        let selected = presets.first { $0.fps == value }
+        let nearest = value.isFinite ? presets.min { abs($0.fps - value) < abs($1.fps - value) } : nil
+        return DialFieldCard(title) {
+            HStack(spacing: 8) {
+                numberInput(title, field: field, suffix: suffix, alignment: .trailing)
+                Text(verbatim: suffix).foregroundStyle(Palette.muted)
+                if field == .sensorFps { importFrameRatesButton }
+            }
+        } dial: {
+            RulerDial(values: presets, selection: selected, parking: nearest,
+                      identifier: "shutter-dial-\(field.rawValue)",
+                      accessibilityLabel: Text(title) + Text(verbatim: " · ") + Text("shutter.presets"),
+                      label: \.shortLabel, accessibilityValue: \.label,
+                      customValueDescription: value.isFinite ? "\(DisplayFormat.shutterNumber(value)) fps" : nil,
+                      isNotch: { FrameRateNotch.contains($0.fps) },
+                      onSelect: { preset in dialFrameRate(preset.fps, field: field) },
+                      // History records the settled cadence, not each detent passed on the way.
+                      onSettle: { store.rememberShutterResult() })
+        }
+    }
+
+    private func dialFrameRate(_ fps: Double, field: ShutterInputField) {
+        showsCopyConfirmation = false
+        focusedInput = nil
+        drafts.removeValue(forKey: field)
+        validatedFields.remove(field)
+        store.updateShutterSettings(fps, at: field.keyPath)
+    }
+    #endif
 
     private var displayRefreshDraft: Binding<String> {
         Binding(get: { store.shutterSettings.displayRefreshRates }, set: { text in

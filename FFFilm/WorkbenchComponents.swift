@@ -325,27 +325,4 @@ extension View {
         self
         #endif
     }
-
-    /// The recording-duration draft commits through DONE; decimalPad on iOS
-    /// has no return key, so this toolbar is the explicit submit affordance.
-    @ViewBuilder
-    func durationInputToolbar(commit: @escaping () -> Void, focus: FocusState<Bool>.Binding) -> some View {
-        #if os(iOS)
-        toolbar {
-            ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                Button {
-                    commit()
-                    focus.wrappedValue = false
-                } label: {
-                    Text("duration.done")
-                }
-                .font(.system(size: 12, weight: .semibold, design: .monospaced))
-                .accessibilityIdentifier("duration-done")
-            }
-        }
-        #else
-        self
-        #endif
-    }
 }

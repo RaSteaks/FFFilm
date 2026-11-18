@@ -200,12 +200,17 @@ struct CalculatorStoreTests {
     func durationBounds() {
         let store = CalculatorStore()
         let original = store.settings.shootHours
-        store.setShootHours(0.249)
-        store.setShootHours(24.001)
+        store.setShootHours(0)
+        store.setShootHours(24 + 1.0 / 3_600)
         store.setShootHours(.nan)
         #expect(store.settings.shootHours == original)
         store.setShootHours(6.75)
         #expect(store.settings.shootHours == 6.75)
+        // The iOS duration wheel edits whole seconds, so one second and ten minutes are valid plans.
+        store.setShootHours(1.0 / 3_600)
+        #expect(store.settings.shootHours == 1.0 / 3_600)
+        store.setShootHours(10.0 / 60)
+        #expect(CalculatorEngine(catalog: store.catalog).normalized(store.settings).shootHours == 10.0 / 60)
     }
 
     @Test("Planning tasks preserve inputs and copy only the active answer")
@@ -220,7 +225,7 @@ struct CalculatorStoreTests {
         #expect(store.settings == settings)
         let summary = store.readableRecordingSummary(storageUnit: .decimal)
         #expect(summary.contains(DisplayFormat.duration(runtime)))
-        #expect(!summary.contains("3.50 h"))
+        #expect(!summary.contains("03:30:00"))
         // Planned hours never affect available recording time; media never affects required storage.
         store.setShootHours(7)
         #expect(store.calculation.captureRuntimeHours == runtime)
@@ -228,7 +233,7 @@ struct CalculatorStoreTests {
         store.selectMedia("2tb")
         #expect(store.calculation.dayTotalGb == capacity * 2)
         let capacitySummary = store.readableRecordingSummary(storageUnit: .decimal)
-        #expect(capacitySummary.contains("7.00 h"))
+        #expect(capacitySummary.contains("07:00:00"))
         #expect(capacitySummary.contains("GB/h") && capacitySummary.contains("Mb/s") && capacitySummary.contains("fps"))
         #expect(store.readableRecordingSummary(storageUnit: .binary).contains("GiB/h"))
         #expect(!capacitySummary.contains("Media:"))

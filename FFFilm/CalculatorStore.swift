@@ -248,7 +248,7 @@ final class CalculatorStore {
     }
 
     func setShootHours(_ hours: Double) {
-        guard hours.isFinite, (0.25 ... 24).contains(hours) else { return }
+        guard hours.isFinite, CaptureSettings.shootHoursRange.contains(hours) else { return }
         clearTransientState()
         settings.shootHours = hours
     }

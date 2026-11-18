@@ -107,7 +107,8 @@ struct CalculatorEngine {
             output.sensorOverdrive = false
         }
         output.sensorFps = normalizedRate(output.sensorFps, available: availableSensorFrameRates(for: output))
-        output.shootHours = min(max(output.shootHours, 0.25), 24)
+        output.shootHours = min(max(output.shootHours, CaptureSettings.shootHoursRange.lowerBound),
+                                 CaptureSettings.shootHoursRange.upperBound)
         if selectedCamera.isStandaloneProRes {
             output.sensorFps = output.projectFps
         }

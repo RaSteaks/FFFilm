@@ -32,6 +32,13 @@ enum DisplayFormat {
         return days > 0 ? "\(days)d \(time)" : time
     }
 
+    /// A planned recording time as the duration wheel shows it: hours never roll into days,
+    /// so a full day reads 24:00:00. Card runtimes keep `duration`, which can exceed a day.
+    static func plannedDuration(_ hours: Double) -> String {
+        let totalSeconds = max(0, Int((hours * 3_600).rounded()))
+        return String(format: "%02d:%02d:%02d", totalSeconds / 3_600, (totalSeconds % 3_600) / 60, totalSeconds % 60)
+    }
+
     static func humanDuration(_ hours: Double) -> String {
         let totalMinutes = max(0, Int((hours * 60).rounded()))
         let hour = totalMinutes / 60

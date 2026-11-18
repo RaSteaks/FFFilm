@@ -231,8 +231,11 @@ struct CalculatorStoreTests {
         #expect(answer.contains(expected.codec.name))
         #expect(answer.contains("02:00:00"))
         #expect(answer.contains(DisplayFormat.compactStorage(expected.dayTotalGb)))
-        let invalid = RecordingEstimate.storageAnswer(cameraID: target.id, hours: 25, defaults: defaults, catalog: store.catalog)
-        #expect(!invalid.contains(target.name))
+        for hours in [0.0, 25] {
+            // Siri asks for a usable time instead of answering for none or more than a day.
+            let invalid = RecordingEstimate.storageAnswer(cameraID: target.id, hours: hours, defaults: defaults, catalog: store.catalog)
+            #expect(!invalid.contains(target.name))
+        }
 
         #expect(RecordingEstimate.summaryAnswer(defaults: defaults, catalog: store.catalog) != answer)
         store.addCurrentToSummary()
@@ -245,7 +248,7 @@ struct CalculatorStoreTests {
     func durationBounds() {
         let store = CalculatorStore()
         let original = store.settings.shootHours
-        store.setShootHours(0)
+        store.setShootHours(-1)
         store.setShootHours(24 + 1.0 / 3_600)
         store.setShootHours(.nan)
         #expect(store.settings.shootHours == original)
@@ -256,6 +259,10 @@ struct CalculatorStoreTests {
         #expect(store.settings.shootHours == 1.0 / 3_600)
         store.setShootHours(10.0 / 60)
         #expect(CalculatorEngine(catalog: store.catalog).normalized(store.settings).shootHours == 10.0 / 60)
+        // 00:00:00 on the wheel is a valid plan that needs no storage.
+        store.setShootHours(0)
+        #expect(store.settings.shootHours == 0)
+        #expect(store.calculation.dayTotalGb == 0)
     }
 
     @Test("Planning tasks preserve inputs and copy only the active answer")

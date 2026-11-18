@@ -164,9 +164,10 @@ struct CaptureSettings: Codable, Equatable, Hashable {
         shootHours: 8
     )
 
-    /// One second to a full day. The iOS wheel edits whole seconds, so the lower
-    /// bound is a single second rather than the former quarter-hour step.
-    static let shootHoursRange: ClosedRange<Double> = (1.0 / 3_600) ... 24
+    /// Zero to a full day. Every position of the iOS hours/minutes/seconds wheel is a
+    /// valid plan, including 00:00:00 (nothing recorded yet), so the wheel never shows
+    /// a total the result does not use.
+    static let shootHoursRange: ClosedRange<Double> = 0 ... 24
 
     /// Settings with the iOS dial- and wheel-owned fields blanked, for feedback comparisons.
     var ignoringDialFields: CaptureSettings {

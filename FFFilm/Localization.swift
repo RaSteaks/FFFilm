@@ -70,7 +70,7 @@ enum AppText {
             let settings = item.entry.settings
             let calculation = item.calculation
             let fps = calculation.camera.isStandaloneProRes ? settings.projectFps : settings.sensorFps
-            return "\(index + 1). \(calculation.camera.name) · \(calculation.mode.label) · \(calculation.resolution.label) · \(calculation.codec.name) · \(DisplayFormat.fps(fps)) fps · \(DisplayFormat.duration(settings.shootHours)) → \(DisplayFormat.compactStorage(calculation.dayTotalGb, unit: unit))"
+            return "\(index + 1). \(calculation.camera.name) · \(calculation.mode.label) · \(calculation.resolution.label) · \(calculation.codec.name) · \(DisplayFormat.fps(fps)) fps · \(DisplayFormat.plannedDuration(settings.shootHours)) → \(DisplayFormat.compactStorage(calculation.dayTotalGb, unit: unit))"
         }
         let header = resolve("copy.summaryHeader", defaultValue: "Recording summary (\(items.count) setups)",
                              comment: "First line of the copied recording summary.")
@@ -100,7 +100,7 @@ enum AppText {
         let answer: String
         switch task {
         case .capacity:
-            answer = resolve("copy.capacityAnswer", defaultValue: "Recording time: \(DisplayFormat.duration(settings.shootHours))\nRequired storage: \(plan)")
+            answer = resolve("copy.capacityAnswer", defaultValue: "Recording time: \(DisplayFormat.plannedDuration(settings.shootHours))\nRequired storage: \(plan)")
         case .runtime:
             answer = resolve("copy.runtimeAnswer", defaultValue: "Media: \(calculation.media.label)\nAvailable recording time: \(runtime)")
         }

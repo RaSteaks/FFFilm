@@ -110,10 +110,11 @@ final class FFFilmUITests: XCTestCase {
         XCTAssertFalse(media.exists)
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "plan-capacity-output").firstMatch.exists)
         XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "card-runtime-output").firstMatch.exists)
-        // An invalid draft must survive hiding its field and returning to capacity planning.
+        // The planned duration must survive hiding its field and returning to capacity planning;
+        // on macOS that includes an invalid draft.
         #if os(iOS)
         assertDuration(4, 0, 0, in: app)
-        setDuration(24, 30, 0, in: app)
+        setDuration(2, 30, 15, in: app)
         #else
         XCTAssertEqual(duration.value as? String, "4.00")
         enterText("30", into: duration, in: app)
@@ -123,11 +124,11 @@ final class FFFilmUITests: XCTestCase {
         runtime.tap()
         capacity.tap()
         #if os(iOS)
-        assertDuration(24, 30, 0, in: app)
+        assertDuration(2, 30, 15, in: app)
         #else
         XCTAssertEqual(duration.value as? String, "30")
-        #endif
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "duration-error").firstMatch.exists)
+        #endif
         let copy = app.buttons["copy-action"].firstMatch
         reveal(copy, in: app)
         let restLabel = copy.label
@@ -193,14 +194,17 @@ final class FFFilmUITests: XCTestCase {
         XCTAssertEqual(app.textFields["shutter-sensorFps"].value as? String, "60")
         selectTab("rate", in: app)
         assertDuration(4, 0, 0, in: app)
-        setDuration(24, 30, 0, in: app)
-        XCTAssertTrue(app.staticTexts["请输入不超过 24 小时的时长。"].exists)
+        setDuration(2, 30, 15, in: app)
+        // Wheel column names and the pinned result follow the app language; the wheel keeps its position.
+        XCTAssertTrue(durationWheel(in: app).pickerWheels.element(boundBy: 0).label.contains("小时"))
+        XCTAssertTrue(app.staticTexts["拍摄容量"].exists)
         selectTab("settings", in: app)
         choose("English", picker: "app-language-picker", in: app)
         XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 3))
         selectTab("rate", in: app)
-        assertDuration(24, 30, 0, in: app)
-        XCTAssertTrue(app.staticTexts["Enter a duration up to 24 hours."].exists)
+        assertDuration(2, 30, 15, in: app)
+        XCTAssertTrue(durationWheel(in: app).pickerWheels.element(boundBy: 0).label.contains("Hours"))
+        XCTAssertTrue(app.staticTexts["Storage needed"].exists)
         selectTab("settings", in: app)
         let english = XCTAttachment(screenshot: app.screenshot())
         english.name = "Settings - English"
@@ -285,12 +289,13 @@ final class FFFilmUITests: XCTestCase {
         let result = app.descendants(matching: .any).matching(identifier: "rate-results").firstMatch
         XCTAssertTrue(result.descendants(matching: .any)
             .matching(NSPredicate(format: "label CONTAINS %@", expectedUnit)).firstMatch.waitForExistence(timeout: 3))
-        // A zero total is still an editor draft, not a request to reload the model.
+        // 00:00:00 is a valid plan (nothing recorded yet) and survives tab switches.
         setDuration(0, 0, 0, in: app)
         selectTab("settings", in: app)
         selectTab("rate", in: app)
         assertDuration(0, 0, 0, in: app)
-        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "duration-error").firstMatch.exists)
+        XCTAssertEqual(app.descendants(matching: .any).matching(identifier: "record-time-output").firstMatch.label, "00:00:00")
+        XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "duration-error").firstMatch.exists)
         selectTab("shutter", in: app)
         XCTAssertEqual(app.textFields["shutter-sensorFps"].value as? String, "60")
 
@@ -398,11 +403,18 @@ final class FFFilmUITests: XCTestCase {
         setDuration(2, 30, 15, in: app)
         XCTAssertEqual(recorded.label, "02:30:15")
 
-        // A total beyond one day surfaces an inline error and never becomes the plan. Columns
-        // commit as they settle, so the last valid plan is whatever the wheel passed before 24.
-        setDuration(24, 30, 15, in: app)
-        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "duration-error").firstMatch.waitForExistence(timeout: 2))
-        XCTAssertNotEqual(recorded.label, "24:30:15")
+        // A full day has no minutes or seconds left: those columns return to 0, so the wheel
+        // can never show a total beyond 24 hours and needs no error state.
+        durationWheel(in: app).pickerWheels.element(boundBy: 0).adjust(toPickerWheelValue: "24")
+        assertDuration(24, 0, 0, in: app)
+        XCTAssertEqual(recorded.label, "24:00:00")
+        // Leaving 24 hours restores the full minute and second columns.
+        setDuration(23, 59, 59, in: app)
+        XCTAssertEqual(recorded.label, "23:59:59")
+        // 00:00:00 is a valid plan: nothing recorded yet.
+        setDuration(0, 0, 0, in: app)
+        XCTAssertEqual(recorded.label, "00:00:00")
+        XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "duration-error").firstMatch.exists)
         #else
         let field = app.textFields["capture-duration"].firstMatch
         XCTAssertTrue(field.waitForExistence(timeout: 5))

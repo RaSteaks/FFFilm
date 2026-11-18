@@ -746,39 +746,15 @@ private struct CaptureControls: View {
             .background(Palette.surface)
             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
 
-            if let wheelError {
-                Label(wheelError, systemImage: "exclamationmark.circle")
-                    .font(.caption)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .accessibilityIdentifier("duration-error")
-                Label("duration.pending", systemImage: "clock")
-                    .font(.caption)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .accessibilityIdentifier("duration-pending")
-            }
-
             quickDurations
         }
         .sensoryFeedback(.selection, trigger: quickDurationTaps)
         .id("capture-duration-field")
     }
 
-    /// Derived from the wheel so the message always describes what the wheel shows.
-    private var wheelError: String? {
-        let total = wheel.totalSeconds
-        if total == 0 {
-            return AppText.resolve("duration.empty", defaultValue: "Enter the actual recording time.", comment: "Empty recording-duration validation.")
-        }
-        guard CaptureSettings.shootHoursRange.contains(wheel.totalHours) else {
-            return AppText.resolve("duration.invalid", defaultValue: "Enter a duration up to 24 hours.", comment: "Recording-duration validation range.")
-        }
-        return nil
-    }
-
+    /// Every wheel position is a valid plan (24 hours collapses minutes and seconds to 0,
+    /// and 00:00:00 means nothing recorded yet), so the wheel always shows the plan in use.
     private func commitWheel() {
-        // Out-of-range totals stay on the wheel with their message; the plan keeps the last
-        // valid calculation instead of being silently corrected.
-        guard wheelError == nil else { return }
         store.setShootHours(wheel.totalHours)
     }
 
@@ -950,7 +926,7 @@ private struct RateResults: View {
 
             if store.recordingTask == .capacity {
                 planningRow(title: "field.duration",
-                            value: DisplayFormat.duration(store.settings.shootHours),
+                            value: DisplayFormat.plannedDuration(store.settings.shootHours),
                             valueIdentifier: "record-time-output")
             } else {
                 planningRow(title: "field.media",
@@ -1097,7 +1073,7 @@ private struct RateMeter: View {
             // How the answer is derived: planned time × rate, or card capacity ÷ rate.
             HStack(spacing: 4) {
                 if capacity {
-                    Text(verbatim: DisplayFormat.duration(store.settings.shootHours))
+                    Text(verbatim: DisplayFormat.plannedDuration(store.settings.shootHours))
                         .accessibilityIdentifier("record-time-output")
                     Text(verbatim: "× \(rate)")
                 } else {
@@ -1269,7 +1245,7 @@ private struct SummaryEntryRow: View {
                 .fixedSize(horizontal: false, vertical: true)
             LabeledContent(fpsLabel, value: "\(DisplayFormat.fps(fps)) fps")
             LabeledContent("result.perHour", value: "\(DisplayFormat.number(unit.converted(decimalGB: calculation.sensorGbPerHour))) \(unit.symbol)/h · \(DisplayFormat.number(calculation.sensorMbps)) Mb/s")
-            LabeledContent("result.planCapacity", value: "\(DisplayFormat.duration(settings.shootHours)) · \(DisplayFormat.compactStorage(calculation.dayTotalGb, unit: unit))")
+            LabeledContent("result.planCapacity", value: "\(DisplayFormat.plannedDuration(settings.shootHours)) · \(DisplayFormat.compactStorage(calculation.dayTotalGb, unit: unit))")
             LabeledContent("result.cardDuration", value: "\(DisplayFormat.duration(calculation.captureRuntimeHours)) · \(calculation.media.label)")
         }
         .padding(.vertical, 6)

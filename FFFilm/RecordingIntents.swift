@@ -6,7 +6,8 @@ import Foundation
 enum RecordingEstimate {
     static func storageAnswer(cameraID: String, hours: Double, defaults: UserDefaults = .standard,
                               catalog: CatalogData = .bundled) -> String {
-        guard hours.isFinite, CaptureSettings.shootHoursRange.contains(hours) else {
+        // Asking Siri about zero recording time has no useful answer, though the wheel allows it.
+        guard hours.isFinite, hours > 0, CaptureSettings.shootHoursRange.contains(hours) else {
             return String(localized: "intent.estimate.invalidDuration",
                           defaultValue: "Give a recording time from one second to 24 hours.",
                           comment: "Siri answer when the requested duration is outside the supported range.")
@@ -21,7 +22,7 @@ enum RecordingEstimate {
         let unit = storageUnit(defaults)
         let fps = result.camera.isStandaloneProRes ? settings.projectFps : settings.sensorFps
         let format = "\(result.camera.name) · \(result.codec.name) · \(DisplayFormat.fps(fps)) fps"
-        let duration = DisplayFormat.duration(settings.shootHours)
+        let duration = DisplayFormat.plannedDuration(settings.shootHours)
         let storage = DisplayFormat.compactStorage(result.dayTotalGb, unit: unit)
         let rate = "\(DisplayFormat.number(unit.converted(decimalGB: result.sensorGbPerHour))) \(unit.symbol)/h"
         return String(localized: "intent.estimate.answer",

@@ -23,12 +23,17 @@ struct DurationComponents: Equatable {
 /// Hours, minutes and seconds on one native three-component wheel, like Clock's timer.
 /// A single UIPickerView keeps each column's touch region separate, which side-by-side
 /// SwiftUI wheel pickers do not, and supplies native momentum, detent ticks and VoiceOver.
+///
+/// Every position the wheel can reach is a valid plan: at 24 hours the minute and second
+/// columns hold only 0, so the wheel never shows a total the result does not use.
 struct DurationWheel: UIViewRepresentable {
     @Binding var components: DurationComponents
     /// Called after the operator settles a column; programmatic updates never call it.
     let onCommit: () -> Void
 
-    static let rows = [25, 60, 60]
+    static func rows(component: Int, hours: Int) -> Int {
+        component == 0 ? 25 : (hours == 24 ? 1 : 60)
+    }
 
     func makeCoordinator() -> Coordinator { Coordinator(parent: self) }
 
@@ -55,6 +60,7 @@ struct DurationWheel: UIViewRepresentable {
         context.coordinator.parent = self
         // Unit titles follow the in-app language, which can change while the wheel is visible.
         picker.unitTitles = Coordinator.unitTitles
+        context.coordinator.matchFullDay(picker)
         let values = [components.hours, components.minutes, components.seconds]
         for (component, value) in values.enumerated() where picker.selectedRow(inComponent: component) != value {
             picker.selectRow(value, inComponent: component, animated: false)
@@ -64,9 +70,21 @@ struct DurationWheel: UIViewRepresentable {
 
     final class Coordinator: NSObject, UIPickerViewDataSource, UIPickerViewAccessibilityDelegate {
         var parent: DurationWheel
+        /// Whether the minute and second columns are collapsed to the single 0 row of a full day.
+        private var showsFullDay: Bool
 
         init(parent: DurationWheel) {
             self.parent = parent
+            showsFullDay = parent.components.hours == 24
+        }
+
+        /// Reloads the minute and second columns when the hours cross into or out of 24.
+        func matchFullDay(_ picker: UIPickerView) {
+            let fullDay = parent.components.hours == 24
+            guard fullDay != showsFullDay else { return }
+            showsFullDay = fullDay
+            picker.reloadComponent(1)
+            picker.reloadComponent(2)
         }
 
         static var unitTitles: [String] {
@@ -75,10 +93,10 @@ struct DurationWheel: UIViewRepresentable {
              AppText.resolve("duration.unit.seconds", defaultValue: "sec", comment: "Unit beside the seconds column of the duration wheel.")]
         }
 
-        func numberOfComponents(in pickerView: UIPickerView) -> Int { DurationWheel.rows.count }
+        func numberOfComponents(in pickerView: UIPickerView) -> Int { 3 }
 
         func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {
-            DurationWheel.rows[component]
+            DurationWheel.rows(component: component, hours: showsFullDay ? 24 : 0)
         }
 
         func pickerView(_ pickerView: UIPickerView, widthForComponent component: Int) -> CGFloat {
@@ -99,7 +117,14 @@ struct DurationWheel: UIViewRepresentable {
 
         func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
             switch component {
-            case 0: parent.components.hours = row
+            case 0:
+                parent.components.hours = row
+                // A full day has no minutes or seconds left; the columns visibly return to 0.
+                if row == 24 {
+                    parent.components.minutes = 0
+                    parent.components.seconds = 0
+                }
+                matchFullDay(pickerView)
             case 1: parent.components.minutes = row
             default: parent.components.seconds = row
             }

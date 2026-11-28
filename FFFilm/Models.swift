@@ -261,7 +261,8 @@ struct Calculation: Hashable {
     let projectRuntimeHours: Double
     let captureRuntimeHours: Double
     let dayTotalGb: Double
-    let dayUsagePercent: Double
+    let cardUsage: Double
+    var dayUsagePercent: Double { cardUsage * 100 }
     let clipWidthMm: Double
     let clipHeightMm: Double
     let imageCircleMm: Double
@@ -287,8 +288,11 @@ struct Calculation: Hashable {
     }
     var referenceCardMinutes: Double? { resolution.references?[codec.id]?.cardMinutes24?[media.id] }
     var requiredCards: Int {
-        guard captureRuntimeHours > 0 else { return 0 }
-        return Int(ceil(dayTotalGb / (captureRuntimeHours * sensorGbPerHour)))
+        // Converting published minutes to hours and scaling by cadence can put an exact
+        // multiple just above a whole card. A positive plan still needs at least one card.
+        let wholeCards = cardUsage.rounded(.down)
+        if wholeCards > 0, cardUsage - wholeCards <= 2 * cardUsage.ulp { return Int(wholeCards) }
+        return Int(cardUsage.rounded(.up))
     }
     var hdeEstimateGb: Double? { codec.id == "arriraw" ? dayTotalGb * 0.6 : nil }
 }

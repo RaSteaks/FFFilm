@@ -34,6 +34,19 @@ struct FFFilmTests {
         }
     }
 
+    @Test("Card counts respect published runtime boundaries")
+    func requiredCardsAtRuntimeBoundary() {
+        let engine = CalculatorEngine(catalog: catalog)
+        var settings = CaptureSettings.default
+        settings.mediaId = "1tb"
+        // The ALEXA 35 reference is 28 minutes per card at 24 fps.
+        for (seconds, cards) in [(0, 0), (1, 1), (1_679, 1), (1_680, 1), (1_681, 2),
+                                 (25_200, 15), (25_201, 16)] {
+            settings.shootHours = Double(seconds) / 3_600
+            #expect(engine.calculate(settings: settings).requiredCards == cards)
+        }
+    }
+
     @Test("DJI manual MB/s rows are converted to Mb/s")
     func djiOfficialRate() {
         let settings = CaptureSettings(

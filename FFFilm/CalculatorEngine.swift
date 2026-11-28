@@ -199,7 +199,7 @@ struct CalculatorEngine {
             projectRuntimeHours: projectRuntimeHours,
             captureRuntimeHours: captureRuntimeHours,
             dayTotalGb: dayTotalGb,
-            dayUsagePercent: captureRuntimeHours > 0 ? settings.shootHours / captureRuntimeHours * 100 : 0,
+            cardUsage: captureRuntimeHours > 0 ? settings.shootHours / captureRuntimeHours : 0,
             clipWidthMm: clipWidth,
             clipHeightMm: clipHeight,
             imageCircleMm: imageCircle,

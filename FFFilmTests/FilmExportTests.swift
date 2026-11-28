@@ -326,7 +326,7 @@ struct FilmExportTests {
         #expect(await job.checkPublishedFiles(at: directory, language: .english)?.first?.status == .pending)
     }
 
-    @Test func batchRecoveryRetainsSurvivingScans() async throws {
+    @Test func batchRecoveryRetainsSurvivingScansAndResetsDestinationOnNewExport() async throws {
         try await withStore { store, directory in
             let batch = FilmBatchStore()
             defer { batch.closeSources() }
@@ -357,6 +357,12 @@ struct FilmExportTests {
             controller.restore(saved)
             #expect(controller.needsRecoveryDirectory && controller.job?.pendingCount == 1)
             #expect(controller.job?.sources[removed] == nil)
+            batch.openExport(scope: .all)
+            controller.setDirectory(directory); controller.confirm(); controller.didDismiss()
+            controller.cancel(); await controller.task?.value
+            #expect(!controller.needsRecoveryDirectory && controller.canResume)
+            controller.resume(); await controller.task?.value
+            #expect(controller.job?.completedCount == 1 && controller.job?.failedCount == 0)
         }
     }
 

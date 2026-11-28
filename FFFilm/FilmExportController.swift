@@ -302,6 +302,7 @@ final class FilmExportController {
 
     private func start(_ plan: FilmExportPlan) {
         guard !isRunning, let directory = plan.directory else { return }
+        needsDestination = false
         job = FilmExportJob(project: plan.project, sourceIdentifier: sourceIdentifier, directory: directory,
                             results: plan.items.map { FilmExportResult(item: $0, status: $0.skipped ? .skipped : .pending) }, sources: plan.sources)
         job?.directoryBookmark = try? directory.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil)

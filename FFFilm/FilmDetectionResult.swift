@@ -1,7 +1,7 @@
 #if os(macOS)
 import Foundation
 
-nonisolated enum FilmEdgeEvidence: String, Sendable {
+nonisolated enum FilmEdgeEvidence: String, Codable, Sendable {
     case reliable, needsRefinement, insufficient
     /// A transport estimate inside indistinguishable base/image pixels must not be tightened.
     case inferred
@@ -17,7 +17,7 @@ nonisolated struct FilmDetectedGap: Equatable, Sendable {
     var center: Double { (start + end) / 2 }
 }
 
-nonisolated struct FilmFrameCandidate: Equatable, Sendable {
+nonisolated struct FilmFrameCandidate: Codable, Equatable, Sendable {
     var slot: FilmRect
     var crop: FilmRect
     var base: SIMD3<Double>

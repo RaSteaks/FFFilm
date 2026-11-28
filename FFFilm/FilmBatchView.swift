@@ -110,8 +110,8 @@ struct FilmBatchView: View {
                 Text(filmText("胶片", "Scans")).font(.headline)
                 Spacer()
                 Menu {
-                    Button(filmText("全选胶片", "Check all scans")) { workspace.items.forEach { $0.checked = true } }
-                    Button(filmText("清除勾选", "Clear checks")) { workspace.items.forEach { $0.checked = false } }
+                    Button(filmText("勾选可见胶片", "Check visible scans")) { workspace.visibleItems.forEach { $0.checked = true } }
+                    Button(filmText("清除可见项勾选", "Clear visible checks")) { workspace.visibleItems.forEach { $0.checked = false } }
                 } label: { Image(systemName: "checklist") }
                     .accessibilityLabel(filmText("胶片勾选", "Scan selection"))
                     .disabled(workspace.blocksDocuments)
@@ -146,13 +146,17 @@ struct FilmBatchView: View {
             HStack {
                 Button(filmText("上一条", "Previous")) { navigate(-1) }
                 Button(filmText("下一条", "Next")) { navigate(1) }
-            }.disabled(workspace.items.count < 2 || workspace.switching || workspace.blocksDocuments)
+            }.disabled(workspace.visibleItems.count < 2 || workspace.switching || workspace.blocksDocuments)
         }.padding(10).background(Palette.surface)
     }
     private func navigate(_ offset: Int) {
-        guard let index = workspace.items.firstIndex(where: { $0.id == workspace.activeID }),
-              workspace.items.indices.contains(index + offset) else { return }
-        workspace.select(workspace.items[index + offset])
+        let visible = workspace.visibleItems
+        guard let index = visible.firstIndex(where: { $0.id == workspace.activeID }) else {
+            if let first = visible.first { workspace.select(first) }
+            return
+        }
+        guard visible.indices.contains(index + offset) else { return }
+        workspace.select(visible[index + offset])
     }
 }
 

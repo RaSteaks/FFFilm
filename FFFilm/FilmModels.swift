@@ -1,6 +1,7 @@
 #if os(macOS)
 import Foundation
 import CoreGraphics
+import CryptoKit
 
 /// Values are normalized to the oriented source, so preview size never changes saved crops.
 nonisolated struct FilmRect: Codable, Equatable, Sendable {
@@ -33,13 +34,14 @@ nonisolated struct FilmRect: Codable, Equatable, Sendable {
     }
 }
 
-nonisolated enum FilmCropEdge: Hashable, CaseIterable, Sendable { case left, right, top, bottom }
+nonisolated enum FilmCropEdge: String, Codable, Hashable, CaseIterable, Sendable { case left, right, top, bottom }
 
 nonisolated struct FilmFrame: Codable, Equatable, Identifiable, Sendable {
     var id = UUID()
     var name: String
     var crop = FilmRect()
     var rotation = 0.0
+    var detection: FilmFrameCandidate?
     var valid: Bool { crop.valid && rotation.isFinite && (-360...360).contains(rotation) }
 }
 
@@ -101,6 +103,25 @@ nonisolated struct FilmLayout: Equatable, Sendable {
     }
 }
 
+/// Bounded reads check relocations without hashing gigabytes on every editor switch.
+nonisolated struct FilmSourceIdentity: Codable, Equatable, Sendable {
+    let size: UInt64
+    let digest: Data
+    let width, height: Int
+
+    static func read(_ url: URL, width: Int, height: Int) throws -> Self {
+        let file = try FileHandle(forReadingFrom: url)
+        defer { try? file.close() }
+        let size = try file.seekToEnd()
+        var hash = SHA256()
+        for offset in [UInt64(0), size / 2, size - min(size, 65_536)] {
+            try file.seek(toOffset: offset)
+            hash.update(data: try file.read(upToCount: 65_536) ?? Data())
+        }
+        return Self(size: size, digest: Data(hash.finalize()), width: width, height: height)
+    }
+}
+
 nonisolated struct FilmProject: Codable, Equatable, Sendable {
     /// Detection and manual drawing share this project-size ceiling.
     static let maximumFrames = 1000
@@ -108,6 +129,7 @@ nonisolated struct FilmProject: Codable, Equatable, Sendable {
     var version = 1
     var sourcePath = ""
     var bookmark: Data?
+    var sourceIdentity: FilmSourceIdentity?
     var inputSpace = "sRGB"
     // Keep input ICC interpretation for faithful export. Codable ignores legacy grading
     // keys, so old projects reopen with geometry only; saving drops those removed keys.
@@ -127,7 +149,7 @@ nonisolated struct FilmProject: Codable, Equatable, Sendable {
         return URL(fileURLWithPath: sourcePath)
     }
     var hasPlaceholderFrame: Bool {
-        frames.count == 1 && frames[0].crop == FilmRect() && frames[0].rotation == 0
+        frames.count == 1 && frames[0].detection == nil && frames[0].crop == FilmRect() && frames[0].rotation == 0
     }
     /// Advance numeric labels so removals and custom names do not duplicate a surviving frame's number.
     var nextFrameName: String {

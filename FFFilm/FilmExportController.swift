@@ -16,11 +16,17 @@ final class FilmExportController {
     var organization = FilmFileOrganization.flat {
         didSet { if isPresented { workspace?.organization = organization; refreshPreview() } }
     }
+    var includesReadyOnly = false { didSet { if isPresented { refreshPreview() } } }
+    var deferredNames: [String] {
+        workspace?.candidates(batchScope).filter { !$0.ready }.map { $0.name + " · " + $0.status } ?? []
+    }
+    private(set) var remainingSeconds: Double?
+    private(set) var freeBytes: Int64?
     var useSourceNames = true { didSet { if isPresented { refreshPreview() } } }
     var isBatch: Bool { workspace != nil }
     private var canRun: Bool { workspace.map { !$0.blocksDocuments && !$0.queueRunning && !$0.switching && !$0.items.contains { $0.store.busy } } ?? (document?.canImportScan == true) }
     var settings = FilmExportSettings() {
-        didSet { if isPresented { refreshPreview() } }
+        didSet { if isPresented && settings != oldValue { schedulePreview() } }
     }
     private(set) var isPresented = false
     private(set) var isDismissing = false
@@ -30,7 +36,11 @@ final class FilmExportController {
     private(set) var directory: URL?
     private(set) var preview: FilmExportPlan?
     private(set) var validationMessage: String?
+    private(set) var revision = 0
     private(set) var job: FilmExportJob?
+    private var needsDestination = false
+    private(set) var isVerifying = false
+    @ObservationIgnored private(set) var verificationTask: Task<Void, Never>?
     @ObservationIgnored private(set) var task: Task<Void, Never>?
     @ObservationIgnored private let renderer: FilmRenderer
     // Read the owner's live gate so recovery actions obey detection and file-panel
@@ -47,8 +57,8 @@ final class FilmExportController {
     var canStart: Bool {
         !isRunning && !isChoosingDirectory && directory != nil && (preview?.outputCount ?? 0) > 0
     }
-    var canResume: Bool { !isRunning && canRun && (job?.pendingCount ?? 0) > 0 }
-    var canRetry: Bool { !isRunning && canRun && (job?.failedCount ?? 0) > 0 }
+    var canResume: Bool { !isRunning && !isVerifying && !needsDestination && canRun && (job?.pendingCount ?? 0) > 0 }
+    var canRetry: Bool { !isRunning && !isVerifying && !needsDestination && canRun && (job?.failedCount ?? 0) > 0 }
     var checkedCount: Int {
         if let workspace { return workspace.candidates(batchScope).reduce(0) { $0 + $1.store.selection.count } }
         return context.frames.filter { checked.contains($0.id) }.count
@@ -61,6 +71,7 @@ final class FilmExportController {
 
     func openBatch(scope: FilmBatchScope) {
         guard let workspace, !isRunning, !blocksDocument else { return }
+        includesReadyOnly = false
         batchScope = scope
         organization = workspace.organization ?? (workspace.candidates(scope).count > 1 ? .folders : .flat)
         if settings.scope == nil {
@@ -110,6 +121,9 @@ final class FilmExportController {
     func setDirectory(_ url: URL) {
         guard !isRunning else { return }
         directory = url
+        let access = url.startAccessingSecurityScopedResource()
+        defer { if access { url.stopAccessingSecurityScopedResource() } }
+        freeBytes = try? url.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey]).volumeAvailableCapacityForImportantUsage
         refreshPreview()
     }
 
@@ -131,10 +145,22 @@ final class FilmExportController {
         } else { panel.begin(completionHandler: finished) }
     }
 
+    @ObservationIgnored private var previewTask: Task<Void, Never>?
+    private func schedulePreview() {
+        previewTask?.cancel()
+        preview = nil
+        previewTask = Task {
+            do { try await Task.sleep(for: .milliseconds(100)) } catch { return }
+            guard isPresented else { return }
+            refreshPreview()
+        }
+    }
+
     func refreshPreview() {
+        previewTask?.cancel(); previewTask = nil
         do {
             if let workspace {
-                preview = try FilmExportPlan.makeBatch(sources: workspace.exportSources(scope: batchScope), settings: settings,
+                preview = try FilmExportPlan.makeBatch(sources: workspace.exportSources(scope: batchScope, readyOnly: includesReadyOnly), settings: settings,
                                                        organization: organization, useSourceNames: useSourceNames, directory: directory)
             } else {
                 preview = try FilmExportPlan.make(project: context, selected: selected, checked: checked,
@@ -177,9 +203,80 @@ final class FilmExportController {
         run(indexes: indexes)
     }
 
+    var needsRecoveryDirectory: Bool { needsDestination && job != nil }
+
+    func chooseRecoveryDirectory() {
+        guard needsRecoveryDirectory, !isChoosingDirectory else { return }
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true; panel.canChooseFiles = false
+        panel.directoryURL = job?.directory
+        isChoosingDirectory = true
+        let finish: (NSApplication.ModalResponse) -> Void = { response in
+            panel.orderOut(nil); self.isChoosingDirectory = false
+            guard response == .OK, let url = panel.url, var saved = self.job else { return }
+            saved.directory = url
+            saved.directoryBookmark = try? url.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil)
+            self.restore(saved, authorizedDirectory: url)
+        }
+        if let window = workspace?.window { panel.beginSheetModal(for: window, completionHandler: finish) }
+        else { panel.begin(completionHandler: finish) }
+    }
+
+    /// Restored manifests are user-opened documents. Validate names, snapshots and prior outputs
+    /// before a resume can read a scan or publish a file in the selected destination.
+    func restore(_ savedJob: FilmExportJob?, authorizedDirectory: URL? = nil) {
+        clearJob()
+        guard var saved = savedJob, let workspace else { return }
+        let sourceIDs = Set(workspace.items.map(\.id))
+        let valid = saved.sources.allSatisfy { key, source in
+            key == source.id && sourceIDs.contains(key) && source.project.valid
+        } && saved.results.allSatisfy { result in
+            let parts = result.item.fileName.components(separatedBy: "/")
+            guard (1...2).contains(parts.count), parts.allSatisfy({ (try? FilmExportPlan.validateComponent($0)) != nil }),
+                  let id = result.item.sourceID, let source = saved.sources[id] else { return false }
+            return result.item.frame.map { source.project.frames.contains($0) } ?? true
+        }
+        guard valid else {
+            workspace.notice = filmText("导出记录无效，请重新配置。", "Invalid export record. Configure a new export.")
+            return
+        }
+        var stale = false
+        let resolved = authorizedDirectory ?? saved.directoryBookmark.flatMap { try? URL(resolvingBookmarkData: $0, options: .withSecurityScope,
+                                            relativeTo: nil, bookmarkDataIsStale: &stale) }
+        saved.phase = .cancelled; saved.activeSourceID = nil; saved.activeFileName = nil
+        job = saved
+        guard let resolved else { needsDestination = true; return }
+        saved.directory = resolved
+        if stale { saved.directoryBookmark = try? resolved.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil) }
+        directory = resolved; needsDestination = false; isVerifying = true
+        let snapshot = saved
+        verificationTask = Task {
+            let changes = await Task.detached(priority: .utility) {
+                snapshot.checkPublishedFiles(at: resolved)
+            }.value
+            guard !Task.isCancelled, self.job?.id == snapshot.id else { return }
+            defer { isVerifying = false; verificationTask = nil }
+            guard let changes else { needsDestination = true; return }
+            var verified = snapshot
+            for (index, present) in changes {
+                verified.results[index].status = present
+                    ? .failed(filmText("目标文件已改变，请核对目标。", "Destination file changed. Check the existing file."))
+                    : .pending
+                if let source = verified.results[index].item.sourceID, let frame = verified.results[index].item.frame {
+                    workspace.items.first(where: { $0.id == source })?.delivery?.frames.removeValue(forKey: frame.id)
+                }
+            }
+            verified.phase = verified.pendingCount == 0 ? .finished : .cancelled
+            job = verified
+            if !changes.isEmpty || stale || authorizedDirectory != nil { revision += 1 }
+        }
+    }
+
     func clearJob() {
         guard !isRunning else { return }
-        job = nil
+        if job != nil { revision += 1 }
+        verificationTask?.cancel(); verificationTask = nil; isVerifying = false
+        job = nil; needsDestination = false
     }
 
     func revealFiles() {
@@ -193,6 +290,9 @@ final class FilmExportController {
         guard !isRunning, let directory = plan.directory else { return }
         job = FilmExportJob(project: plan.project, sourceIdentifier: sourceIdentifier, directory: directory,
                             results: plan.items.map { FilmExportResult(item: $0, status: $0.skipped ? .skipped : .pending) }, sources: plan.sources)
+        job?.directoryBookmark = try? directory.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil)
+        job?.deferredSources = includesReadyOnly ? deferredNames : []
+        revision += 1
         run()
     }
 
@@ -210,7 +310,9 @@ final class FilmExportController {
             }
             var loadedSource: UUID?
             var sourceFailure: String?
-            for index in indexes {
+            let began = ProcessInfo.processInfo.systemUptime
+            remainingSeconds = nil
+            for (position, index) in indexes.enumerated() {
                 if Task.isCancelled { break }
                 let item = snapshot.results[index].item
                 job?.activeFileName = item.fileName; job?.activeSourceID = item.sourceID
@@ -224,8 +326,12 @@ final class FilmExportController {
                             await renderer.close()
                             loadedSource = sourceID; sourceFailure = nil
                             do {
-                                _ = try await renderer.load(source.project.resolvedSourceURL, inputSpace: source.project.inputSpace,
+                                let decoded = try await renderer.load(source.project.resolvedSourceURL, inputSpace: source.project.inputSpace,
                                                             inputProfile: source.project.inputProfile)
+                                if let expected = source.project.sourceIdentity,
+                                   try await renderer.identity(source.project.resolvedSourceURL, width: decoded.width, height: decoded.height) != expected {
+                                    throw FilmFailure(message: filmText("原扫描已改变。", "Original scan changed."))
+                                }
                             } catch { sourceFailure = error.localizedDescription }
                         }
                         if let sourceFailure { throw FilmFailure(message: sourceFailure) }
@@ -239,15 +345,24 @@ final class FilmExportController {
                     try Task.checkCancellation()
                     // Publishing never overwrites a destination that appeared after
                     // planning. Report the conflict and keep its original planned name.
+                    let written = try await Task.detached { try FilmSourceIdentity.read(temporary, width: 0, height: 0) }.value
+                    try Task.checkCancellation()
                     try FileManager.default.moveItem(at: temporary, to: url)
+                    job?.results[index].writtenFile = written
+                    if let id = item.sourceID, let frame = item.frame {
+                        workspace?.items.first(where: { $0.id == id })?.recordDelivery(frame, project: project)
+                    }
                     job?.results[index].status = .succeeded
                 } catch {
                     try? FileManager.default.removeItem(at: temporary)
                     if Task.isCancelled || error is CancellationError { break }
                     job?.results[index].status = .failed(error.localizedDescription)
                 }
+                remainingSeconds = (ProcessInfo.processInfo.systemUptime - began) / Double(position + 1) * Double(indexes.count - position - 1)
             }
+            remainingSeconds = nil
             if !snapshot.sources.isEmpty { await renderer.close() }
+            revision += 1
             job?.phase = Task.isCancelled ? .cancelled : .finished
         }
     }

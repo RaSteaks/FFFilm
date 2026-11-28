@@ -37,6 +37,12 @@ actor FilmRenderer {
     }
 
     /// Read only image-directory metadata before asking for an untagged scan's input profile.
+    func identity(_ url: URL, width: Int, height: Int) throws -> FilmSourceIdentity {
+        let access = url.startAccessingSecurityScopedResource()
+        defer { if access { url.stopAccessingSecurityScopedResource() } }
+        return try FilmSourceIdentity.read(url, width: width, height: height)
+    }
+
     func probe(_ url: URL) throws -> ScanProbe {
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
@@ -284,7 +290,7 @@ actor FilmRenderer {
         return sample
     }
 
-    /// All options and intermediate samples are session-local. Only accepted crop rectangles
+    /// All options and intermediate samples are session-local. Accepted crop geometry and matching provenance
     /// enter the document; cancellation never commits a partially refined detection cache.
     func refineFrames(options: FilmDetectionOptions,
                       progress: @Sendable (FilmDetectionProgress) async -> Void) async throws -> FilmDetectionResult {

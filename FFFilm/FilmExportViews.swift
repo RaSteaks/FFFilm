@@ -220,7 +220,14 @@ struct FilmExportSheet: View {
                 }
             }.padding(.horizontal, 16).padding(.vertical, 10)
             Divider()
+            if !controller.deferredNames.isEmpty {
+                VStack(alignment: .leading) {
+                    Text(controller.deferredNames.joined(separator: "\n")).font(.caption)
+                    Toggle(filmText("仅导出已就绪胶片，暂缓上述项目", "Export ready scans only; defer listed items"), isOn: $controller.includesReadyOnly)
+                }.padding(8)
+            }
             if let preview = controller.preview {
+                capacityInfo(preview)
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 0) {
                         ForEach(preview.messages, id: \.self) { message in
@@ -246,6 +253,20 @@ struct FilmExportSheet: View {
                     .accessibilityElement(children: .combine)
             }
         }.background(Palette.background)
+    }
+
+    @ViewBuilder private func capacityInfo(_ preview: FilmExportPlan) -> some View {
+        let bytes = preview.estimatedBytes
+        let estimate = ByteCountFormatter.string(fromByteCount: Int64(min(bytes, Double(Int64.max / 2))), countStyle: .file)
+        Text(filmText("未压缩估算", "Uncompressed estimate") + " · " + estimate)
+            .font(.caption).padding(.horizontal, 12)
+        if let free = controller.freeBytes {
+            Text(filmText("目标可用空间", "Destination space available") + " · " + ByteCountFormatter.string(fromByteCount: free, countStyle: .file))
+                .font(.caption).padding(.horizontal, 12)
+            if Double(free) < bytes {
+                Label(filmText("预计空间不足", "Estimated space exceeds capacity"), systemImage: "exclamationmark.triangle")
+            }
+        }
     }
 
     private func previewSummary(_ preview: FilmExportPlan) -> String {
@@ -394,6 +415,15 @@ struct FilmExportStatusView: View {
                         .font(.caption.monospaced()).foregroundStyle(.secondary)
                         .lineLimit(1).truncationMode(.middle)
                 }
+                if let deferred = job.deferredSources, !deferred.isEmpty {
+                    DisclosureGroup(filmText("暂缓项目", "Deferred scans") + " · \(deferred.count)") {
+                        Text(deferred.joined(separator: "\n")).font(.caption).textSelection(.enabled)
+                    }
+                }
+                if controller.isVerifying { ProgressView(filmText("核对已交文件…", "Checking delivered files…")) }
+                if controller.needsRecoveryDirectory {
+                    Button(filmText("重新选择交付文件夹", "Reconnect delivery folder")) { controller.chooseRecoveryDirectory() }
+                }
                 if !issues(job).isEmpty { details(job) }
             }
             .animation(motion(FilmMotion.expand), value: detailsExpanded)
@@ -425,6 +455,9 @@ struct FilmExportStatusView: View {
                     .contentTransition(FilmMotion.digits(reduceMotion: reduceMotion))
                     .animation(motion(FilmMotion.text), value: title(job))
                     .accessibilityIdentifier("film-export-status-title")
+                if let seconds = controller.remainingSeconds, seconds > 0 {
+                    Text(filmText("预计剩余", "Estimated remaining") + " · " + DisplayFormat.duration(seconds / 3600)).font(.caption)
+                }
                 Text(counts(job)).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
                     .textSelection(.enabled)
                     .contentTransition(FilmMotion.digits(reduceMotion: reduceMotion))

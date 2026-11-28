@@ -12,6 +12,7 @@ nonisolated struct FilmBatchDocument: Codable, Equatable {
     var entries: [Entry]
     var activeID: UUID?
     var organization: FilmFileOrganization?
+    var lastExport: FilmExportJob?
     struct Entry: Codable, Equatable, Identifiable {
         let id: UUID
         var project: FilmProject
@@ -20,9 +21,22 @@ nonisolated struct FilmBatchDocument: Codable, Equatable {
         var profileAssigned: Bool
         var selected: UUID?
         var selection: Set<UUID>
+        var delivery: FilmDelivery?
     }
     var valid: Bool {
         version == 1 && Set(entries.map(\.id)).count == entries.count && entries.allSatisfy { $0.project.valid }
+    }
+}
+
+nonisolated struct FilmDelivery: Codable, Equatable {
+    let sourcePath: String
+    let identity: FilmSourceIdentity?
+    let inputSpace: String
+    let inputProfile: Data?
+    var frames: [UUID: FilmFrame] = [:]
+    func matches(_ project: FilmProject) -> Bool {
+        (identity.map { $0 == project.sourceIdentity } ?? (sourcePath == project.sourcePath))
+            && inputSpace == project.inputSpace && inputProfile == project.inputProfile
     }
 }
 
@@ -31,6 +45,19 @@ final class FilmBatchItem: Identifiable {
     let id: UUID
     let store: FilmStore
     var checked = true
+    var delivery: FilmDelivery?
+    func recordDelivery(_ frame: FilmFrame, project: FilmProject) {
+        if delivery?.matches(project) != true {
+            delivery = FilmDelivery(sourcePath: project.sourcePath, identity: project.sourceIdentity,
+                                    inputSpace: project.inputSpace, inputProfile: project.inputProfile)
+        }
+        delivery?.frames[frame.id] = frame
+    }
+    var coverage: String? {
+        guard let delivery, delivery.matches(store.project) else { return nil }
+        let done = store.project.frames.filter { delivery.frames[$0.id] == $0 }.count
+        return filmText("全卷已交帧", "Roll frames delivered") + " \(done)/\(store.project.frames.count)"
+    }
     var profileAssigned = false
     var needsProfile = false
     var initialized = false
@@ -39,6 +66,13 @@ final class FilmBatchItem: Identifiable {
     @ObservationIgnored private var accessURL: URL?
     @ObservationIgnored private var hasAccess = false
     var name: String { store.sourceFileName }
+    var ready: Bool { initialized && !queued && !store.busy && !needsProfile && store.error == nil }
+    var exportIssue: Bool {
+        store.workspace?.exportController.job?.results.contains { result in
+            guard result.item.sourceID == id else { return false }
+            switch result.status { case .pending, .failed: return true; default: return false }
+        } ?? false
+    }
     var status: String {
         if store.busy { return store.detecting ? filmText("正在识别", "Detecting") : filmText("正在加载", "Loading") }
         if needsProfile { return filmText("需指定输入配置", "Input profile required") }
@@ -60,10 +94,14 @@ final class FilmBatchItem: Identifiable {
                     || source.project.inputProfile != store.project.inputProfile {
                     return filmText("已修改 · 需重新导出", "Modified · export again")
                 }
-                return store.reviewed ? filmText("已检查 · 已导出", "Reviewed · exported") : filmText("待检查 · 已导出", "Needs review · exported")
+                let done = results.filter { $0.status == .succeeded }
+                let frames = Set(done.compactMap { $0.item.frame?.id }).count
+                let delivered = done.contains { $0.item.frame == nil } ? filmText("整条文件已交", "Strip delivered")
+                    : filmText("本次已交帧", "Frames delivered in this job") + " \(frames)/\(store.project.frames.count)"
+                return (store.reviewed ? filmText("已检查", "Reviewed") : filmText("待检查", "Needs review")) + " · " + delivered + (coverage.map { " · " + $0 } ?? "")
             }
         }
-        return store.reviewed ? filmText("已检查", "Reviewed") : filmText("待检查", "Needs review")
+        return (store.reviewed ? filmText("已检查", "Reviewed") : filmText("待检查", "Needs review")) + (coverage.map { " · " + $0 } ?? "")
     }
     init(id: UUID = UUID()) { self.id = id; self.store = FilmStore() }
     func retainAccess(_ url: URL) {
@@ -76,12 +114,12 @@ final class FilmBatchItem: Identifiable {
     }
     var entry: FilmBatchDocument.Entry {
         .init(id: id, project: store.project, checked: checked, reviewed: store.reviewed,
-              profileAssigned: profileAssigned, selected: store.selected, selection: store.selection)
+              profileAssigned: profileAssigned, selected: store.selected, selection: store.selection, delivery: delivery)
     }
 }
 
 /// A window owns one batch. Editors retain their own history; only the active editor
-/// and the sequential queue worker retain decoded sources. Export has its own renderer.
+/// and the sequential queue worker need full sources. One small recently viewed scan may stay warm for A/B review.
 @MainActor @Observable
 final class FilmBatchStore {
     static let workspaces = NSHashTable<FilmBatchStore>.weakObjects()
@@ -106,7 +144,9 @@ final class FilmBatchStore {
     }
     @ObservationIgnored private var task: Task<Void, Never>?
     @ObservationIgnored private var activationTask: Task<Void, Never>?
+    @ObservationIgnored private weak var warmEditor: FilmStore?
     private var savedEntries: [FilmBatchDocument.Entry] = []
+    private var savedExportRevision = 0
     private var savedOrganization: FilmFileOrganization?
     private var queue: [(id: UUID, detect: Bool)] = []
     private var removed: (item: FilmBatchItem, index: Int)?
@@ -115,18 +155,18 @@ final class FilmBatchStore {
     var activeStore: FilmStore { activeItem?.store ?? emptyStore }
     var blocksDocuments: Bool { presentingPanel || exportController.blocksDocument }
     var canAdd: Bool { !blocksDocuments && !switching && !exportController.isRunning && !cancellationRequested }
-    var canSave: Bool { !blocksDocuments && !queueRunning && !switching && !items.contains { $0.store.busy } }
-    var busy: Bool { queueRunning || switching || exportController.isRunning || items.contains { $0.store.busy } }
+    var canSave: Bool { !exportController.isVerifying && !blocksDocuments && !queueRunning && !switching && !items.contains { $0.store.busy } }
+    var busy: Bool { exportController.isVerifying || queueRunning || switching || exportController.isRunning || items.contains { $0.store.busy } }
     var dirty: Bool {
-        // Navigation and frame checks are saved, but do not themselves create unsaved edits.
+        // Cursor movement is navigation. Both levels of checkmarks determine the handoff scope.
         let current = items.map(\.entry)
-        return current.count != savedEntries.count || organization != savedOrganization || zip(current, savedEntries).contains {
-            $0.id != $1.id || $0.project != $1.project || $0.reviewed != $1.reviewed || $0.profileAssigned != $1.profileAssigned
+        return exportController.revision != savedExportRevision || current.count != savedEntries.count || organization != savedOrganization || zip(current, savedEntries).contains {
+            $0.id != $1.id || $0.checked != $1.checked || $0.delivery != $1.delivery || $0.selection != $1.selection || $0.project != $1.project || $0.reviewed != $1.reviewed || $0.profileAssigned != $1.profileAssigned
         }
     }
     var checkedItems: [FilmBatchItem] { items.filter(\.checked) }
     var visibleItems: [FilmBatchItem] {
-        onlyNeedsAttention ? items.filter { !$0.store.reviewed || $0.store.error != nil || $0.needsProfile } : items
+        onlyNeedsAttention ? items.filter { !$0.store.reviewed || $0.store.error != nil || $0.needsProfile || $0.exportIssue } : items
     }
     init() {
         emptyStore.workspace = self
@@ -160,11 +200,12 @@ final class FilmBatchStore {
         var added: [FilmBatchItem] = []
         var rejected: [String] = []
         var duplicates = 0
+        var known = Set(items.map { URL(fileURLWithPath: $0.store.project.sourcePath).standardizedFileURL })
         for url in urls {
             guard url.isFileURL, ["tif", "tiff", "fff"].contains(url.pathExtension.lowercased()) else {
                 rejected.append(url.lastPathComponent); continue
             }
-            if items.contains(where: { $0.store.project.resolvedSourceURL.standardizedFileURL == url.standardizedFileURL }) { duplicates += 1; continue }
+            if !known.insert(url.standardizedFileURL).inserted { duplicates += 1; continue }
             let item = FilmBatchItem()
             item.retainAccess(url)
             item.store.workspace = self; item.store.window = window
@@ -191,7 +232,16 @@ final class FilmBatchStore {
         activeID = item.id
         switching = true
         activationTask = Task {
-            if let previous, !previous.store.busy { await previous.store.suspendSource() }
+            // Keep at most one small, inactive source for A/B inspection. Large scans and
+            // queue workers still evict immediately, independently of the active editor.
+            if let warmEditor, warmEditor !== item.store { await warmEditor.evictRetainedSource() }
+            warmEditor = nil
+            if let previous, !previous.store.busy {
+                let budget = min(UInt64(96 * 1024 * 1024), ProcessInfo.processInfo.physicalMemory / 32)
+                let retain = !queueRunning && previous.store.info.map { Double($0.width) * Double($0.height) * 24 < Double(budget) } == true
+                await previous.store.suspendSource(retainingRenderer: retain)
+                if retain { warmEditor = previous.store }
+            }
             if item.initialized, !item.store.busy, !item.queued { await item.store.resumeSource() }
             switching = false; activationTask = nil
         }
@@ -304,15 +354,43 @@ final class FilmBatchStore {
     func locate(_ item: FilmBatchItem) {
         guard canSave, !isExporting(item.store) else { return }
         let panel = NSOpenPanel()
-        panel.message = filmText("重新定位原始扫描文件", "Locate the original scan file")
+        let expected = item.store.project.sourceIdentity
+        let size = expected.map { " · \($0.width) × \($0.height)" } ?? ""
+        panel.message = filmText("重新定位原始扫描文件", "Locate the original scan file") + " · " + item.name + size
         panel.allowedContentTypes = [.tiff, UTType(filenameExtension: "fff") ?? .data]
         present(panel) { response in
             guard response == .OK, let url = panel.url else { return }
-            item.retainAccess(url)
-            item.store.project.sourcePath = url.path
-            item.store.project.bookmark = try? url.bookmarkData(options: [.withSecurityScope, .securityScopeAllowOnlyReadAccess], includingResourceValuesForKeys: nil, relativeTo: nil)
-            item.initialized = false
-            self.enqueue([item], detect: false)
+            self.presentingPanel = true
+            Task {
+                defer { self.presentingPanel = false }
+                let access = url.startAccessingSecurityScopedResource()
+                defer { if access { url.stopAccessingSecurityScopedResource() } }
+                do {
+                    if let expected {
+                        guard try await item.store.renderer.identity(url, width: expected.width, height: expected.height) == expected else {
+                            throw FilmFailure(message: filmText("所选文件与原扫描不匹配。", "Selected file does not match the original scan."))
+                        }
+                    } else {
+                        // Older batches have no signature. Keep their geometry only after an explicit identity check.
+                        let alert = NSAlert()
+                        alert.messageText = filmText("确认旧批次的扫描原件", "Confirm source for legacy batch")
+                        alert.informativeText = item.name + " → " + url.lastPathComponent + "\n" +
+                            filmText("旧批次未保存原件特征。请核对卷号，采用后需重新检查片框。", "No original signature is available. Confirm the roll and review its crops again.")
+                        alert.addButton(withTitle: filmText("取消", "Cancel"))
+                        alert.addButton(withTitle: filmText("采用并重新检查", "Use and review again"))
+                        guard let window = self.window else { return }
+                        let decision = await alert.beginSheetModal(for: window)
+                        guard decision == .alertSecondButtonReturn else { return }
+                    }
+                    item.retainAccess(url)
+                    item.store.project.sourcePath = url.path
+                    item.store.project.bookmark = try? url.bookmarkData(options: [.withSecurityScope, .securityScopeAllowOnlyReadAccess], includingResourceValuesForKeys: nil, relativeTo: nil)
+                    item.store.reviewed = false
+                    item.initialized = false
+                    self.presentingPanel = false
+                    self.enqueue([item], detect: false)
+                } catch { self.error = error.localizedDescription }
+            }
         }
     }
     func reviewAndNext() {
@@ -320,7 +398,7 @@ final class FilmBatchStore {
         item.store.reviewed = true
         let index = items.firstIndex(where: { $0.id == item.id }) ?? 0
         let ordered = Array(items.dropFirst(index + 1)) + Array(items.prefix(index))
-        if let next = ordered.first(where: { !$0.store.reviewed }) { select(next) }
+        if let next = ordered.first(where: { !$0.store.reviewed && $0.ready }) { select(next) }
     }
     func removeActive() {
         guard canSave, !exportController.isRunning, let item = activeItem,
@@ -338,11 +416,11 @@ final class FilmBatchStore {
     }
 
     func openExport(scope: FilmBatchScope = .checked) {
-        guard !blocksDocuments, !exportController.isRunning, !queueRunning, !switching, !items.contains(where: { $0.store.busy }) else { return }
+        guard !blocksDocuments, !exportController.isVerifying, !exportController.isRunning, !queueRunning, !switching, !items.contains(where: { $0.store.busy }) else { return }
         exportController.openBatch(scope: scope)
     }
-    func exportSources(scope: FilmBatchScope) throws -> [FilmExportSource] {
-        let chosen = candidates(scope)
+    func exportSources(scope: FilmBatchScope, readyOnly: Bool = false) throws -> [FilmExportSource] {
+        let chosen = candidates(scope).filter { !readyOnly || $0.ready }
         guard !chosen.isEmpty else { throw FilmFailure(message: filmText("请选择胶片。", "Select scans.")) }
         return try chosen.map { item in
             guard item.initialized, let info = item.store.info, !item.queued, !item.store.busy,
@@ -378,9 +456,10 @@ final class FilmBatchStore {
     private func write(to url: URL) -> Bool {
         do {
             let entries = items.map(\.entry)
-            let document = FilmBatchDocument(entries: entries, activeID: activeID, organization: organization)
+            let document = FilmBatchDocument(entries: entries, activeID: activeID, organization: organization, lastExport: exportController.job)
             let encoder = JSONEncoder(); encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
             try encoder.encode(document).write(to: url, options: .atomic)
+            savedExportRevision = exportController.revision
             savedEntries = entries; savedOrganization = organization; projectURL = url
             return true
         } catch { self.error = error.localizedDescription; return false }
@@ -413,11 +492,11 @@ final class FilmBatchStore {
                                          UTType(exportedAs: "com.rasteaks.fffilm-project", conformingTo: .json)]
             self.present(panel) { response in
                 guard response == .OK, let url = panel.url else { return }
-                self.read(url)
+                self.loadProject(at: url)
             }
         }
     }
-    private func read(_ url: URL) {
+    func loadProject(at url: URL) {
         let access = url.startAccessingSecurityScopedResource()
         defer { if access { url.stopAccessingSecurityScopedResource() } }
         do {
@@ -435,7 +514,7 @@ final class FilmBatchStore {
                 let item = FilmBatchItem(id: entry.id)
                 item.store.workspace = self; item.store.window = window; item.store.project = entry.project
                 item.store.selected = entry.selected; item.store.selection = entry.selection; item.store.reviewed = entry.reviewed
-                item.checked = entry.checked; item.profileAssigned = entry.profileAssigned
+                item.delivery = entry.delivery; item.checked = entry.checked; item.profileAssigned = entry.profileAssigned
                 item.retainAccess(entry.project.resolvedSourceURL)
                 return item
             }
@@ -443,7 +522,8 @@ final class FilmBatchStore {
             organization = document.organization
             savedEntries = document.entries; savedOrganization = organization
             projectURL = url.pathExtension.lowercased() == "ffbatch" ? url : nil
-            exportController.clearJob()
+            exportController.restore(document.lastExport)
+            savedExportRevision = exportController.revision
             enqueue(items, detect: false)
         } catch { self.error = error.localizedDescription }
     }

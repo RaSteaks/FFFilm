@@ -69,6 +69,9 @@ final class FilmStore {
     var exporting: Bool { exportController.isRunning || workspace?.isExporting(self) == true }
     let exportController: FilmExportController
     var detecting = false
+    // Legacy documents contain final crops only. On first detection match those geometries
+    // conservatively, preserving manual edits instead of inserting duplicates at the same slot.
+    private var legacyDetectionIDs: Set<UUID> = []
     private(set) var detectionOptions = FilmDetectionOptions()
     var presentingSheet = false
     var sourceGeneration = 0
@@ -378,6 +381,11 @@ final class FilmStore {
                 }
                 // A profile choice is made before the full scan is decoded.
                 let decoded = try await renderer.load(url, inputSpace: next.inputSpace, inputProfile: next.inputProfile)
+                let identity = try await renderer.identity(url, width: decoded.width, height: decoded.height)
+                if let expected = next.sourceIdentity, expected != identity {
+                    throw FilmFailure(message: filmText("原件特征不匹配。请重新定位同一卷扫描。", "Source identity mismatch. Locate the original scan."))
+                }
+                next.sourceIdentity = identity
                 next.sourcePath = url.path
                 let access = url.startAccessingSecurityScopedResource()
                 defer { if access { url.stopAccessingSecurityScopedResource() } }
@@ -398,9 +406,13 @@ final class FilmStore {
                 exportController.resetSource(project: next, size: CGSize(width: decoded.width, height: decoded.height),
                                              identifier: await renderer.sourceIdentifier)
                 // A newly imported scan is an unsaved document even before geometry edits.
-                project = next; info = decoded; sourceSuspended = false; savedProject = restoring == nil ? FilmProject() : next
+                project = next; info = decoded; rendererRetained = false; sourceSuspended = false; savedProject = restoring == nil ? FilmProject() : next
                 sourceGeneration += 1
-                automaticFrames.removeAll(); automaticSource = nil
+                automaticFrames = Dictionary(uniqueKeysWithValues: next.frames.compactMap { frame in
+                    frame.detection.map { (frame.id, $0) }
+                })
+                automaticSource = await renderer.sourceIdentifier
+                legacyDetectionIDs = restoring != nil && !next.hasPlaceholderFrame ? Set(next.frames.filter { $0.detection == nil }.map(\.id)) : []
                 detectionOptions = FilmDetectionOptions()
                 if restoring == nil { projectURL = nil }
                 undoStack.removeAll(); redoStack.removeAll(); selection.removeAll()
@@ -432,7 +444,14 @@ final class FilmStore {
     }
 
     /// Keep lightweight document state and overview while evicting full-resolution pixels.
-    func suspendSource() async {
+    private var rendererRetained = false
+    func evictRetainedSource() async {
+        guard rendererRetained else { return }
+        rendererRetained = false
+        await renderer.close()
+    }
+
+    func suspendSource(retainingRenderer: Bool = false) async {
         guard !busy, !sourceSuspended, !exportController.isRunning else { return }
         sourceSuspended = true
         renderTask?.cancel(); renderRevision += 1
@@ -440,7 +459,8 @@ final class FilmStore {
             // Inactive scans need only a list thumbnail, not an 1800px bitmap per scan.
             overview = try? await renderer.thumbnail(frame: FilmFrame(name: ""))
             image = overview; displayedProject = nil; displayedLimit = 0
-            await renderer.close()
+            rendererRetained = retainingRenderer
+            if !retainingRenderer { await renderer.close() }
         }
         suspensionTask = task
         await task.value
@@ -451,10 +471,21 @@ final class FilmStore {
         // Selection can arrive during eviction; finish closing before reloading.
         await suspensionTask?.value
         guard sourceSuspended, !busy else { return }
+        if rendererRetained {
+            rendererRetained = false; sourceSuspended = false
+            overview = try? await renderer.render(project: FilmProject(), frame: nil)
+            image = showStrip ? overview : nil
+            refresh()
+            return
+        }
         busy = true
         defer { busy = false; refresh() }
         do {
             let decoded = try await renderer.load(project.resolvedSourceURL, inputSpace: project.inputSpace, inputProfile: project.inputProfile)
+            if let expected = project.sourceIdentity,
+               try await renderer.identity(project.resolvedSourceURL, width: decoded.width, height: decoded.height) != expected {
+                throw FilmFailure(message: filmText("原始扫描已改变，请核对源文件。", "Original scan changed. Check the source file."))
+            }
             info = decoded
             overview = try await renderer.render(project: FilmProject(), frame: nil)
             image = showStrip ? overview : nil
@@ -551,10 +582,10 @@ final class FilmStore {
             // Refined gap coordinates can move. Match transport intervals by overlap instead
             // of exact float equality, while reserving each existing frame for at most one candidate.
             let previous = project.frames.filter { !matched.contains($0.id) }.compactMap { frame -> (FilmFrame, Double)? in
-                guard let old = automaticFrames[frame.id] else { return nil }
-                let intersection = old.slot.cgRect.intersection(candidate.slot.cgRect)
+                guard let slot = automaticFrames[frame.id]?.slot ?? (legacyDetectionIDs.contains(frame.id) ? frame.crop : nil) else { return nil }
+                let intersection = slot.cgRect.intersection(candidate.slot.cgRect)
                 let area = intersection.isNull ? 0 : Double(intersection.width * intersection.height)
-                let union = old.slot.width * old.slot.height + candidate.slot.width * candidate.slot.height - area
+                let union = slot.width * slot.height + candidate.slot.width * candidate.slot.height - area
                 let overlap = area / max(union, 0.000001)
                 return overlap >= 0.5 ? (frame, overlap) : nil
             }.max { $0.1 < $1.1 }?.0
@@ -579,9 +610,10 @@ final class FilmStore {
                     guard previous.crop == automaticFrames[previous.id]?.crop, previous.rotation == 0,
                           let index = project.frames.firstIndex(where: { $0.id == previous.id }) else { continue }
                     project.frames[index].crop = candidate.crop
+                    project.frames[index].detection = candidate
                     applied[previous.id] = candidate
                 } else {
-                    let frame = FilmFrame(name: project.nextFrameName, crop: candidate.crop)
+                    let frame = FilmFrame(name: project.nextFrameName, crop: candidate.crop, detection: candidate)
                     project.frames.append(frame)
                     applied[frame.id] = candidate
                 }

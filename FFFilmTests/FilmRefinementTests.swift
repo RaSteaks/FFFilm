@@ -239,6 +239,15 @@ struct FilmRefinementTests {
         let restored = store.project
         store.loadSource(url, restoring: restored); try await finish(store)
         #expect(store.detectionOptions == FilmDetectionOptions() && store.project == restored)
+        store.detect(); try await finish(store)
+        #expect(store.project.frames.count == restored.frames.count)
+        #expect(Set(store.project.frames.map(\.id)) == Set(restored.frames.map(\.id)))
+        #expect(store.project.frames.first(where: { $0.id == manual.id })?.crop == manual.crop)
+        var legacy = restored
+        for index in legacy.frames.indices { legacy.frames[index].detection = nil }
+        store.loadSource(url, restoring: legacy); try await finish(store)
+        store.detect(); try await finish(store)
+        #expect(store.project.frames.map(\.id) == legacy.frames.map(\.id))
         await store.renderer.close()
     }
 

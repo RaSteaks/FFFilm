@@ -31,13 +31,43 @@ nonisolated struct FilmExportSettings: Equatable, Sendable {
     var collision: FilmExportCollision = .keepBoth
 }
 
-nonisolated struct FilmExportItem: Identifiable, Equatable, Sendable {
+nonisolated struct FilmExportItem: Codable, Identifiable, Equatable, Sendable {
     var id: String { (sourceID?.uuidString ?? "") + (frame?.id.uuidString ?? "strip") }
     var sourceID: UUID? = nil
     let frame: FilmFrame?
     let fileName: String
     let pixelSize: CGSize
     let skipped: Bool
+}
+
+/// One inventory per destination folder and per preview. Share it across scans in flat
+/// exports. The final move still refuses a collision that appeared after the preview.
+@MainActor final class FilmExportNames {
+    private var taken: Set<String>
+    private var suffixes: [String: Int] = [:]
+
+    init(directory: URL?) throws {
+        if let directory, FileManager.default.fileExists(atPath: directory.path) {
+            let files = try FileManager.default.contentsOfDirectory(atPath: directory.path)
+            taken = Set(files.map { $0.precomposedStringWithCanonicalMapping.lowercased() })
+        } else { taken = [] }
+    }
+
+    func reserve(stem: String, extension ext: String, collision: FilmExportCollision) -> (name: String, skipped: Bool) {
+        let base = stem + "." + ext
+        let key = base.precomposedStringWithCanonicalMapping.lowercased()
+        if taken.insert(key).inserted { return (base, false) }
+        if collision == .skip { return (base, true) }
+        var suffix = suffixes[key] ?? 1
+        while true {
+            suffix += 1
+            let name = "\(stem) (\(suffix)).\(ext)"
+            if taken.insert(name.precomposedStringWithCanonicalMapping.lowercased()).inserted {
+                suffixes[key] = suffix
+                return (name, false)
+            }
+        }
+    }
 }
 
 /// A plan is also the naming preview. The same immutable items become the export job.
@@ -47,11 +77,18 @@ nonisolated struct FilmExportPlan: Sendable {
     let items: [FilmExportItem]
     var sources: [UUID: FilmExportSource] = [:]
     var messages: [String] = []
+    var estimatedBytes: Double {
+        items.lazy.filter { !$0.skipped }.reduce(0) { total, item in
+            let jpeg = item.sourceID.flatMap { sources[$0]?.project.exportJPEG } ?? project.exportJPEG
+            // JPEG compression depends on content; show the uncompressed working estimate.
+            return total + Double(item.pixelSize.width * item.pixelSize.height) * (jpeg ? 4 : 8)
+        }
+    }
     var outputCount: Int { items.filter { !$0.skipped }.count }
 
     @MainActor static func make(project: FilmProject, selected: UUID?, checked: Set<UUID>,
                                 sourceSize: CGSize, settings: FilmExportSettings, directory: URL?,
-                                reservedNames: Set<String> = [], requireExistingDirectory: Bool = true) throws -> Self {
+                                names sharedNames: FilmExportNames? = nil, requireExistingDirectory: Bool = true) throws -> Self {
         let prefix = settings.prefix.trimmingCharacters(in: .whitespacesAndNewlines)
         try validateComponent(prefix)
         guard (2...4).contains(settings.digits),
@@ -77,9 +114,7 @@ nonisolated struct FilmExportPlan: Sendable {
                 throw FilmFailure(message: filmText("导出文件夹不可用，请重新选择。", "The export folder is unavailable. Choose it again."))
             }
         }
-        // Reserve names within the batch as well as on disk. Case folding also keeps
-        // the preview safe on the usual case-insensitive macOS destination volumes.
-        var reserved = reservedNames
+        let names = try sharedNames ?? FilmExportNames(directory: directory)
         var items: [FilmExportItem] = []
         for (index, frame) in frames.enumerated() {
             var token = frame.map {
@@ -91,20 +126,7 @@ nonisolated struct FilmExportPlan: Sendable {
                 token = String(repeating: "0", count: max(0, settings.digits - token.count)) + token
             }
             let stem = prefix + "_" + token
-            var suffix = 1
-            var name = stem + "." + settings.format.fileExtension
-            func exists(_ name: String) -> Bool {
-                reserved.contains(name.precomposedStringWithCanonicalMapping.lowercased())
-                    || directory.map { FileManager.default.fileExists(atPath: $0.appendingPathComponent(name).path) } == true
-            }
-            let skipped = settings.collision == .skip && exists(name)
-            if !skipped {
-                while exists(name) {
-                    suffix += 1
-                    name = "\(stem) (\(suffix)).\(settings.format.fileExtension)"
-                }
-                reserved.insert(name.precomposedStringWithCanonicalMapping.lowercased())
-            }
+            let (name, skipped) = names.reserve(stem: stem, extension: settings.format.fileExtension, collision: settings.collision)
             guard name.utf8.count <= 255 else {
                 throw FilmFailure(message: filmText("文件名过长，请缩短前缀或帧名称。", "The filename is too long. Shorten the prefix or frame name."))
             }
@@ -126,24 +148,27 @@ nonisolated struct FilmExportPlan: Sendable {
     }
 }
 
-nonisolated struct FilmExportResult: Identifiable, Sendable {
-    enum Status: Equatable, Sendable {
+nonisolated struct FilmExportResult: Codable, Equatable, Identifiable, Sendable {
+    enum Status: Codable, Equatable, Sendable {
         case pending, succeeded, skipped, failed(String)
     }
     var id: String { item.id }
     let item: FilmExportItem
     var status: Status
+    var writtenFile: FilmSourceIdentity?
 }
 
-nonisolated struct FilmExportJob: Identifiable, Sendable {
-    enum Phase: Sendable { case running, cancelled, finished }
-    let id = UUID()
+nonisolated struct FilmExportJob: Codable, Equatable, Identifiable, Sendable {
+    enum Phase: String, Codable, Sendable { case running, cancelled, finished }
+    private(set) var id = UUID()
     let project: FilmProject
     let sourceIdentifier: UUID
-    let directory: URL
+    var directory: URL
     var results: [FilmExportResult]
     var sources: [UUID: FilmExportSource] = [:]
     var phase = Phase.running
+    var directoryBookmark: Data?
+    var deferredSources: [String]?
     var activeFileName: String?
     var activeSourceID: UUID?
     var completedCount: Int { results.filter { $0.status == .succeeded }.count }
@@ -151,13 +176,31 @@ nonisolated struct FilmExportJob: Identifiable, Sendable {
     var failedCount: Int { results.filter { if case .failed = $0.status { true } else { false } }.count }
     var pendingCount: Int { results.filter { $0.status == .pending }.count }
     var processedCount: Int { results.count - pendingCount }
+    /// Files can be large or remote. Read only sampled signatures off the main actor.
+    /// Each changed entry carries whether a conflicting file still exists at its path.
+    func checkPublishedFiles(at folder: URL) -> [(Int, Bool)]? {
+        let access = folder.startAccessingSecurityScopedResource()
+        defer { if access { folder.stopAccessingSecurityScopedResource() } }
+        var directory: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: folder.path, isDirectory: &directory), directory.boolValue else { return nil }
+        var changes: [(Int, Bool)] = []
+        for (index, result) in results.enumerated() where result.status == .succeeded {
+            let output = folder.appendingPathComponent(result.item.fileName)
+            let present = FileManager.default.fileExists(atPath: output.path)
+            if !present || result.writtenFile == nil || (try? FilmSourceIdentity.read(output, width: 0, height: 0)) != result.writtenFile {
+                changes.append((index, present))
+            }
+        }
+        return changes
+    }
+
     var completedURLs: [URL] {
         results.filter { $0.status == .succeeded }.map { directory.appendingPathComponent($0.item.fileName) }
     }
 }
 
 /// The source and geometry are captured at confirmation, independent of editor navigation.
-nonisolated struct FilmExportSource: Sendable {
+nonisolated struct FilmExportSource: Codable, Equatable, Sendable {
     let id: UUID
     var project: FilmProject
     let selected: UUID?
@@ -182,7 +225,7 @@ extension FilmExportPlan {
         var snapshots: [UUID: FilmExportSource] = [:]
         var messages: [String] = []
         var folders: Set<String> = []
-        var reserved: [String: Set<String>] = [:]
+        var inventories: [String: FilmExportNames] = [:]
         for source in sources {
             let name = URL(fileURLWithPath: source.project.sourcePath).deletingPathExtension().lastPathComponent
             if settings.scope == .checked && source.checked.isEmpty || settings.scope != .strip && source.project.frames.isEmpty {
@@ -210,12 +253,13 @@ extension FilmExportPlan {
             var options = settings
             if useSourceNames { options.prefix = name }
             let destination = folder.isEmpty ? directory : directory?.appendingPathComponent(folder, isDirectory: true)
+            let names = try inventories[folder] ?? FilmExportNames(directory: destination)
+            inventories[folder] = names
             let plan = try make(project: source.project, selected: source.selected, checked: source.checked,
                                 sourceSize: source.size, settings: options, directory: destination,
-                                reservedNames: reserved[folder, default: []], requireExistingDirectory: false)
+                                names: names, requireExistingDirectory: false)
             var snapshot = source; snapshot.project = plan.project; snapshots[source.id] = snapshot
             for item in plan.items {
-                if !item.skipped { reserved[folder, default: []].insert(item.fileName.precomposedStringWithCanonicalMapping.lowercased()) }
                 items.append(FilmExportItem(sourceID: source.id, frame: item.frame,
                                             fileName: folder.isEmpty ? item.fileName : folder + "/" + item.fileName,
                                             pixelSize: item.pixelSize, skipped: item.skipped))

@@ -241,6 +241,48 @@ struct FilmExportTests {
 
     /// Real ImageIO/Core Image fixtures exercise the same renderer and file publishing
     /// used by the app. Every invocation owns a separate disposable source/destination.
+    @Test func batchHandoffRestoresDeliveryScopeAndRechecksMissingFile() async throws {
+        try await withStore { source, directory in
+            let batch = FilmBatchStore()
+            defer { batch.closeSources() }
+            batch.autoDetect = false
+            let original = source.project.resolvedSourceURL
+            try #require(batch.appendScans([original]))
+            while batch.busy { try await Task.sleep(for: .milliseconds(10)) }
+            let roll = try #require(batch.activeItem)
+            roll.store.change { $0.frames = source.project.frames }
+            batch.reviewAndNext()
+            batch.projectURL = directory.appendingPathComponent("Saved.ffbatch")
+            batch.save()
+            let first = try #require(roll.store.project.frames.first)
+            roll.store.setFrameChecked(first.id, checked: true)
+            #expect(batch.dirty)
+            let job = batch.exportController
+            batch.openExport(scope: .current); job.settings.scope = .checked
+            job.setDirectory(directory); job.confirm(); job.didDismiss()
+            await job.task?.value
+            #expect(job.job?.completedCount == 1)
+            #expect(roll.status.contains("1/3"))
+            batch.save()
+            let batchURL = try #require(batch.projectURL)
+            let saved = try JSONDecoder().decode(FilmBatchDocument.self, from: Data(contentsOf: batchURL))
+            #expect(saved.entries[0].selection == [first.id] && saved.lastExport?.completedCount == 1)
+            let output = try #require(job.job?.completedURLs.first)
+            try FileManager.default.removeItem(at: output)
+            let reopened = FilmBatchStore()
+            defer { reopened.closeSources() }
+            reopened.loadProject(at: batchURL)
+            while reopened.busy { try await Task.sleep(for: .milliseconds(10)) }
+            let recovery = reopened.exportController
+            // Temporary test volumes may not provide a persistent sandbox bookmark.
+            if recovery.needsRecoveryDirectory { recovery.restore(saved.lastExport, authorizedDirectory: directory) }
+            await recovery.verificationTask?.value
+            #expect(recovery.job?.pendingCount == 1 && recovery.canResume)
+            recovery.resume(); await recovery.task?.value
+            #expect(recovery.job?.completedCount == 1 && FileManager.default.fileExists(atPath: output.path))
+        }
+    }
+
     private func withStore(_ body: (FilmStore, URL) async throws -> Void) async throws {
         let directory = try FilmTestFiles.directory().appending(path: "FilmExport-\(UUID())", directoryHint: .isDirectory)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)

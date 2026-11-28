@@ -264,11 +264,20 @@ struct FilmExportTests {
             #expect(roll.status.contains("1/3"))
             batch.save()
             let batchURL = try #require(batch.projectURL)
-            let saved = try JSONDecoder().decode(FilmBatchDocument.self, from: Data(contentsOf: batchURL))
+            var saved = try JSONDecoder().decode(FilmBatchDocument.self, from: Data(contentsOf: batchURL))
             #expect(saved.entries[0].selection == [first.id] && saved.lastExport?.completedCount == 1)
             let output = try #require(job.job?.completedURLs.first)
             #expect(try saved.lastExport?.results.first?.outputSHA256 == Data(SHA256.hash(data: Data(contentsOf: output))))
             try FileManager.default.removeItem(at: output)
+            // Locate updated the batch to a verified copy on another volume; the old job
+            // still has the now-offline URL and the crop as it was when export was confirmed.
+            let relocated = directory.appendingPathComponent("relocated.tiff")
+            try FileManager.default.copyItem(at: original, to: relocated)
+            try FileManager.default.removeItem(at: original)
+            saved.entries[0].project.sourcePath = relocated.path
+            saved.entries[0].project.bookmark = nil
+            saved.entries[0].project.frames[0].crop.width = 0.25
+            try JSONEncoder().encode(saved).write(to: batchURL)
             let reopened = FilmBatchStore()
             defer { reopened.closeSources() }
             reopened.loadProject(at: batchURL)
@@ -280,6 +289,8 @@ struct FilmExportTests {
             #expect(recovery.job?.pendingCount == 1 && recovery.canResume)
             recovery.resume(); await recovery.task?.value
             #expect(recovery.job?.completedCount == 1 && FileManager.default.fileExists(atPath: output.path))
+            let published = try #require(CGImageSourceCreateWithURL(output as CFURL, nil))
+            #expect(CGImageSourceCreateImageAtIndex(published, 0, nil)?.width == 64)
         }
     }
 

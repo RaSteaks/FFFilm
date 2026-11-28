@@ -322,10 +322,19 @@ final class FilmExportController {
                             await renderer.close()
                             loadedSource = sourceID; sourceFailure = nil
                             do {
-                                let decoded = try await renderer.load(source.project.resolvedSourceURL, inputSpace: source.project.inputSpace,
+                                // Locate can grant access to an identical scan on another volume.
+                                // Only its URL follows the editor. Use the captured profile, geometry and identity.
+                                let current = workspace?.items.first { $0.id == sourceID }?.store.project
+                                let url: URL
+                                if let expected = source.project.sourceIdentity, let current, current.sourceIdentity == expected {
+                                    url = current.resolvedSourceURL
+                                } else {
+                                    url = source.project.resolvedSourceURL
+                                }
+                                let decoded = try await renderer.load(url, inputSpace: source.project.inputSpace,
                                                             inputProfile: source.project.inputProfile)
                                 if let expected = source.project.sourceIdentity,
-                                   try await renderer.identity(source.project.resolvedSourceURL, width: decoded.width, height: decoded.height) != expected {
+                                   try await renderer.identity(url, width: decoded.width, height: decoded.height) != expected {
                                     throw FilmFailure(message: filmText("原扫描已改变。", "Original scan changed."))
                                 }
                             } catch { sourceFailure = error.localizedDescription }

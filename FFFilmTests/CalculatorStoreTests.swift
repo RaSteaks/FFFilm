@@ -255,6 +255,23 @@ struct CalculatorStoreTests {
         #expect(store.configuration(from: invalid) == nil)
     }
 
+    @Test("Cadence review applies to automatic capture adjustments and clears on explicit choices")
+    func effectiveCaptureCadenceReview() throws {
+        let suite = "FFFilm.CadenceReview.\(UUID())"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = CalculatorStore(defaults: defaults)
+        store.selectSensorFps(75)
+        store.selectMedia("1tb")
+        #expect(store.settings.sensorFps == 35 && store.needsCadenceReview && !store.canShareRecording)
+        let proRes = try #require(store.catalog.cameras.first(where: { $0.isStandaloneProRes }))
+        store.selectCamera(proRes.id)
+        #expect(!store.needsCadenceReview)
+        store.selectProjectFps(50)
+        #expect(store.calculation.captureFps == 50 && store.canShareRecording)
+        #expect(store.feedbackMessage == nil)
+    }
+
     @Test("Legacy entries migrate by shooting date and retain unavailable original IDs")
     func legacySummaryHandoff() throws {
         struct Legacy: Encodable { let version = 1; let entries: [SummaryEntry] }

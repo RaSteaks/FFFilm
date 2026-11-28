@@ -327,6 +327,7 @@ final class CalculatorStore {
     /// Dials pass `persisting: false` for each detent and call `persistFormatSettings()` when they
     /// settle, so a fling recalculates live without re-encoding camera memory at every stop.
     func selectProjectFps(_ fps: Double, persisting: Bool = true) {
+        if currentCamera.isStandaloneProRes { needsCadenceReview = false }
         updateFormatSettings(persisting: persisting) { $0.projectFps = fps }
     }
 
@@ -530,26 +531,32 @@ final class CalculatorStore {
     private func commitFormatSettings(_ proposed: CaptureSettings, persisting: Bool = true) {
         clearTransientState()
         let normalized = engine.normalized(proposed)
-        let adjusted = adjustedParameters(from: proposed, to: normalized)
+        // Standalone ProRes records at project cadence. Its mirrored sensor value is not a user input.
+        let usesProjectCadence = engine.camera(id: normalized.cameraId).isStandaloneProRes
+        let adjusted = adjustedParameters(from: proposed, to: normalized, usesProjectCadence: usesProjectCadence)
+        if normalized.cameraId != settings.cameraId { needsCadenceReview = false }
         settings = normalized
         if persisting { rememberCurrentCamera() }
         if !adjusted.isEmpty {
             var message = AppText.adjusted(parameters: adjusted)
-            if proposed.sensorFps != normalized.sensorFps {
-                message += " \(DisplayFormat.fps(proposed.sensorFps)) → \(DisplayFormat.fps(normalized.sensorFps)) fps"
-                needsCadenceReview = abs(proposed.sensorFps - normalized.sensorFps) > 1
+            let requestedFps = usesProjectCadence ? proposed.projectFps : proposed.sensorFps
+            let effectiveFps = usesProjectCadence ? normalized.projectFps : normalized.sensorFps
+            if requestedFps != effectiveFps {
+                message += " \(DisplayFormat.fps(requestedFps)) → \(DisplayFormat.fps(effectiveFps)) fps"
+                needsCadenceReview = abs(requestedFps - effectiveFps) > 1
             }
             feedbackMessage = message
         }
     }
 
-    private func adjustedParameters(from proposed: CaptureSettings, to normalized: CaptureSettings) -> [CaptureParameter] {
+    private func adjustedParameters(from proposed: CaptureSettings, to normalized: CaptureSettings,
+                                    usesProjectCadence: Bool) -> [CaptureParameter] {
         var fields: [CaptureParameter] = []
         if proposed.modeId != normalized.modeId { fields.append(.mode) }
         if proposed.resolutionId != normalized.resolutionId { fields.append(.resolution) }
         if proposed.codecId != normalized.codecId { fields.append(.codec) }
         if proposed.projectFps != normalized.projectFps { fields.append(.projectFps) }
-        if proposed.sensorFps != normalized.sensorFps { fields.append(.sensorFps) }
+        if !usesProjectCadence, proposed.sensorFps != normalized.sensorFps { fields.append(.sensorFps) }
         if proposed.sensorOverdrive != normalized.sensorOverdrive { fields.append(.sensorOverdrive) }
         return fields
     }

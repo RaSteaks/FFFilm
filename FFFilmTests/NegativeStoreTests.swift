@@ -577,6 +577,44 @@ struct NegativeStoreTests {
         #expect(!store.canExport && !store.captureLocked)
     }
 
+    @Test(arguments: [FilmPreviewInput.slide, .colorNegative], [false, true])
+    func interruptedCameraStartPreservesImportedFile(input: FilmPreviewInput, cancel: Bool) async throws {
+        let file = try externalFixture(width: 100, height: 70)
+        defer { try? FileManager.default.removeItem(at: file) }
+        let camera = StubNegativeCamera(), store = NegativeStore(camera: camera)
+        store.loadFile(file); try await waitUntilIdle(store)
+        store.setInputType(input)
+        if input.requiresBase {
+            store.selectBase(); try await waitUntilIdle(store)
+            store.confirmBase(); try await waitUntilIdle(store)
+            try #require(store.base != nil)
+        }
+        let loaded = try #require(store.asset), base = store.base
+        store.filmLook = .portra400; store.outputName = "Roll7"; store.setComparingOriginal(true)
+        try #require(store.canExport)
+
+        store.startCamera()
+        try await waitFor { camera.hasStarted }
+        #expect(!store.isCamera && store.phase == .cameraStarting)
+        if cancel { store.cancelWork() }
+        else { camera.fail(); try await waitFor { store.error != nil } }
+        let frame = NegativeAsset(image: loaded.image)
+        // Wait for the discarded callback as well as the cancellation/error handler.
+        await withCheckedContinuation { continuation in
+            camera.deliver(frame, acknowledge: { continuation.resume() })
+        }
+        #expect(!store.isCamera && !store.paused && store.asset === loaded && store.canExport)
+        #expect(store.filmLook == .portra400 && store.outputName == "Roll7")
+        #expect(store.base == base && store.isComparingOriginal)
+
+        store.startCamera()
+        try await waitFor { camera.startCount == 2 }
+        camera.deliver(frame)
+        try await waitFor { store.asset === frame }
+        #expect(store.isCamera && store.live && store.base == nil && !store.isComparingOriginal)
+        #expect(store.filmLook == .neutral && store.outputName.isEmpty)
+    }
+
     @Test func interruptedPreviewSamplesAndExportsLastDisplayedFrame() async throws {
         let camera = StubNegativeCamera(), store = NegativeStore(camera: camera)
         let context = NegativePixels.context()
@@ -678,13 +716,14 @@ nonisolated private final class StubNegativeCamera: NegativeCameraCapture, @unch
             lenses: [NegativeLens(id: "wide", titleKey: "negative.lens.wide"), NegativeLens(id: "ultra", titleKey: "negative.lens.ultraWide")],
             resolutions: [.hd, .fullHD], supportsFocus: true, minimumFocusDistance: 100))
     }
-    func deliver(_ asset: NegativeAsset, frozenForSampling: Bool = false, isMacro: Bool = false, calibrationInvalidated: Bool = false) {
+    func deliver(_ asset: NegativeAsset, frozenForSampling: Bool = false, isMacro: Bool = false, calibrationInvalidated: Bool = false,
+                 acknowledge: @escaping @Sendable () -> Void = {}) {
         let (handler, generation) = lock.withLock {
             if calibrationInvalidated { calibrationID = UUID() }
             return (frameHandler, calibrationID)
         }
         handler?(NegativeCameraFrame(asset: asset, frozenForSampling: frozenForSampling,
-            isMacro: isMacro, calibrationID: generation), {})
+            isMacro: isMacro, calibrationID: generation), acknowledge)
     }
     func fail() {
         let handler = lock.withLock { errorHandler }

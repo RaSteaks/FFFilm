@@ -239,11 +239,11 @@ final class NegativeStore {
         operation = Task {
             let granted = await camera.requestAccess()
             guard revision == id, !Task.isCancelled else { return }
-            guard granted else { phase = nil; cameraDenied = true; error = AppText.localized("negative.error.permission"); return }
+            guard granted else { cancelWork(); cameraDenied = true; error = AppText.localized("negative.error.permission"); return }
             let generation = UUID(); cameraRevision = generation
-            base = nil; positive = nil; sampling = false; candidate = nil; isComparingOriginal = false
-            if !isCamera { outputName = ""; filmLook = .neutral }
-            isCamera = true; live = true; paused = false; captureLocked = false
+            // A new configuration invalidates the previous camera lock immediately.
+            // An imported file keeps its calibration until a camera frame replaces it.
+            if isCamera { base = nil; captureLocked = false }
             camera.start(settings: requestedSettings, onConfiguration: { [weak self] configuration in
                 Task { @MainActor [weak self] in
                     guard let self, self.cameraRevision == generation else { return }
@@ -253,8 +253,15 @@ final class NegativeStore {
             }) { [weak self] frame, acknowledge in
                 Task { @MainActor [weak self] in
                     defer { acknowledge() }
-                    guard let self, self.cameraRevision == generation, self.live else { return }
+                    guard let self, self.cameraRevision == generation,
+                          self.live || self.phase == .cameraStarting else { return }
                     if let phase = self.phase, !phase.acceptsCameraFrame(frozenForSampling: frame.frozenForSampling) { return }
+                    if self.phase == .cameraStarting {
+                        if !self.isCamera { self.outputName = ""; self.filmLook = .neutral }
+                        self.base = nil; self.positive = nil; self.candidate = nil; self.sampling = false
+                        self.isComparingOriginal = false; self.captureLocked = false
+                        self.isCamera = true; self.live = true; self.paused = false
+                    }
                     self.macroActive = frame.isMacro
                     if let previous = self.calibrationID, let current = frame.calibrationID, previous != current {
                         // Switching into or out of macro changes the optical/color pipeline.
@@ -274,12 +281,14 @@ final class NegativeStore {
             } onError: { [weak self] key in
                 Task { @MainActor [weak self] in
                     guard let self, self.cameraRevision == generation else { return }
-                    // Freeze the last displayed source before allowing static sampling/export.
-                    // Suspension also cancels pending renders and invalidates late callbacks.
-                    self.suspend()
+                    if self.isCamera {
+                        self.suspend()
+                        self.base = nil; self.positive = nil; self.camera.setBase(nil)
+                    } else {
+                        // Startup failed before replacing the document. Ignore late frames.
+                        self.cancelWork()
+                    }
                     self.error = AppText.key(key)
-                    // Interrupted configuration cannot retain a valid sampled base.
-                    self.base = nil; self.positive = nil; self.camera.setBase(nil)
                 }
             }
         }
@@ -525,6 +534,11 @@ final class NegativeStore {
 
     func cancelWork() {
         guard phase != .savingPhotos else { return }
+        if phase == .cameraStarting {
+            cameraRevision = UUID(); camera.stop()
+            paused = isCamera || asset == nil
+            captureLocked = false
+        }
         operation?.cancel(); operation = nil
         displayTask?.cancel()
         revision = UUID(); phase = nil
@@ -536,9 +550,14 @@ final class NegativeStore {
         // File operations and committed exports belong to the workspace and can finish offscreen.
         // A stopped capture pipeline cannot certify a new exposure, but its last frozen pixels
         // and their base still form a valid static image.
-        guard isCamera || phase == .cameraStarting else { return }
+        if phase == .cameraStarting {
+            cancelWork()
+            error = AppText.key("negative.interrupted")
+            return
+        }
+        guard isCamera else { return }
         paused = true
-        if phase == .cameraStarting || phase == .locking {
+        if phase == .locking {
             cancelWork()
             error = AppText.key("negative.interrupted")
         }

@@ -3,6 +3,7 @@ import Testing
 import Foundation
 import CoreImage
 import ImageIO
+import CryptoKit
 @testable import FFFilm
 
 @MainActor
@@ -239,8 +240,6 @@ struct FilmExportTests {
                                 sourceSize: CGSize(width: 128, height: 64), settings: settings, directory: directory)
     }
 
-    /// Real ImageIO/Core Image fixtures exercise the same renderer and file publishing
-    /// used by the app. Every invocation owns a separate disposable source/destination.
     @Test func batchHandoffRestoresDeliveryScopeAndRechecksMissingFile() async throws {
         try await withStore { source, directory in
             let batch = FilmBatchStore()
@@ -268,6 +267,7 @@ struct FilmExportTests {
             let saved = try JSONDecoder().decode(FilmBatchDocument.self, from: Data(contentsOf: batchURL))
             #expect(saved.entries[0].selection == [first.id] && saved.lastExport?.completedCount == 1)
             let output = try #require(job.job?.completedURLs.first)
+            #expect(try saved.lastExport?.results.first?.outputSHA256 == Data(SHA256.hash(data: Data(contentsOf: output))))
             try FileManager.default.removeItem(at: output)
             let reopened = FilmBatchStore()
             defer { reopened.closeSources() }
@@ -283,6 +283,40 @@ struct FilmExportTests {
         }
     }
 
+    @Test func recoveryDetectsChangesOutsideSampledRangesAndPreservesLegacyOutputs() async throws {
+        let directory = try FilmTestFiles.directory().appending(path: UUID().uuidString, directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let item = FilmExportItem(frame: nil, fileName: "delivery.tiff", pixelSize: .zero, skipped: false)
+        let url = directory.appendingPathComponent(item.fileName)
+        let bytes = Data(repeating: 17, count: 3 * 1024 * 1024)
+        try bytes.write(to: url)
+        var job = FilmExportJob(project: FilmProject(), sourceIdentifier: UUID(), directory: directory,
+                                results: [.init(item: item, status: .succeeded, outputSHA256: Data(SHA256.hash(data: bytes)))])
+        #expect(await job.checkPublishedFiles(at: directory, language: .english)?.isEmpty == true)
+        var changed = bytes
+        changed[2 * 1024 * 1024] = 18
+        try changed.write(to: url)
+        let issues = try #require(await job.checkPublishedFiles(at: directory, language: .english))
+        #expect(issues.count == 1)
+        guard case .failed = issues.first?.status else { Issue.record("Changed delivery remained successful"); return }
+
+        struct LegacyResult: Encodable {
+            let item: FilmExportItem
+            let status: FilmExportResult.Status
+            let writtenFile: FilmSourceIdentity
+        }
+        let legacy = LegacyResult(item: item, status: .succeeded, writtenFile: try FilmSourceIdentity.read(url, width: 0, height: 0))
+        job.results = [try JSONDecoder().decode(FilmExportResult.self, from: JSONEncoder().encode(legacy))]
+        let unverified = await job.checkPublishedFiles(at: directory, language: .english)
+        #expect(unverified?.first?.status == .failed("No full-file checksum was saved. Verify the existing file manually."))
+        #expect(try Data(contentsOf: url) == changed)
+        try FileManager.default.removeItem(at: url)
+        #expect(await job.checkPublishedFiles(at: directory, language: .english)?.first?.status == .pending)
+    }
+
+    /// Real ImageIO/Core Image fixtures exercise the same renderer and file publishing
+    /// used by the app. Every invocation owns a separate disposable source/destination.
     private func withStore(_ body: (FilmStore, URL) async throws -> Void) async throws {
         let directory = try FilmTestFiles.directory().appending(path: "FilmExport-\(UUID())", directoryHint: .isDirectory)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)

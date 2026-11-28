@@ -1,6 +1,7 @@
 #if os(macOS)
 import Foundation
 import CoreGraphics
+import CryptoKit
 
 nonisolated enum FilmExportScope: String, CaseIterable, Sendable {
     case current, checked, all, strip
@@ -155,7 +156,24 @@ nonisolated struct FilmExportResult: Codable, Equatable, Identifiable, Sendable 
     var id: String { item.id }
     let item: FilmExportItem
     var status: Status
-    var writtenFile: FilmSourceIdentity?
+    /// Older manifests contain only a sampled `writtenFile` identity. They decode with
+    /// no full-file digest and require manual verification for an existing output.
+    var outputSHA256: Data?
+
+    @concurrent static func checksum(at url: URL) async throws -> Data {
+        let file = try FileHandle(forReadingFrom: url)
+        defer { try? file.close() }
+        var hash = SHA256()
+        while true {
+            try Task.checkCancellation()
+            // FileHandle autoreleases its buffers on macOS. Drain each read's pool so
+            // hashing a multi-gigabyte export retains just the current chunk.
+            let chunk = try autoreleasepool { try file.read(upToCount: 1024 * 1024) }
+            guard let chunk, !chunk.isEmpty else { break }
+            hash.update(data: chunk)
+        }
+        return Data(hash.finalize())
+    }
 }
 
 nonisolated struct FilmExportJob: Codable, Equatable, Identifiable, Sendable {
@@ -176,19 +194,25 @@ nonisolated struct FilmExportJob: Codable, Equatable, Identifiable, Sendable {
     var failedCount: Int { results.filter { if case .failed = $0.status { true } else { false } }.count }
     var pendingCount: Int { results.filter { $0.status == .pending }.count }
     var processedCount: Int { results.count - pendingCount }
-    /// Files can be large or remote. Read only sampled signatures off the main actor.
-    /// Each changed entry carries whether a conflicting file still exists at its path.
-    func checkPublishedFiles(at folder: URL) -> [(Int, Bool)]? {
+
+    /// Hash on the worker executor so the UI can cancel verification of a large delivery.
+    @concurrent func checkPublishedFiles(at folder: URL, language: AppLanguage) async -> [(index: Int, status: FilmExportResult.Status)]? {
         let access = folder.startAccessingSecurityScopedResource()
         defer { if access { folder.stopAccessingSecurityScopedResource() } }
         var directory: ObjCBool = false
         guard FileManager.default.fileExists(atPath: folder.path, isDirectory: &directory), directory.boolValue else { return nil }
-        var changes: [(Int, Bool)] = []
+        var changes: [(Int, FilmExportResult.Status)] = []
         for (index, result) in results.enumerated() where result.status == .succeeded {
+            if Task.isCancelled { return nil }
             let output = folder.appendingPathComponent(result.item.fileName)
-            let present = FileManager.default.fileExists(atPath: output.path)
-            if !present || result.writtenFile == nil || (try? FilmSourceIdentity.read(output, width: 0, height: 0)) != result.writtenFile {
-                changes.append((index, present))
+            if !FileManager.default.fileExists(atPath: output.path) {
+                changes.append((index, .pending))
+            } else if let digest = result.outputSHA256 {
+                if (try? await FilmExportResult.checksum(at: output)) != digest {
+                    changes.append((index, .failed(filmText("目标文件已改变或无法读取，请核对目标。", "Destination file changed or could not be read. Check the existing file.", language: language))))
+                }
+            } else {
+                changes.append((index, .failed(filmText("旧记录缺少完整文件校验值，请人工核对目标。", "No full-file checksum was saved. Verify the existing file manually.", language: language))))
             }
         }
         return changes

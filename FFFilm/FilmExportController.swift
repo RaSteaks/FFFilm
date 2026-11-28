@@ -251,17 +251,13 @@ final class FilmExportController {
         directory = resolved; needsDestination = false; isVerifying = true
         let snapshot = saved
         verificationTask = Task {
-            let changes = await Task.detached(priority: .utility) {
-                snapshot.checkPublishedFiles(at: resolved)
-            }.value
+            let changes = await snapshot.checkPublishedFiles(at: resolved, language: AppLanguagePreference.shared.language)
             guard !Task.isCancelled, self.job?.id == snapshot.id else { return }
             defer { isVerifying = false; verificationTask = nil }
             guard let changes else { needsDestination = true; return }
             var verified = snapshot
-            for (index, present) in changes {
-                verified.results[index].status = present
-                    ? .failed(filmText("目标文件已改变，请核对目标。", "Destination file changed. Check the existing file."))
-                    : .pending
+            for (index, status) in changes {
+                verified.results[index].status = status
                 if let source = verified.results[index].item.sourceID, let frame = verified.results[index].item.frame {
                     workspace.items.first(where: { $0.id == source })?.delivery?.frames.removeValue(forKey: frame.id)
                 }
@@ -345,10 +341,10 @@ final class FilmExportController {
                     try Task.checkCancellation()
                     // Publishing never overwrites a destination that appeared after
                     // planning. Report the conflict and keep its original planned name.
-                    let written = try await Task.detached { try FilmSourceIdentity.read(temporary, width: 0, height: 0) }.value
+                    let digest = try await FilmExportResult.checksum(at: temporary)
                     try Task.checkCancellation()
                     try FileManager.default.moveItem(at: temporary, to: url)
-                    job?.results[index].writtenFile = written
+                    job?.results[index].outputSHA256 = digest
                     if let id = item.sourceID, let frame = item.frame {
                         workspace?.items.first(where: { $0.id == id })?.recordDelivery(frame, project: project)
                     }

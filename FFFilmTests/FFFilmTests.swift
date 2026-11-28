@@ -47,6 +47,19 @@ struct FFFilmTests {
         }
     }
 
+    @Test("V-RAPTOR XL dedicated 4K recording offers standard ProRes 422")
+    func raptorProRes422() {
+        let engine = CalculatorEngine(catalog: catalog)
+        let settings = CaptureSettings(
+            cameraId: "raptor-xl", modeId: "prores-4k", resolutionId: "raptor-prores-4k",
+            codecId: "prores-422", projectFps: 24, sensorFps: 24, sensorOverdrive: false,
+            mediaId: "1tb", shootHours: 1
+        )
+        #expect(engine.availableCodecs(for: settings).contains { $0.id == "prores-422" })
+        let result = engine.calculate(settings: settings)
+        #expect(result.codec.id == "prores-422" && result.hasEstimate)
+    }
+
     @Test("DJI manual MB/s rows are converted to Mb/s")
     func djiOfficialRate() {
         let settings = CaptureSettings(

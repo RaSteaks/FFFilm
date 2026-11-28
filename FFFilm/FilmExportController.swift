@@ -227,9 +227,13 @@ final class FilmExportController {
     func restore(_ savedJob: FilmExportJob?, authorizedDirectory: URL? = nil) {
         clearJob()
         guard var saved = savedJob, let workspace else { return }
-        let sourceIDs = Set(workspace.items.map(\.id))
+        // Older versions could save a job unchanged after the operator removed a scan.
+        // Drop only those snapshots and their outputs; still validate every surviving entry.
+        let removedIDs = Set(saved.sources.keys).subtracting(workspace.items.map(\.id))
+        saved.removeSources(removedIDs)
+        guard !saved.results.isEmpty else { return }
         let valid = saved.sources.allSatisfy { key, source in
-            key == source.id && sourceIDs.contains(key) && source.project.valid
+            key == source.id && source.project.valid
         } && saved.results.allSatisfy { result in
             let parts = result.item.fileName.components(separatedBy: "/")
             guard (1...2).contains(parts.count), parts.allSatisfy({ (try? FilmExportPlan.validateComponent($0)) != nil }),
@@ -266,6 +270,20 @@ final class FilmExportController {
             job = verified
             if !changes.isEmpty || stale || authorizedDirectory != nil { revision += 1 }
         }
+    }
+
+    /// Keep the batch's single-step removal undo independent of later export jobs.
+    func removeSource(_ id: UUID) -> FilmExportJob? {
+        guard let previous = job, previous.sources[id] != nil else { return nil }
+        var remaining = previous
+        remaining.removeSources([id])
+        job = remaining.results.isEmpty ? nil : remaining
+        return previous
+    }
+
+    func undoSourceRemoval(previousJob: FilmExportJob?, revisionAtRemoval: Int) {
+        guard let previousJob, revision == revisionAtRemoval, !isRunning, !isVerifying else { return }
+        job = previousJob
     }
 
     func clearJob() {

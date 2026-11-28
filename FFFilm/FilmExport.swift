@@ -195,6 +195,11 @@ nonisolated struct FilmExportJob: Codable, Equatable, Identifiable, Sendable {
     var pendingCount: Int { results.filter { $0.status == .pending }.count }
     var processedCount: Int { results.count - pendingCount }
 
+    mutating func removeSources(_ ids: Set<UUID>) {
+        for id in ids { sources.removeValue(forKey: id) }
+        results.removeAll { $0.item.sourceID.map(ids.contains) == true }
+    }
+
     /// Hash on the worker executor so the UI can cancel verification of a large delivery.
     @concurrent func checkPublishedFiles(at folder: URL, language: AppLanguage) async -> [(index: Int, status: FilmExportResult.Status)]? {
         let access = folder.startAccessingSecurityScopedResource()

@@ -149,7 +149,7 @@ final class FilmBatchStore {
     private var savedExportRevision = 0
     private var savedOrganization: FilmFileOrganization?
     private var queue: [(id: UUID, detect: Bool)] = []
-    private var removed: (item: FilmBatchItem, index: Int)?
+    private var removed: (item: FilmBatchItem, index: Int, previousJob: FilmExportJob?, exportRevision: Int)?
     var canUndoRemoval: Bool { removed != nil }
     var activeItem: FilmBatchItem? { items.first { $0.id == activeID } }
     var activeStore: FilmStore { activeItem?.store ?? emptyStore }
@@ -404,7 +404,7 @@ final class FilmBatchStore {
         guard canSave, !exportController.isRunning, let item = activeItem,
               let index = items.firstIndex(where: { $0.id == item.id }) else { return }
         removed?.item.releaseAccess()
-        removed = (item, index)
+        removed = (item, index, exportController.removeSource(item.id), exportController.revision)
         items.remove(at: index); activeID = nil
         Task { await item.store.suspendSource() }
         if let next = items.first { select(next) }
@@ -412,6 +412,7 @@ final class FilmBatchStore {
     func undoRemoval() {
         guard canSave, let removed else { return }
         items.insert(removed.item, at: min(removed.index, items.count)); self.removed = nil
+        exportController.undoSourceRemoval(previousJob: removed.previousJob, revisionAtRemoval: removed.exportRevision)
         select(removed.item)
     }
 

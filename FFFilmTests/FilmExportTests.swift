@@ -326,6 +326,40 @@ struct FilmExportTests {
         #expect(await job.checkPublishedFiles(at: directory, language: .english)?.first?.status == .pending)
     }
 
+    @Test func batchRecoveryRetainsSurvivingScans() async throws {
+        try await withStore { store, directory in
+            let batch = FilmBatchStore()
+            defer { batch.closeSources() }
+            batch.autoDetect = false
+            let second = directory.appendingPathComponent("second.tiff")
+            let original = store.project.resolvedSourceURL
+            try FileManager.default.copyItem(at: original, to: second)
+            try #require(batch.appendScans([original, second]))
+            while batch.busy { try await Task.sleep(for: .milliseconds(10)) }
+            let controller = batch.exportController
+            batch.openExport(scope: .all)
+            controller.setDirectory(directory); controller.confirm(); controller.didDismiss()
+            controller.cancel(); await controller.task?.value
+            var saved = try #require(controller.job)
+            try #require(saved.pendingCount == 2)
+            let removed = try #require(batch.activeID)
+            batch.removeActive()
+            while batch.busy { try await Task.sleep(for: .milliseconds(10)) }
+            #expect(controller.job?.pendingCount == 1 && controller.job?.sources[removed] == nil)
+            batch.undoRemoval()
+            while batch.busy { try await Task.sleep(for: .milliseconds(10)) }
+            #expect(controller.job == saved)
+            batch.removeActive()
+            while batch.busy { try await Task.sleep(for: .milliseconds(10)) }
+
+            // A handoff saved by an earlier app can still reference the removed scan.
+            saved.directoryBookmark = nil
+            controller.restore(saved)
+            #expect(controller.needsRecoveryDirectory && controller.job?.pendingCount == 1)
+            #expect(controller.job?.sources[removed] == nil)
+        }
+    }
+
     /// Real ImageIO/Core Image fixtures exercise the same renderer and file publishing
     /// used by the app. Every invocation owns a separate disposable source/destination.
     private func withStore(_ body: (FilmStore, URL) async throws -> Void) async throws {

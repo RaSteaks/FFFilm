@@ -159,6 +159,8 @@ final class NegativeStore {
         base = nil; positive = nil; candidate = nil; sampleError = nil
         captureLocked = false; needsCameraResampling = false; isComparingOriginal = false
         if isCamera { camera.setBase(nil) }
+        // The discarded positive may have been the only bitmap sharpened at this zoom.
+        sharpenDisplay(target: displayLimit)
     }
 
     func reportImportError(_ error: Error) {

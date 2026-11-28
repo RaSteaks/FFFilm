@@ -615,6 +615,21 @@ struct NegativeStoreTests {
         #expect(store.filmLook == .neutral && store.outputName.isEmpty)
     }
 
+    @Test func changingMaterialRefreshesOriginalAtCurrentZoom() async throws {
+        let file = try externalFixture(width: 2200, height: 1400)
+        defer { try? FileManager.default.removeItem(at: file) }
+        let store = NegativeStore()
+        store.loadFile(file); try await waitUntilIdle(store)
+        store.selectBase(); try await waitUntilIdle(store)
+        store.confirmBase(); try await waitUntilIdle(store)
+        store.displayNeeds(2200)
+        try await waitFor { store.imageState.positive?.width == 2200 }
+        try #require(store.imageState.original?.width == 1800)
+        store.setInputType(.slide)
+        try await waitFor { store.displayed?.width == 2200 }
+        #expect(store.displayed === store.imageState.original && store.canExport)
+    }
+
     @Test func interruptedPreviewSamplesAndExportsLastDisplayedFrame() async throws {
         let camera = StubNegativeCamera(), store = NegativeStore(camera: camera)
         let context = NegativePixels.context()

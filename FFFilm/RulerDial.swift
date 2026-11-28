@@ -1,7 +1,7 @@
 #if os(iOS)
 import SwiftUI
 
-/// A horizontal ruler that snaps to discrete stops, like a camera's thumb dial.
+/// A snapping dial with a horizontal ruler or a vertical camera thumbwheel face.
 ///
 /// The dial is a picker for values the operator reaches by swiping; exact values
 /// that are not stops stay owned by the caller's readout (a menu or text field).
@@ -9,6 +9,7 @@ import SwiftUI
 /// so parking beside a typed custom value, or scrolling to reflect an external change,
 /// never rewrites the model.
 struct RulerDial<Value: Hashable>: View {
+    enum Face { case ruler, verticalWheel }
     let values: [Value]
     /// The model's value when it is one of the stops; nil when it holds a custom value.
     let selection: Value?
@@ -23,6 +24,7 @@ struct RulerDial<Value: Hashable>: View {
     let customValueDescription: String?
     /// Production-standard stops get a longer tick and a firmer detent, like a dial's click stops.
     let isNotch: (Value) -> Bool
+    let face: Face
     /// Plays the shared soft click and haptic (`DialFeedback`) for each detent the operator turns.
     let feedback: Bool
     /// Called once per detent while the user scrolls, and for taps and VoiceOver adjustments.
@@ -41,7 +43,7 @@ struct RulerDial<Value: Hashable>: View {
     init(values: [Value], selection: Value?, parking: Value? = nil, spacing: CGFloat = 56,
          identifier: String, accessibilityLabel: Text, label: @escaping (Value) -> String,
          accessibilityValue: @escaping (Value) -> String, customValueDescription: String? = nil,
-         isNotch: @escaping (Value) -> Bool = { _ in false }, feedback: Bool = true,
+         isNotch: @escaping (Value) -> Bool = { _ in false }, face: Face = .ruler, feedback: Bool = true,
          onSelect: @escaping (Value) -> Void, onSettle: @escaping () -> Void = {}) {
         self.values = values
         self.selection = selection
@@ -53,6 +55,7 @@ struct RulerDial<Value: Hashable>: View {
         self.accessibilityValue = accessibilityValue
         self.customValueDescription = customValueDescription
         self.isNotch = isNotch
+        self.face = face
         self.feedback = feedback
         self.onSelect = onSelect
         self.onSettle = onSettle
@@ -67,26 +70,28 @@ struct RulerDial<Value: Hashable>: View {
     }
 
     private var restingIndex: Int? { Self.index(of: selection ?? parking, in: values) }
+    private var vertical: Bool { face == .verticalWheel }
 
-    var body: some View {
-        GeometryReader { proxy in
-            ScrollView(.horizontal) {
-                LazyHStack(spacing: 0) {
-                    ForEach(values.indices, id: \.self) { index in
-                        tick(index)
-                            .id(index)
-                    }
+    private var scrollingStops: some View {
+        let vertical = self.vertical
+        return GeometryReader { proxy in
+            let length = vertical ? proxy.size.height : proxy.size.width
+            ScrollView(vertical ? .vertical : .horizontal) {
+                if vertical {
+                    LazyVStack(spacing: 0) { stops }.scrollTargetLayout()
+                } else {
+                    LazyHStack(spacing: 0) { stops }.scrollTargetLayout()
                 }
-                .scrollTargetLayout()
             }
             .scrollIndicators(.hidden)
             .scrollTargetBehavior(.viewAligned(limitBehavior: .never))
             .scrollPosition($position, anchor: .center)
-            // Half-width margins let the first and last stops reach the indicator.
-            .contentMargins(.horizontal, max(0, (proxy.size.width - spacing) / 2), for: .scrollContent)
+            // Both end stops need enough inset to reach the fixed center indicator.
+            .contentMargins(vertical ? .vertical : .horizontal, max(0, (length - spacing) / 2), for: .scrollContent)
             .onScrollGeometryChange(for: Int.self) { geometry in
-                // contentInsets includes the margins, so offset + inset is the centred cell's leading edge.
-                Int(((geometry.contentOffset.x + geometry.contentInsets.leading) / spacing).rounded())
+                let offset = vertical ? geometry.contentOffset.y + geometry.contentInsets.top
+                                      : geometry.contentOffset.x + geometry.contentInsets.leading
+                return Int((offset / spacing).rounded())
             } action: { _, raw in
                 guard !values.isEmpty else { return }
                 let index = min(max(raw, 0), values.count - 1)
@@ -115,67 +120,129 @@ struct RulerDial<Value: Hashable>: View {
                     break
                 }
             }
-            // The first layout passes settle the width after the initial position was requested.
-            .onChange(of: proxy.size.width) { _, _ in
+            .onChange(of: length) { _, _ in
                 guard !userDriven else { return }
                 scroll(to: restingIndex, animated: false)
             }
         }
-        .frame(height: height)
-        .mask {
-            // Fade the ends so the ruler reads as continuing beyond the card.
-            LinearGradient(stops: [.init(color: .clear, location: 0),
-                                   .init(color: .black, location: 0.14),
-                                   .init(color: .black, location: 0.86),
-                                   .init(color: .clear, location: 1)],
-                           startPoint: .leading, endPoint: .trailing)
-        }
-        .overlay(alignment: .bottom) {
-            Capsule()
-                .fill(Palette.text)
-                .frame(width: 2, height: 26)
-                .padding(.bottom, 6)
-                .allowsHitTesting(false)
-        }
-        .onAppear { scroll(to: restingIndex, animated: false) }
-        .onChange(of: restingIndex) { _, index in
-            // External edits (presets, reset, typing, import) only move the ruler.
-            guard !userDriven else { return }
-            scroll(to: index, animated: true)
-        }
-        .onChange(of: values) { _, _ in
-            guard !userDriven else { return }
-            scroll(to: restingIndex, animated: false)
-        }
-        // The scrolling content's accessibility frame spans the whole ruler, far wider than
-        // the visible dial; a clear overlay gives VoiceOver and tests the dial's real frame.
-        .accessibilityHidden(true)
-        .overlay {
-            Color.clear
-                .allowsHitTesting(false)
-                .accessibilityElement()
-                .accessibilityLabel(accessibilityLabel)
-                .accessibilityValue(Text(verbatim: selection.map(accessibilityValue) ?? customValueDescription ?? ""))
-                .accessibilityAdjustableAction { direction in
-                    // A custom value moves to the neighbour of the stop the ruler is parked on;
-                    // with no usable value at all, increment starts at the first stop and
-                    // decrement at the last.
-                    let target: Int
-                    if let base = restingIndex {
-                        target = direction == .increment ? base + 1 : base - 1
-                    } else {
-                        target = direction == .increment ? 0 : values.count - 1
-                    }
-                    guard values.indices.contains(target) else { return }
-                    onSelect(values[target])
-                    onSettle()
+    }
+
+    var body: some View {
+        scrollingStops
+            .frame(height: vertical ? spacing * 3 : height)
+            .mask {
+                // Fade the ends so the ruler reads as continuing beyond the card.
+                LinearGradient(stops: [.init(color: .clear, location: 0),
+                                       .init(color: .black, location: 0.14),
+                                       .init(color: .black, location: 0.86),
+                                       .init(color: .clear, location: 1)],
+                               startPoint: vertical ? .top : .leading, endPoint: vertical ? .bottom : .trailing)
+            }
+            .overlay(alignment: vertical ? .center : .bottom) {
+                if vertical {
+                    RoundedRectangle(cornerRadius: 5)
+                        .strokeBorder(Palette.line)
+                        .frame(height: spacing)
+                        .padding(.horizontal, 4)
+                        .allowsHitTesting(false)
+                } else {
+                    Capsule()
+                        .fill(Palette.text)
+                        .frame(width: 2, height: 26)
+                        .padding(.bottom, 6)
+                        .allowsHitTesting(false)
                 }
-                .accessibilityIdentifier(identifier)
+            }
+            .background {
+                if vertical {
+                    let rim = RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    rim.fill(LinearGradient(colors: [Palette.background, Palette.controlSurface, Palette.background],
+                                            startPoint: .top, endPoint: .bottom))
+                        .overlay { rim.strokeBorder(Palette.line, lineWidth: 1) }
+                        .allowsHitTesting(false)
+                }
+            }
+            .onAppear { scroll(to: restingIndex, animated: false) }
+            .onChange(of: restingIndex) { _, index in
+                // External edits (presets, reset, typing, import) only move the ruler.
+                guard !userDriven else { return }
+                scroll(to: index, animated: true)
+            }
+            .onChange(of: values) { _, _ in
+                guard !userDriven else { return }
+                scroll(to: restingIndex, animated: false)
+            }
+            // The content spans every stop. Expose one adjustable element inside the visible dial.
+            .accessibilityHidden(true)
+            .overlay {
+                Color.clear
+                    .allowsHitTesting(false)
+                    .accessibilityElement()
+                    .accessibilityLabel(accessibilityLabel)
+                    .accessibilityValue(Text(verbatim: selection.map(accessibilityValue) ?? customValueDescription ?? ""))
+                    .accessibilityAdjustableAction { direction in
+                        // A custom value moves to the neighbour of the stop the ruler is parked on;
+                        // with no usable value at all, increment starts at the first stop and
+                        // decrement at the last.
+                        let target: Int
+                        if let base = restingIndex {
+                            target = direction == .increment ? base + 1 : base - 1
+                        } else {
+                            target = direction == .increment ? 0 : values.count - 1
+                        }
+                        guard values.indices.contains(target) else { return }
+                        onSelect(values[target])
+                        onSettle()
+                    }
+                    .accessibilityIdentifier(identifier)
+            }
+    }
+
+    private var stops: some View {
+        ForEach(values.indices, id: \.self) { index in
+            let value = values[index]
+            Group {
+                if vertical { wheelRow(value) }
+                else { tick(value) }
+            }
+            .contentShape(.rect)
+            .onTapGesture {
+                guard value != selection else { return }
+                if feedback { DialFeedback.shared.detent(notch: isNotch(value)) }
+                onSelect(value)
+                onSettle()
+            }
+            .id(index)
         }
     }
 
-    private func tick(_ index: Int) -> some View {
-        let value = values[index]
+    private func wheelRow(_ value: Value) -> some View {
+        Text(verbatim: label(value))
+            .font(.subheadline.monospaced().weight(value == selection ? .semibold : .regular))
+            .foregroundStyle(value == selection ? Palette.text : Palette.muted)
+            .lineLimit(1).minimumScaleFactor(0.7)
+            .padding(.horizontal, 24)
+            .frame(maxWidth: .infinity)
+            .frame(height: spacing)
+            .background {
+                Canvas { context, size in
+                    // Grip ridges travel with the drum on either side of the printed names.
+                    for tooth in 0..<7 {
+                        let y = (CGFloat(tooth) + 0.5) * size.height / 7
+                        for x in [8, size.width - 20] {
+                            let ridge = CGRect(x: x, y: y, width: 12, height: 1)
+                            context.fill(Path(ridge), with: .color(Palette.mutedDeep))
+                            context.fill(Path(ridge.offsetBy(dx: 0, dy: 1)), with: .color(.black))
+                        }
+                    }
+                }
+            }
+            .scrollTransition(.interactive.threshold(.centered), axis: .vertical) { [reduceMotion] row, phase in
+                row.scaleEffect(x: 1, y: reduceMotion ? 1 : 1 - 0.18 * abs(phase.value))
+            }
+    }
+
+    private func tick(_ value: Value) -> some View {
         let selected = value == selection
         let notch = isNotch(value)
         return VStack(spacing: 6) {
@@ -204,13 +271,6 @@ struct RulerDial<Value: Hashable>: View {
         }
         .frame(width: spacing)
         .frame(maxHeight: .infinity)
-        .contentShape(.rect)
-        .onTapGesture {
-            guard value != selection else { return }
-            if feedback { DialFeedback.shared.detent(notch: notch) }
-            onSelect(value)
-            onSettle()
-        }
     }
 
     private func scroll(to index: Int?, animated: Bool) {

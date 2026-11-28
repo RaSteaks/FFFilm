@@ -7,6 +7,8 @@ import UIKit
 /// App-wide language and storage preferences are shared across windows and retained after relaunch.
 struct SettingsView: View {
     @AppStorage(StorageUnit.preferenceKey) private var unit: StorageUnit = .decimal
+    @Bindable private var appearance = WorkbenchAppearance.shared
+    @AppStorage("fffilm.dialSound") private var dialSound = true
     @Bindable private var languagePreference = AppLanguagePreference.shared
 
     var body: some View {
@@ -23,6 +25,12 @@ struct SettingsView: View {
                 .accessibilityIdentifier("app-language-picker")
             }
 
+            Section {
+                Toggle("settings.highContrast", isOn: $appearance.highContrast)
+                #if os(iOS)
+                Toggle("settings.dialSound", isOn: $dialSound)
+                #endif
+            }
             Section {
                 Picker("settings.capacity", selection: $unit) {
                     ForEach(StorageUnit.allCases) { Text($0.title).tag($0) }

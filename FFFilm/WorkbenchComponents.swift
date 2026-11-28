@@ -253,14 +253,21 @@ struct AdaptiveWorkbenchLayout: SwiftUI.Layout {
     }
 }
 
+@Observable final class WorkbenchAppearance {
+    static let shared = WorkbenchAppearance()
+    var highContrast = UserDefaults.standard.bool(forKey: "fffilm.highContrast") {
+        didSet { UserDefaults.standard.set(highContrast, forKey: "fffilm.highContrast") }
+    }
+}
+
 enum Palette {
     static let background = Color(red: 17 / 255, green: 17 / 255, blue: 17 / 255)
     static let surface = Color(red: 25 / 255, green: 25 / 255, blue: 25 / 255)
     static let controlSurface = Color(red: 34 / 255, green: 34 / 255, blue: 34 / 255)
     static let text = Color(red: 242 / 255, green: 242 / 255, blue: 242 / 255)
-    static let muted = Color(red: 166 / 255, green: 166 / 255, blue: 166 / 255)
-    static let mutedDeep = Color(red: 118 / 255, green: 118 / 255, blue: 118 / 255)
-    static let line = Color.white.opacity(0.14)
+    static var muted: Color { Color(white: WorkbenchAppearance.shared.highContrast ? 0.94 : 166 / 255) }
+    static var mutedDeep: Color { Color(white: WorkbenchAppearance.shared.highContrast ? 0.87 : 118 / 255) }
+    static var line: Color { Color.white.opacity(WorkbenchAppearance.shared.highContrast ? 0.5 : 0.14) }
 }
 
 extension View {
@@ -278,7 +285,9 @@ extension View {
         // Desktop content stays opaque and quiet; native window chrome owns toolbar materials.
         background(Palette.surface, in: RoundedRectangle(cornerRadius: min(cornerRadius, 12)))
             .overlay {
+                // Decorative surface borders must pass mouse events to native text fields.
                 RoundedRectangle(cornerRadius: min(cornerRadius, 12)).stroke(Palette.line.opacity(0.6))
+                    .allowsHitTesting(false)
             }
         #else
         // iOS uses Liquid Glass when available and keeps material surfaces on earlier releases.
@@ -286,7 +295,7 @@ extension View {
             glassEffect(.regular, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
         } else {
             background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-                .overlay { RoundedRectangle(cornerRadius: cornerRadius, style: .continuous).stroke(Palette.line) }
+                .overlay { RoundedRectangle(cornerRadius: cornerRadius, style: .continuous).stroke(Palette.line).allowsHitTesting(false) }
         }
         #endif
     }

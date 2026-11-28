@@ -2,7 +2,7 @@
 import AVFoundation
 import UIKit
 
-/// The shared detent cue for the frame-rate/media dials and the duration wheel: a soft,
+/// The shared detent cue for the frame-rate, media, film-look and duration dials: a soft,
 /// short synthesized click with a light haptic, so turning any dial feels like one instrument.
 ///
 /// It stays gentle on purpose:
@@ -33,8 +33,8 @@ final class DialFeedback {
 
     /// Call when a touch lands on a dial so the first detent plays without start-up latency.
     func prepare() {
+        // Tracking may end without crossing a stop. Start audio only when a sound will play.
         haptic.prepare()
-        startAudioIfNeeded()
     }
 
     /// One detent. Notches are production-standard stops and land a little firmer and lower.
@@ -45,9 +45,11 @@ final class DialFeedback {
         lastCue = now
         let pace = min(1, max(0.35, interval / restingInterval))
         haptic.impactOccurred(intensity: (notch ? 0.7 : 0.4) * pace)
-        playClick(notch: notch, level: Float(pace))
+        if UserDefaults.standard.object(forKey: "fffilm.dialSound") as? Bool != false {
+            playClick(notch: notch, level: Float(pace))
+            pauseWhenIdle()
+        }
         haptic.prepare()
-        pauseWhenIdle()
     }
 
     private func startAudioIfNeeded() {

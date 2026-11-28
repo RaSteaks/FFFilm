@@ -86,16 +86,21 @@ struct ShootingDay: Codable, Identifiable, Equatable {
     }
     isolated deinit { if let observer { NotificationCenter.default.removeObserver(observer) } }
 
-    func refresh() {
+    func refresh(returnToOpenDay: Bool = false) {
         lastRevision = defaults.string(forKey: revisionKey); refreshedDate = .now
         if let data = defaults.data(forKey: Self.daysKey),
            let book = try? JSONDecoder().decode(Book.self, from: data),
            let day = book.days.first(where: { $0.id == book.active }) {
-            days = book.days; activeDay = day
+            // Other windows may change the book while this window is reading an archived handoff.
+            let selectedArchive = !returnToOpenDay && activeDay.archivedUnit != nil
+                ? book.days.first(where: { $0.id == activeDay.id }) : nil
+            days = book.days
             if day.followsCalendar != false, !Calendar.current.isDateInToday(book.accessed) {
                 newDay(project: day.project, date: .now, followsCalendar: true)
-                return
+            } else {
+                activeDay = day
             }
+            if let selectedArchive { activeDay = selectedArchive }
         } else {
             days = [activeDay]
             if let data = defaults.data(forKey: Self.key),

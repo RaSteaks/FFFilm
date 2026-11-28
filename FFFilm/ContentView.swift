@@ -233,7 +233,9 @@ private struct CalculatorWorkbench: View {
                                     usesMeter: usesMeter)
             }
         }
-        .sheet(isPresented: $showsSummary) {
+        .sheet(isPresented: $showsSummary, onDismiss: {
+            store.summary.refresh(returnToOpenDay: true)
+        }) {
             SummarySheet(store: store)
         }
     }
@@ -1304,7 +1306,7 @@ private struct SummarySheet: View {
         }
         .sheet(isPresented: $createsDay) { SummaryEditSheet(summary: store.summary, entry: nil) }
         .onAppear { store.summary.refresh() }
-        .onDisappear { copyResetTask?.cancel(); store.summary.refresh() }
+        .onDisappear { copyResetTask?.cancel() }
         .sensoryFeedback(.success, trigger: copied) { _, newValue in newValue }
         .tint(Palette.text)
         .preferredColorScheme(.dark)

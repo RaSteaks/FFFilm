@@ -60,6 +60,7 @@ struct ShutterLibraryView: View {
                     Text(record.title).foregroundStyle(Palette.text).lineLimit(2)
                     Text(AppText.shutterRestoreLabel(record.rig)).font(.caption).foregroundStyle(Palette.muted)
                     if !record.cameraLabel.isEmpty { Text(record.cameraLabel).font(.caption).foregroundStyle(Palette.muted).lineLimit(2) }
+                    if !record.conditions.isEmpty { Text(record.conditions).font(.caption).lineLimit(2) }
                     if record.fieldChecked {
                         Label("shutter.library.checked", systemImage: "checkmark.circle").font(.caption)
                     }

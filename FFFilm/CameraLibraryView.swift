@@ -20,7 +20,7 @@ struct CameraLibraryView: View {
         let search = query.trimmingCharacters(in: .whitespacesAndNewlines)
         return store.sortedCameras.filter {
             !$0.isStandaloneProRes && (search.isEmpty ||
-                "\($0.manufacturer.rawValue) \($0.name)".localizedStandardContains(search))
+                "\($0.manufacturer.rawValue) \($0.name)".localizedStandardContains(search) || store.camera($0, supportsCodecNamed: search))
         }
     }
 
@@ -233,6 +233,10 @@ private struct CameraDetailView: View {
                     DisclosureGroup {
                         if !mode.note.isEmpty {
                             Text(mode.note).font(.caption).foregroundStyle(.secondary)
+                        }
+                        Button("camera.calculateMode") {
+                            store.selectCamera(camera.id); store.selectMode(mode.id)
+                            store.catalogSelection += 1
                         }
                         ForEach(mode.resolutions) { resolution in
                             VStack(alignment: .leading, spacing: 4) {

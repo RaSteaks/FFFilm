@@ -8,15 +8,18 @@ enum DisplayFormat {
     /// Convert from canonical decimal GB, including the matching TB/TiB threshold.
     static func compactStorage(_ gigabytes: Double, unit: StorageUnit = .decimal) -> String {
         let value = unit.converted(decimalGB: gigabytes)
+        if value > 0, value < 1 {
+            let small = value * unit.radix
+            let label = unit == .decimal ? "MB" : "MiB"
+            return small < 0.01 ? "<0.01 \(label)" : "\(number(small, decimals: small < 1 ? 2 : 1)) \(label)"
+        }
         return value >= unit.radix
             ? "\(number(value / unit.radix, decimals: 2)) \(unit.largeSymbol)"
             : "\(number(value, decimals: 0)) \(unit.symbol)"
     }
 
     static func fps(_ value: Double) -> String {
-        value.rounded() == value
-            ? String(Int(value))
-            : String(format: "%.2f", value).replacingOccurrences(of: "0$", with: "", options: .regularExpression)
+        value.formatted(.number.grouping(.never).precision(.fractionLength(0...3)))
     }
 
     static func duration(_ hours: Double) -> String {

@@ -33,7 +33,7 @@ struct MacWorkbenchToolbar: ToolbarContent {
                     store.addCurrentToSummary()
                 } label: {
                     Label {
-                        Text("summary.add")
+                        Text(store.addLabel)
                         Text("\(store.summary.entries.count)").monospacedDigit().foregroundStyle(.secondary)
                     } icon: {
                         Image(systemName: "plus")
@@ -41,6 +41,7 @@ struct MacWorkbenchToolbar: ToolbarContent {
                 }
                 .help(Text("Add setup to summary (⇧⌘P)"))
                 .keyboardShortcut("p", modifiers: [.command, .shift])
+                .disabled(!store.canShareRecording)
                 .accessibilityIdentifier("summary-add")
             }
             // Both calculator tabs expose Copy after the in-content header is removed.
@@ -65,7 +66,7 @@ struct MacWorkbenchToolbar: ToolbarContent {
                 // Keep each branch as localized Text; a computed String skips localization.
                 .help(store.activeView == .rate ? Text("Copy configuration (⇧⌘C)") : Text("Copy shutter summary (⇧⌘C)"))
                 .keyboardShortcut("c", modifiers: [.command, .shift])
-                .disabled(store.activeView == .shutter && store.shutterCalculation.exposure == nil)
+                .disabled(store.activeView == .shutter ? store.shutterCalculation.exposure == nil : !store.canShareRecording)
                 .accessibilityIdentifier("copy-action")
                 .onDisappear { copyResetTask?.cancel(); copied = false }
             }
@@ -76,13 +77,12 @@ struct MacWorkbenchToolbar: ToolbarContent {
                     if store.activeView == .rate {
                         Button("nav.copyLink", systemImage: "link") {
                             PlatformClipboard.copy(store.configurationText)
-                        }
+                        }.disabled(!store.canShareRecording)
                     }
                     Button("nav.reset", systemImage: "arrow.counterclockwise") {
                         store.resetActiveView()
                     }
                     .help(Text("nav.reset"))
-                    .keyboardShortcut("r", modifiers: [.command, .shift])
                     .accessibilityIdentifier("reset-action")
                 } label: {
                     Label("nav.more", systemImage: "ellipsis.circle")
@@ -160,6 +160,11 @@ struct MacWorkbenchCommands: Commands {
             Button(AppText.localized("nav.film")) { store?.setActiveView(.film) }
                 .keyboardShortcut("3")
                 .disabled(store == nil)
+            Divider()
+            // A command in a closed toolbar Menu is not registered as a window shortcut.
+            Button(AppText.localized("nav.reset")) { store?.resetActiveView() }
+                .keyboardShortcut("r", modifiers: [.command, .shift])
+                .disabled(store == nil || store?.activeView == .film)
         }
     }
 }

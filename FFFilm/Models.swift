@@ -18,6 +18,8 @@ enum CaptureSourceType: String, Codable, Hashable {
 }
 
 enum RateModel: String, Codable, Hashable {
+    case reference
+    case unavailable
     case appleTarget = "apple-target"
     case estimatedBitsPerPixel = "estimated-bpp"
     // Manufacturer-published sensor-rate rows; the table is shared across brands.
@@ -30,11 +32,21 @@ struct SensorCrop: Codable, Hashable {
     let factor: Double
 }
 
+/// Published reference at 24 fps; runtime anchors include the card's usable recording space.
+struct RecordingReference: Codable, Hashable {
+    let gbPerHour24: Double
+    let maximumFps: Double
+    let cardMinutes24: [String: Double]?
+    let cardFps: [String: Double]?
+    let frameRates: [Double]?
+}
+
 struct Resolution: Codable, Identifiable, Hashable {
     let id: String
     let label: String
     let width: Int
     let height: Int
+    let references: [String: RecordingReference]?
     let activeWidth: Int?
     let activeHeight: Int?
     let maxSensorFps: Double?
@@ -58,6 +70,7 @@ struct CameraProfile: Codable, Identifiable, Hashable {
     let id: String
     let name: String
     let manufacturer: CameraManufacturer
+    let mediaIDs: [String]?
     let sourceType: CaptureSourceType?
     let maxSensorFps: Double?
     let maxSensorFpsWithoutOverdrive: Double?
@@ -102,6 +115,7 @@ struct CatalogData: Codable, Hashable {
     // Published per-camera rows keyed "camera|codec|resolution" → frame rate → MB/s payload.
     let rateTable: [String: [String: Double]]
 
+    static let referenceRevision = "2026-11-26"
     static let bundled: CatalogData = {
         do {
             return try load()
@@ -156,7 +170,7 @@ struct CaptureSettings: Codable, Equatable, Hashable {
         cameraId: "alexa35",
         modeId: "open-gate",
         resolutionId: "a35-open",
-        codecId: "arriraw-hde",
+        codecId: "arriraw",
         projectFps: 24,
         sensorFps: 24,
         sensorOverdrive: false,
@@ -254,6 +268,29 @@ struct Calculation: Hashable {
     let formatFactor: Double
     /// The cadence that is actually recorded: project fps for standalone ProRes, sensor fps otherwise.
     let captureFps: Double
+
+    var hasEstimate: Bool { sensorGbPerHour > 0 }
+    var rateBasis: String {
+        if resolution.references?[codec.id] != nil {
+            return AppText.key(camera.id == "alexa35" ? "rate.arriManual" : "rate.reference24")
+        }
+        if !camera.isStandaloneProRes, camera.supportedCodecIds == nil, resolution.supportedCodecIds == nil,
+           codec.rateModel != .publishedTable, codec.rateModel != .unavailable {
+            return AppText.key("rate.generic")
+        }
+        switch codec.rateModel {
+        case .publishedTable: return AppText.key("rate.published")
+        case .appleTarget: return AppText.key("rate.target")
+        case .estimatedBitsPerPixel: return AppText.key("rate.estimated")
+        case .unavailable, .reference: return AppText.key("rate.unknown")
+        }
+    }
+    var referenceCardMinutes: Double? { resolution.references?[codec.id]?.cardMinutes24?[media.id] }
+    var requiredCards: Int {
+        guard captureRuntimeHours > 0 else { return 0 }
+        return Int(ceil(dayTotalGb / (captureRuntimeHours * sensorGbPerHour)))
+    }
+    var hdeEstimateGb: Double? { codec.id == "arriraw" ? dayTotalGb * 0.6 : nil }
 }
 
 /// Two independent planning questions share one camera format without overwriting inputs.
@@ -370,6 +407,16 @@ enum ShutterFramePreset: String, CaseIterable, Identifiable {
     }
 
     /// Frequent production cadences stay one tap away; the menu retains every exact preset.
+    /// Catalog tables use nominal decimal keys; only catalog selections are mapped to rational rates.
+    static func recordingCadence(_ fps: Double) -> Double {
+        switch fps {
+        case 23.976: 24_000 / 1_001
+        case 29.97: 30_000 / 1_001
+        case 59.94: 60_000 / 1_001
+        case 119.88: 120_000 / 1_001
+        default: fps
+        }
+    }
     static let quick: [Self] = [.fractional24, .fps24, .fps25, .fps50, .fps60]
     var shortLabel: String {
         switch self {

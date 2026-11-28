@@ -206,17 +206,53 @@ struct CalculatorStoreTests {
         store.addCurrentToSummary()
         #expect(store.summary.entries.count == 3)
 
-        // Entries for cameras the catalog no longer contains are dropped on load.
-        struct Payload: Encodable { var version = 1; var entries: [SummaryEntry] }
-        var retired = store.settings
-        retired.cameraId = "retired-camera"
-        let stored = [SummaryEntry(id: UUID(), settings: retired, added: .now)] + store.summary.entries
-        defaults.set(try JSONEncoder().encode(Payload(entries: stored)), forKey: RecordingSummary.key)
+        let firstDay = store.summary.activeDay
+        let link = try #require(URL(string: store.configurationText))
+        #expect(store.configuration(from: link) == store.settings)
+        #expect(store.configuration(from: URL(string: store.configurationText + "&hours=2")!) == nil)
+        store.summary.newDay(project: "Night unit", date: .now)
+        #expect(other.summary.entries.isEmpty)
+        store.recordingTask = .runtime
+        store.recordingRig = "B"
+        store.addCurrentToSummary()
+        let card = try #require(store.summary.entries.first)
+        #expect(card.rig == "B" && card.cardAllocation == true)
+        #expect(store.summaryTotalGb == store.calculation.media.capacityGb)
+        #expect(card.settings.shootHours == store.calculation.captureRuntimeHours)
+        store.summary.edit(card.id, rig: "C", hours: 1)
+        #expect(other.summary.entries.first?.rig == "C" && store.summaryTotalGb == store.calculation.media.capacityGb)
+        store.summary.selectDay(firstDay)
+        #expect(store.summary.entries.count == 3 && store.summary.activeDay.archivedUnit != nil)
+        let archivedID = try #require(store.summary.entries.first?.id)
+        store.removeSummaryEntry(id: archivedID)
+        #expect(store.summary.entries.count == 3 && other.summary.entries.count == 1)
         store.summary.refresh()
-        #expect(store.summary.entries.count == 3)
-
         store.clearSummary()
         #expect(CalculatorStore(defaults: defaults).summary.entries.isEmpty)
+    }
+
+    @Test("Legacy entries migrate by shooting date and retain unavailable original IDs")
+    func legacySummaryHandoff() throws {
+        struct Legacy: Encodable { let version = 1; let entries: [SummaryEntry] }
+        let namespace = "FFFilm.LegacySummary.\(UUID())"
+        let defaults = try #require(UserDefaults(suiteName: namespace))
+        defer { defaults.removePersistentDomain(forName: namespace) }
+        let yesterday = try #require(Calendar.current.date(byAdding: .day, value: -1, to: .now))
+        var retired = CaptureSettings.default
+        retired.cameraId = "retired-camera"
+        let input = Legacy(entries: [
+            SummaryEntry(id: UUID(), settings: .default, added: yesterday),
+            SummaryEntry(id: UUID(), settings: retired, added: yesterday),
+            SummaryEntry(id: UUID(), settings: .default, added: .now)
+        ])
+        defaults.set(try JSONEncoder().encode(input), forKey: RecordingSummary.key)
+        let store = CalculatorStore(defaults: defaults)
+        #expect(store.summary.entries.count == 1 && store.summary.entries[0].snapshot?.reconstructed == true)
+        let archive = try #require(store.summary.days.first { $0.archivedUnit != nil })
+        store.summary.selectDay(archive)
+        #expect(store.summary.entries.count == 2)
+        #expect(store.readableSummary(storageUnit: .decimal).contains("retired-camera"))
+        #expect(CalculatorStore(defaults: defaults).summary.entries.count == 1)
     }
 
     @Test("Dial detents recalculate live but save camera and shutter memory once they settle")

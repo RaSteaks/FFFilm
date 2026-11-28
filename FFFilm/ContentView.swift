@@ -8,6 +8,8 @@ struct ContentView: View {
     // Both calculator tabs share their model, while each page retains its own editor state.
     @State private var store = CalculatorStore()
     @State private var showsCameras = false
+    @State private var linkedSettings: CaptureSettings?
+    @State private var presentsConfiguration = false
     #if os(iOS)
     @State private var negativeStore: NegativeStore
     @State private var selectedTab: MobileTab = .rate
@@ -36,11 +38,6 @@ struct ContentView: View {
         Group {
             #if os(iOS)
             mobileTabs
-                .onOpenURL { url in
-                    showsCameras = false
-                    selectedTab = .negative
-                    negativeStore.openExternalFile(url)
-                }
                 .sensoryFeedback(.selection, trigger: selectedTab)
                 .onChange(of: selectedTab) { _, tab in
                     switch tab {
@@ -81,7 +78,36 @@ struct ContentView: View {
         }
         // Present outside the compact tab shell so iPad sheets retain their
         // native regular-width list/detail presentation and window adaptation.
+        .onOpenURL { url in
+            if url.scheme?.lowercased() == "fffilm" {
+                linkedSettings = store.configuration(from: url)
+                presentsConfiguration = true
+            } else {
+                #if os(iOS)
+                showsCameras = false; selectedTab = .negative
+                negativeStore.openExternalFile(url)
+                #endif
+            }
+        }
+        .alert("handoff.configuration", isPresented: $presentsConfiguration) {
+            if let linkedSettings {
+                Button("action.apply") {
+                    store.applyConfiguration(linkedSettings)
+                    #if os(iOS)
+                    selectedTab = .rate
+                    #endif
+                    store.setActiveView(.rate)
+                }.accessibilityIdentifier("handoff-apply")
+            }
+            Button("shutter.library.cancel", role: .cancel) {}
+        } message: {
+            if let value = linkedSettings {
+                let result = CalculatorEngine(catalog: store.catalog).calculate(settings: value)
+                Text("\(result.camera.name) · \(result.resolution.label) · \(result.codec.name) · \(DisplayFormat.fps(result.captureFps)) fps · \(result.media.label) · \(DisplayFormat.plannedDuration(value.shootHours))")
+            } else { Text("handoff.invalid") }
+        }
         .sheet(isPresented: $showsCameras) { CameraLibraryView(store: store) }
+        .onChange(of: store.catalogSelection) { _, _ in showsCameras = false }
         .tint(Palette.text)
         .preferredColorScheme(.dark)
         // Every add-to-summary control (meter, panel, header, macOS toolbar) shares one confirmation.
@@ -239,7 +265,7 @@ private struct CalculatorWorkbench: View {
                         // and storage caveats should not appear on the shutter calculator.
                         if view == .rate {
                             Text("footer.estimate")
-                                .font(.system(size: 9, weight: .medium, design: .monospaced))
+                                .font(.system(.caption, design: .monospaced, weight: .medium))
                                 .tracking(0.8)
                                 .foregroundStyle(Palette.mutedDeep)
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -258,19 +284,22 @@ private struct CalculatorWorkbench: View {
                     .padding(.bottom, 28)
                     .frame(maxWidth: .infinity)
                 }
+                #if os(iOS)
                 .scrollDismissesKeyboard(.interactively)
-                // The inset reserves scroll space, so the last controls stay reachable above the meter.
                 .safeAreaInset(edge: .bottom, spacing: 0) {
-                    #if os(iOS)
                     if usesMeter && view == .rate {
-                        RateMeter(store: store, showsSummary: $showsSummary)
-                            .frame(maxWidth: maximumWidth)
-                            .padding(.horizontal, Layout.pageGutter)
-                            .padding(.top, 6)
-                            .padding(.bottom, 8)
+                        if store.calculation.hasEstimate {
+                            RateMeter(store: store, showsSummary: $showsSummary)
+                                .frame(maxWidth: maximumWidth)
+                                .padding(.horizontal, Layout.pageGutter)
+                                .padding(.top, 6)
+                                .padding(.bottom, 8)
+                        } else {
+                            UnavailableRecordingResult(showsSummary: $showsSummary)
+                        }
                     }
-                    #endif
                 }
+                #endif
         }
     }
 }
@@ -326,7 +355,7 @@ private struct HeaderView: View {
                         store.addCurrentToSummary()
                     } label: {
                         HStack(spacing: 4) {
-                            Label("summary.add", systemImage: "plus")
+                            Label(store.addLabel, systemImage: "plus")
                             Text("\(store.summary.entries.count)")
                                 .monospacedDigit()
                                 .foregroundStyle(Palette.muted)
@@ -334,8 +363,9 @@ private struct HeaderView: View {
                         .fixedSize(horizontal: true, vertical: false)
                         .frame(minWidth: 44, minHeight: 44)
                     }
-                    .accessibilityLabel(Text("summary.add"))
+                    .accessibilityLabel(Text(store.addLabel))
                     .accessibilityValue("\(store.summary.entries.count)")
+                    .disabled(!store.canShareRecording)
                     .accessibilityIdentifier("summary-add-header")
                     .accessibilityHint(Text("summary.addHint"))
                 }
@@ -343,6 +373,7 @@ private struct HeaderView: View {
                 Button(action: copyCurrent) {
                     actionLabel(copied ? "nav.copied" : "nav.copy", systemImage: copied ? "checkmark" : "doc.on.doc")
                 }
+                .disabled(!store.canShareRecording)
                 .accessibilityIdentifier("copy-action")
                 .accessibilityHint(Text("copy.summaryHint"))
                 .sensoryFeedback(.success, trigger: copied) { _, newValue in newValue }
@@ -367,7 +398,7 @@ private struct HeaderView: View {
             if view == .rate {
                 Button("nav.copyLink", systemImage: "link") {
                     PlatformClipboard.copy(store.configurationText)
-                }
+                }.disabled(!store.canShareRecording)
             }
             Button("nav.reset", systemImage: "arrow.counterclockwise") {
                 store.resetActiveView()
@@ -484,6 +515,11 @@ private struct RateView: View {
                 // Field labels explain the task visually; keep extra guidance available to VoiceOver.
                 .accessibilityHint(Text(store.recordingTask.hint))
             }
+            if store.needsCadenceReview {
+                Button { store.needsCadenceReview = false } label: {
+                    Text("rate.confirmFPS") + Text(verbatim: " · \(DisplayFormat.fps(store.settings.sensorFps)) fps")
+                }
+            }
             QuickStartView(store: store, showsCameras: $showsCameras)
             // Controls keep one layout identity whether or not the meter is used, so rotating
             // a phone never resets the duration wheel or other editor state.
@@ -491,12 +527,25 @@ private struct RateView: View {
                 CaptureControls(store: store, availableWidth: isWide ? (contentWidth - Layout.workbenchColumnSpacing) * 0.55 : contentWidth)
                 if usesMeter {
                     Color.clear.frame(height: 0)
-                } else {
+                } else if store.calculation.hasEstimate {
                     RateResults(store: store, showsSummary: $showsSummary)
                         .accessibilitySortPriority(isWide ? 0 : 1)
+                } else {
+                    UnavailableRecordingResult(showsSummary: $showsSummary)
                 }
             }
         }
+    }
+}
+
+private struct UnavailableRecordingResult: View {
+    @Binding var showsSummary: Bool
+
+    var body: some View {
+        VStack(spacing: 8) {
+            Label("rate.unknown", systemImage: "questionmark.circle")
+            Button("summary.view") { showsSummary = true }
+        }.padding()
     }
 }
 
@@ -517,7 +566,10 @@ private struct CaptureControls: View {
     @FocusState private var durationFocused: Bool
     @State private var durationDraft = ""
     @State private var durationError: String?
-    @State private var durationPending = false
+    private var durationPending: Bool {
+        get { store.durationDraftPending }
+        nonmutating set { store.durationDraftPending = newValue }
+    }
     #endif
 
     private var usesCompactLayout: Bool {
@@ -533,9 +585,16 @@ private struct CaptureControls: View {
             // Establish the recording format before entering the task-specific storage plan.
             ParameterGroup(title: "group.format") {
                 formatFields
+                Text(store.calculation.rateBasis).font(.callout).foregroundStyle(.secondary)
             }
             ParameterGroup(title: "group.storagePlan") {
                 storageFields
+                if store.currentCamera.id == "alexa35" { Text(verbatim: "CODEX Compact Drive").font(.caption) }
+                if store.currentCamera.id == "venice2" { Text(verbatim: "Sony AXS-1TS66").font(.caption) }
+                TextField("summary.rig", text: Bindable(store).recordingRig).textFieldStyle(.roundedBorder)
+                if store.recordingTask == .capacity, store.calculation.hasEstimate {
+                    RecordingPlanDetails(store: store)
+                }
             }
         }
         .accessibilityElement(children: .contain)
@@ -549,7 +608,7 @@ private struct CaptureControls: View {
             #if os(iOS)
             wheel = DurationComponents(hours: store.settings.shootHours)
             #else
-            durationDraft = DisplayFormat.number(store.settings.shootHours, decimals: 2)
+            durationDraft = store.settings.shootHours.formatted(.number.grouping(.never).precision(.fractionLength(0...12)))
             #endif
             durationInitialized = true
         }
@@ -572,7 +631,7 @@ private struct CaptureControls: View {
             let stored = DurationComponents(hours: value)
             if stored.totalSeconds != wheel.totalSeconds { wheel = stored }
             #else
-            durationDraft = DisplayFormat.number(value, decimals: 2)
+            durationDraft = value.formatted(.number.grouping(.never).precision(.fractionLength(0...12)))
             durationError = nil
             durationPending = false
             #endif
@@ -604,10 +663,11 @@ private struct CaptureControls: View {
     private var storageFields: some View {
         if store.recordingTask == .capacity {
             durationField
+            FieldCard("field.media") { mediaPicker }
         } else {
             #if os(iOS)
-            let labels = Dictionary(uniqueKeysWithValues: store.catalog.mediaOptions.map { ($0.id, $0.label) })
-            dialField("field.media", values: store.catalog.mediaOptions.map(\.id), selection: store.settings.mediaId,
+            let labels = Dictionary(uniqueKeysWithValues: store.availableMedia.map { ($0.id, $0.label) })
+            dialField("field.media", values: store.availableMedia.map(\.id), selection: store.settings.mediaId,
                       spacing: 64, identifier: "capture-media-dial", label: { labels[$0] ?? $0 },
                       select: { store.selectMedia($0) }) { mediaPicker }
             #else
@@ -661,13 +721,17 @@ private struct CaptureControls: View {
 
     private var codecField: some View {
         FieldCard("field.codec") {
-            Picker("field.codec", selection: Binding(get: { store.settings.codecId }, set: store.selectCodec)) {
-                ForEach(store.availableCodecs) { codec in
-                    Text(verbatim: codec.name).tag(codec.id)
+            if store.availableCodecs.isEmpty {
+                Text("rate.unknown").font(.callout)
+            } else {
+                Picker("field.codec", selection: Binding(get: { store.settings.codecId }, set: store.selectCodec)) {
+                    ForEach(store.availableCodecs) { codec in
+                        Text(verbatim: codec.name).tag(codec.id)
+                    }
                 }
+                .fieldPicker(compact: usesCompactLayout)
+                .accessibilityIdentifier("capture-codec")
             }
-            .fieldPicker(compact: usesCompactLayout)
-            .accessibilityIdentifier("capture-codec")
         }
     }
 
@@ -723,7 +787,7 @@ private struct CaptureControls: View {
 
     private var mediaPicker: some View {
         Picker("field.media", selection: Binding(get: { store.settings.mediaId }, set: { pickFromMenu(); store.selectMedia($0) })) {
-            ForEach(store.catalog.mediaOptions) { media in
+            ForEach(store.availableMedia) { media in
                 Text(verbatim: media.label).tag(media.id)
             }
         }
@@ -865,7 +929,7 @@ private struct CaptureControls: View {
         }
         durationError = nil
         // A valid draft stays uncommitted until submit or focus loss.
-        durationPending = value != store.settings.shootHours
+        durationPending = abs(value - store.settings.shootHours) > 1e-12
     }
 
     private func parsedDuration(_ text: String) -> Double? {
@@ -880,14 +944,14 @@ private struct CaptureControls: View {
         // Invalid or empty drafts stay visible with their inline error; the plan
         // keeps the last valid calculation instead of being silently corrected.
         guard let value = parsedDuration(durationDraft) else { return }
-        durationDraft = DisplayFormat.number(value, decimals: 2)
+        durationDraft = value.formatted(.number.grouping(.never).precision(.fractionLength(0...12)))
         durationError = nil
         durationPending = false
         store.setShootHours(value)
     }
 
     private func applyQuickDuration(_ hours: Double) {
-        durationDraft = DisplayFormat.number(hours, decimals: 2)
+        durationDraft = hours.formatted(.number.grouping(.never).precision(.fractionLength(0...12)))
         durationError = nil
         durationPending = false
         store.setShootHours(hours)
@@ -960,6 +1024,7 @@ private struct RateResults: View {
                             value: DisplayFormat.compactStorage(result.media.capacityGb, unit: unit),
                             detail: result.media.label)
             }
+            Text(result.rateBasis).font(.caption).foregroundStyle(Palette.muted)
             planningRow(title: "recording.hourlyData",
                         value: "\(DisplayFormat.number(unit.converted(decimalGB: result.sensorGbPerHour))) \(unit.symbol)/h",
                         detail: "\(DisplayFormat.number(result.sensorMbps)) Mb/s")
@@ -975,7 +1040,7 @@ private struct RateResults: View {
                     store.addCurrentToSummary()
                 } label: {
                     Label {
-                        Text("summary.add")
+                        Text(store.addLabel)
                         Text("\(store.summary.entries.count)")
                             .monospacedDigit()
                             .foregroundStyle(Palette.muted)
@@ -985,11 +1050,11 @@ private struct RateResults: View {
                 }
                 .buttonStyle(.bordered)
                 .accessibilityHint(Text("summary.addHint"))
+                .disabled(!store.canShareRecording)
                 .accessibilityIdentifier("summary-add")
 
                 Button("summary.view") { showsSummary = true }
                     .buttonStyle(.bordered)
-                    .disabled(store.summary.entries.isEmpty)
                     .accessibilityIdentifier("summary-open")
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -1072,7 +1137,7 @@ private struct RateMeter: View {
                 } label: {
                     HStack(spacing: 5) {
                         Image(systemName: "plus")
-                        Text("summary.add")
+                        Text(store.addLabel)
                         if count > 0 {
                             Text(verbatim: "\(count)")
                                 .monospacedDigit()
@@ -1087,8 +1152,10 @@ private struct RateMeter: View {
                 .buttonStyle(.bordered)
                 .fixedSize()
                 .accessibilityHint(Text("summary.addHint"))
+                .disabled(!store.canShareRecording)
                 .accessibilityIdentifier("summary-add")
             }
+            Text(result.rateBasis).font(.caption2).foregroundStyle(Palette.muted)
             // How the answer is derived: planned time × rate, or card capacity ÷ rate.
             HStack(spacing: 4) {
                 if capacity {
@@ -1097,13 +1164,17 @@ private struct RateMeter: View {
                     Text(verbatim: "× \(rate)")
                 } else {
                     Text(verbatim: result.media.label)
-                    Text(verbatim: "÷ \(rate)")
+                    if let minutes = result.referenceCardMinutes {
+                        Text(verbatim: "· \(DisplayFormat.number(minutes, decimals: 0)) min @ 24 fps")
+                    } else {
+                        Text(verbatim: "÷ \(rate)")
+                    }
                 }
                 Spacer(minLength: 8)
-                if count > 0 {
+                Group {
                     Button { showsSummary = true } label: {
                         HStack(spacing: 4) {
-                            Text(verbatim: AppText.summaryLine(count: count,
+                            Text(verbatim: count == 0 ? AppText.key("summary.view") : AppText.summaryLine(count: count,
                                                                total: DisplayFormat.compactStorage(store.summaryTotalGb, unit: unit)))
                             Image(systemName: "chevron.right")
                                 .font(.caption2.weight(.semibold))
@@ -1121,7 +1192,7 @@ private struct RateMeter: View {
             .foregroundStyle(Palette.muted)
             .lineLimit(1)
             .minimumScaleFactor(0.8)
-            .frame(minHeight: count > 0 ? Layout.controlHeight : nil)
+            .frame(minHeight: Layout.controlHeight)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
@@ -1141,6 +1212,8 @@ private struct SummarySheet: View {
     @Environment(\.dismiss) private var dismiss
     @AppStorage(StorageUnit.preferenceKey) private var unit: StorageUnit = .decimal
     let store: CalculatorStore
+    @State private var projectName = ""
+    @State private var createsDay = false
     @State private var confirmsClear = false
     @State private var copied = false
     @State private var copyResetTask: Task<Void, Never>?
@@ -1157,6 +1230,21 @@ private struct SummarySheet: View {
         let items = store.summaryItems
         NavigationStack {
             List {
+                Section {
+                    Picker("summary.day", selection: Binding(get: { store.summary.activeDay.id }, set: { id in
+                        if let day = store.summary.days.first(where: { $0.id == id }) { store.summary.selectDay(day) }
+                    })) { ForEach(store.summary.days) { day in Text(day.title).tag(day.id) } }
+                    HStack {
+                        TextField("summary.project", text: $projectName)
+                        Button("action.apply") { store.summary.renameDay(projectName) }.disabled(projectName == store.summary.activeDay.project)
+                    }
+                    .disabled(store.summary.activeDay.archivedUnit != nil)
+                    .onChange(of: store.summary.activeDay, initial: true) { _, day in projectName = day.project }
+                    Button("summary.newDay") { createsDay = true }
+                    ForEach(store.summary.entries.filter { $0.snapshot == nil }) { entry in
+                        Text("\(entry.settings.cameraId) · \(AppText.key("rate.unknown"))")
+                    }
+                }
                 if items.isEmpty {
                     ContentUnavailableView {
                         Label("summary.empty", systemImage: "sum")
@@ -1166,7 +1254,7 @@ private struct SummarySheet: View {
                 } else {
                     Section {
                         LabeledContent("summary.total",
-                                       value: DisplayFormat.compactStorage(store.summaryTotalGb, unit: unit))
+                                       value: DisplayFormat.compactStorage(store.summaryTotalGb, unit: store.summary.activeDay.archivedUnit ?? unit))
                             .font(.headline.monospacedDigit())
                             .accessibilityIdentifier("summary-sheet-total")
                     } footer: {
@@ -1174,7 +1262,7 @@ private struct SummarySheet: View {
                     }
                     Section {
                         ForEach(items) { item in
-                            SummaryEntryRow(store: store, item: item, unit: unit)
+                            SummaryEntryRow(store: store, item: item)
                         }
                     }
                 }
@@ -1205,6 +1293,7 @@ private struct SummarySheet: View {
                 ToolbarItem(placement: clearPlacement) {
                     Button("summary.clear", role: .destructive) { confirmsClear = true }
                         .disabled(items.isEmpty)
+                        .disabled(store.summary.activeDay.archivedUnit != nil)
                         .accessibilityIdentifier("summary-clear")
                 }
             }
@@ -1213,8 +1302,9 @@ private struct SummarySheet: View {
                     .accessibilityIdentifier("summary-clear-confirm")
             }
         }
+        .sheet(isPresented: $createsDay) { SummaryEditSheet(summary: store.summary, entry: nil) }
         .onAppear { store.summary.refresh() }
-        .onDisappear { copyResetTask?.cancel() }
+        .onDisappear { copyResetTask?.cancel(); store.summary.refresh() }
         .sensoryFeedback(.success, trigger: copied) { _, newValue in newValue }
         .tint(Palette.text)
         .preferredColorScheme(.dark)
@@ -1229,21 +1319,25 @@ private struct SummarySheet: View {
 private struct SummaryEntryRow: View {
     let store: CalculatorStore
     let item: SummaryItem
-    let unit: StorageUnit
+    @State private var editing = false
 
     var body: some View {
+        let unit = item.calculation.unit
         let settings = item.entry.settings
         let calculation = item.calculation
         // Catalog mode names are verbatim technical terms and never localized.
-        let modeLabel = calculation.mode.label
+        let modeLabel = calculation.modeLabel
         let fps = calculation.captureFps
         // Standalone ProRes captures at project cadence; camera profiles use sensor cadence.
-        let fpsLabel: LocalizedStringKey = calculation.camera.isStandaloneProRes ? "field.projectFps" : "field.sensorFps"
+        let fpsLabel: LocalizedStringKey = calculation.standalone ? "field.projectFps" : "field.sensorFps"
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline) {
-                Text(calculation.camera.name)
+                Text(calculation.cameraName)
                     .font(.headline)
                 Spacer()
+                Button { editing = true } label: { Label("summary.edit", systemImage: "pencil").labelStyle(.iconOnly) }
+                    .buttonStyle(.borderless)
+                    .disabled(store.summary.activeDay.archivedUnit != nil)
                 Button(role: .destructive) {
                     store.removeSummaryEntry(id: item.id)
                 } label: {
@@ -1253,16 +1347,21 @@ private struct SummaryEntryRow: View {
                         .frame(minWidth: Layout.controlHeight, minHeight: Layout.controlHeight)
                 }
                 .buttonStyle(.borderless)
+                .disabled(store.summary.activeDay.archivedUnit != nil)
                 .accessibilityIdentifier("summary-remove-\(item.id.uuidString)")
             }
-            Text("\(modeLabel) · \(calculation.resolution.label) · \(calculation.codec.name)")
+            Text("\(modeLabel) · \(calculation.resolutionLabel) · \(calculation.codecName)")
                 .font(.subheadline)
                 .fixedSize(horizontal: false, vertical: true)
+            if let rig = item.entry.rig, !rig.isEmpty { Text(rig) }
+            Text([calculation.basis, calculation.catalogRevision].compactMap { $0 }.joined(separator: " · ")).font(.caption)
+            if calculation.reconstructed == true { Text("summary.reconstructed").font(.caption) }
             LabeledContent(fpsLabel, value: "\(DisplayFormat.fps(fps)) fps")
             LabeledContent("result.perHour", value: "\(DisplayFormat.number(unit.converted(decimalGB: calculation.sensorGbPerHour))) \(unit.symbol)/h · \(DisplayFormat.number(calculation.sensorMbps)) Mb/s")
             LabeledContent("result.planCapacity", value: "\(DisplayFormat.plannedDuration(settings.shootHours)) · \(DisplayFormat.compactStorage(calculation.dayTotalGb, unit: unit))")
-            LabeledContent("result.cardDuration", value: "\(DisplayFormat.duration(calculation.captureRuntimeHours)) · \(calculation.media.label)")
+            LabeledContent("result.cardDuration", value: "\(DisplayFormat.duration(calculation.captureRuntimeHours)) · \(calculation.mediaLabel)")
         }
+        .sheet(isPresented: $editing) { SummaryEditSheet(summary: store.summary, entry: item.entry) }
         .padding(.vertical, 6)
         .textSelection(.enabled)
         .accessibilityElement(children: .contain)
@@ -1392,6 +1491,17 @@ private struct ShutterView: View {
         .onChange(of: store.shutterWorkspace.selectedRig) { _, _ in
             focusedInput = nil; importFeedback = nil; showsCopyConfirmation = false
         }
+        .alert("shutter.import", isPresented: $confirmsRateImport) {
+            Button("\(AppText.key("field.sensorFps")) · \(DisplayFormat.fps(store.calculation.captureFps)) fps") {
+                applyImportedRates(includeProject: false)
+            }.accessibilityIdentifier("shutter-import-capture")
+            Button("\(AppText.key("field.sensorFps")) + \(AppText.key("field.projectFps")) · \(DisplayFormat.fps(store.calculation.captureFps))/\(DisplayFormat.fps(store.settings.projectFps))") {
+                applyImportedRates(includeProject: true)
+            }.accessibilityIdentifier("shutter-import-both")
+            Button("shutter.library.cancel", role: .cancel) {}
+        } message: {
+            Text("\(store.currentCamera.name) → \(store.shutterWorkspace.selectedRig.rawValue) · \(store.shutterWorkspace.active.cameraLabel)")
+        }
         .sheet(item: $workspaceSheet) { sheet in
             switch sheet {
             case .library: ShutterLibraryView(store: store)
@@ -1426,17 +1536,22 @@ private struct ShutterView: View {
 
     // Import is a secondary action of the camera FPS field, with a full accessible
     // label and tooltip so the compact icon remains understandable on every platform.
+    @State private var confirmsRateImport = false
+    private func applyImportedRates(includeProject: Bool) {
+        focusedInput = nil
+        showsCopyConfirmation = false
+        let imported = store.importShutterFrameRates(includeProject: includeProject)
+        importFeedback = AppText.imported(sensorFps: imported.sensor, projectFps: imported.project)
+        // Import replaces the selected fields only. Keep an unfinished project draft on camera-only import.
+        let fields: [ShutterInputField] = includeProject ? [.sensorFps, .projectFps] : [.sensorFps]
+        for field in fields {
+            drafts.removeValue(forKey: field)
+            validatedFields.remove(field)
+        }
+    }
+
     private var importFrameRatesButton: some View {
-        Button {
-            focusedInput = nil
-            showsCopyConfirmation = false
-            let imported = store.importShutterFrameRates()
-            importFeedback = AppText.imported(sensorFps: imported.sensor, projectFps: imported.project)
-            for field in [ShutterInputField.sensorFps, .projectFps] {
-                drafts.removeValue(forKey: field)
-                validatedFields.remove(field)
-            }
-        } label: {
+        Button { confirmsRateImport = true } label: {
             Label("shutter.import", systemImage: "arrow.down.doc")
                 .labelStyle(.iconOnly)
                 .frame(minWidth: Layout.controlHeight, minHeight: Layout.controlHeight)

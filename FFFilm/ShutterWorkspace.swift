@@ -32,7 +32,7 @@ struct ShutterRecord: Codable, Hashable, Identifiable {
     }
 
     func matches(_ other: Self) -> Bool {
-        rig == other.rig && cameraLabel == other.cameraLabel && settings == other.settings
+        rig == other.rig && cameraLabel == other.cameraLabel && settings == other.settings && fieldChecked == other.fieldChecked && conditions == other.conditions
     }
 }
 

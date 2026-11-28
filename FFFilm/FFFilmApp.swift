@@ -20,6 +20,7 @@ struct FFFilmApp: App {
         // Summary workflows start from an empty, persisted shooting-day list.
         if ProcessInfo.processInfo.environment["FFFILM_UI_RESET_SUMMARY"] == "1" {
             UserDefaults.standard.removeObject(forKey: RecordingSummary.key)
+            UserDefaults.standard.removeObject(forKey: RecordingSummary.daysKey)
         }
         #endif
         #if DEBUG && targetEnvironment(simulator)

@@ -40,6 +40,21 @@ final class NegativeUITests: XCTestCase {
         }
     }
 
+    @MainActor func testConfigurationLinkOpensRecordingOnColdLaunch() throws {
+        let app = XCUIApplication()
+        app.terminate()
+        let url = try XCTUnwrap(URL(string: "fffilm://configuration?camera=alexa35&mode=open-gate&resolution=a35-open&codec=arriraw&project=24&sensor=24&sensorOverdrive=false&media=1tb&hours=1"))
+        app.open(url)
+        // Native alert actions can expose localized titles without a SwiftUI identifier.
+        let apply = app.alerts.buttons.matching(NSPredicate(format: "identifier == %@ OR label IN %@", "handoff-apply", ["Apply", "采用"])).firstMatch
+        XCTAssertTrue(apply.waitForExistence(timeout: 8), app.debugDescription)
+        apply.tap()
+        let result = app.descendants(matching: .any).matching(identifier: "plan-capacity-output").firstMatch
+        XCTAssertTrue(result.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "record-time-output").firstMatch.exists)
+        XCTAssertFalse(app.buttons["negative-sample"].exists)
+    }
+
     @MainActor func testEmptyAndCancelledImport() {
         let app = XCUIApplication()
         openNegative(app)

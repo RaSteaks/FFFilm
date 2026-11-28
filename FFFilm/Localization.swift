@@ -70,7 +70,9 @@ enum AppText {
             let settings = item.entry.settings
             let calculation = item.calculation
             let fps = calculation.captureFps
-            return "\(index + 1). \(calculation.camera.name) · \(calculation.mode.label) · \(calculation.resolution.label) · \(calculation.codec.name) · \(DisplayFormat.fps(fps)) fps · \(DisplayFormat.plannedDuration(settings.shootHours)) → \(DisplayFormat.compactStorage(calculation.dayTotalGb, unit: unit))"
+            return "\(index + 1). \(item.entry.rig ?? "") \(calculation.cameraName) · \(calculation.modeLabel) · \(calculation.resolutionLabel) · \(calculation.codecName) · \(DisplayFormat.fps(fps)) fps · \(DisplayFormat.plannedDuration(settings.shootHours)) → \(DisplayFormat.compactStorage(calculation.dayTotalGb, unit: calculation.unit))"
+                + " · " + calculation.basis + (calculation.catalogRevision.map { " · " + $0 } ?? "")
+                + (calculation.reconstructed == true ? " · " + key("summary.reconstructed") : "")
         }
         let header = resolve("copy.summaryHeader", defaultValue: "Recording summary (\(items.count) setups)",
                              comment: "First line of the copied recording summary.")
@@ -133,6 +135,12 @@ enum AppText {
             if let alternative = calculation.maximumExposure, let stops = calculation.maximumExposureDifferenceStops {
                 summary += "\n" + shutterMaximumAlternative(alternative, stops: stops)
             }
+        }
+        if let speed = calculation.playbackSpeed, let duration = calculation.durationMultiplier {
+            summary += "\n\(AppText.key("shutter.playbackSpeed")) \(DisplayFormat.shutterNumber(speed))× · \(AppText.key("shutter.durationFactor")) \(DisplayFormat.shutterNumber(duration))×"
+        }
+        if let matches = calculation.matchesLightCycles {
+            summary += "\n" + key(matches ? "shutter.cyclesAligned" : "shutter.cyclesPartial")
         }
         guard let compromise = calculation.compromise else { return summary }
         // Copy the qualification and reference angle as well as the main exposure; in matching

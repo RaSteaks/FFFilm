@@ -7,18 +7,31 @@ struct FFFilmTests {
     @Test("The migrated catalog preserves every source profile")
     func catalogMigration() {
         #expect(catalog.cameras.count == 39)
-        #expect(catalog.codecs.count == 23)
-        #expect(catalog.rateTable.count == 87)
+        #expect(catalog.codecs.count == 31)
+        #expect(catalog.rateTable.count == 92)
         #expect(catalog.cameras.contains(where: { $0.id == "alexa35" }))
         #expect(catalog.cameras.contains(where: { $0.id == "ronin4d-8k" }))
         #expect(catalog.cameras.contains(where: { $0.id == "a7m4" }))
     }
 
-    @Test("Default ALEXA 35 ARRIRAW HDE calculation matches the web model")
+    @Test("ALEXA 35 Open Gate uses published card times and migrates offload-only HDE")
     func defaultRateCalculation() {
         let result = CalculatorEngine(catalog: catalog).calculate(settings: .default)
-        #expect(abs(result.projectMbps - 2_501.8785792) < 0.001)
-        #expect(abs(result.projectGbPerHour - 1_125.84536064) < 0.001)
+        #expect(result.codec.id == "arriraw")
+        #expect(abs(result.projectGbPerHour - 2009) < 0.001)
+        #expect(abs(result.captureRuntimeHours * 60 - 56) < 0.001)
+        let engine = CalculatorEngine(catalog: catalog)
+        var legacy = CaptureSettings.default
+        legacy.codecId = "arriraw-hde"; legacy.mediaId = "1tb"
+        #expect(engine.normalized(legacy).codecId == "arriraw")
+        #expect(engine.availableSensorFrameRates(for: legacy).max() == 35)
+        #expect(abs(engine.calculate(settings: legacy).captureRuntimeHours * 60 - 28) < 0.001)
+        #expect(DisplayFormat.compactStorage(0.32).contains("MB"))
+        for (id, expected) in [("fx6", "fx6-xavc-i"), ("venice2", "x-ocn-xt"), ("raptor-xl", "r3d-hq")] {
+            legacy.cameraId = id
+            let capture = engine.calculate(settings: legacy)
+            #expect(capture.codec.id == expected && capture.sensorMbps > 0)
+        }
     }
 
     @Test("DJI manual MB/s rows are converted to Mb/s")

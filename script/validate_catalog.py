@@ -64,6 +64,19 @@ def main() -> int:
                     fail(errors, f"{cid}/{rid}: active width exceeds sensor")
                 if res.get("activeHeightMm") is not None and res["activeHeightMm"] > camera["sensorHeightMm"] + 1e-9:
                     fail(errors, f"{cid}/{rid}: active height exceeds sensor")
+                # Empty reference maps explicitly denote unverified recording modes.
+                for codec_id, ref in res.get("references", {}).items():
+                    if codec_id not in codec_ids:
+                        fail(errors, f"{cid}/{rid}: unknown reference codec {codec_id}")
+                    for field in ("gbPerHour24", "maximumFps"):
+                        if not math.isfinite(ref[field]) or ref[field] <= 0:
+                            fail(errors, f"{cid}/{rid}: invalid reference {field}")
+                    for field in ("cardFps", "cardMinutes24"):
+                        for card, value in ref.get(field, {}).items():
+                            if card not in camera.get("mediaIDs", []) or not math.isfinite(value) or value <= 0:
+                                fail(errors, f"{cid}/{rid}: invalid {field} for {card}")
+                    if any(rate not in FRAME_RATES or rate > ref["maximumFps"] for rate in ref.get("frameRates", [])):
+                        fail(errors, f"{cid}/{rid}: invalid verified cadence")
                 cap = res.get("maxSensorFps")
                 if cap is not None and cap > (camera.get("maxSensorFps") or math.inf) + 1e-9:
                     fail(errors, f"{cid}/{rid}: resolution fps cap above camera cap")

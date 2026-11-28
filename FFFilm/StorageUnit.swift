@@ -1,7 +1,7 @@
 import Foundation
 
 /// Display units only: catalog capacities and engine results remain decimal GB.
-enum StorageUnit: String, CaseIterable, Identifiable {
+enum StorageUnit: String, Codable, CaseIterable, Identifiable {
     case decimal, binary
     static let preferenceKey = "fffilm.storage-unit"
     var id: String { rawValue }

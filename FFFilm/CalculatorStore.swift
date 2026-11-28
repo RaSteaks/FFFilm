@@ -18,8 +18,30 @@ final class CalculatorStore {
     @ObservationIgnored private var rememberedShutterSettings: ShutterSettings
     // Invalid numeric drafts may live in a window, but never enter persisted rig snapshots.
     @ObservationIgnored private var shutterRigDrafts: [ShutterRigID: ShutterSettings] = [:]
-    // Results are recomputed only when the shared entries change, not on every render.
-    @ObservationIgnored private var summaryCache: (entries: [SummaryEntry], items: [SummaryItem])?
+    // Uncommitted Mac input must gate every handoff action, including toolbar shortcuts.
+    var durationDraftPending = false
+    var recordingRig = ""
+    var backupCopies = 2
+    var reservePercent = 10
+    var proxyGb = 0.0
+    var destinationFreeGb: Double?
+    var bytesPerDestinationGb: Double { (calculation.dayTotalGb + max(proxyGb, 0)) / (1 - Double(reservePercent) / 100) }
+    var addLabel: String {
+        let result = calculation
+        let value = recordingTask == .capacity ? DisplayFormat.plannedDuration(settings.shootHours) : result.media.label
+        return "\(AppText.key("summary.add")) · \(value)"
+    }
+    func backupSummary(unit: StorageUnit) -> String {
+        return "\(AppText.key("plan.destination")) \(DisplayFormat.compactStorage(bytesPerDestinationGb, unit: unit)) × \(backupCopies) · \(AppText.key("plan.reserve")) \(reservePercent)%"
+    }
+    var needsCadenceReview = false
+    var validBackupPlan: Bool {
+        proxyGb.isFinite && proxyGb >= 0 && (destinationFreeGb.map { $0.isFinite && $0 >= 0 } ?? true)
+            && bytesPerDestinationGb.isFinite
+    }
+    var canShareRecording: Bool {
+        summary.activeDay.archivedUnit == nil && calculation.hasEstimate && !needsCadenceReview && (recordingTask == .runtime || (!durationDraftPending && validBackupPlan))
+    }
     let shutterWorkspace: ShutterWorkspace
     /// Persisted and shared by every window; each window refreshes it before changing it.
     let summary: RecordingSummary
@@ -72,7 +94,14 @@ final class CalculatorStore {
         }
     }
 
-    var calculation: Calculation { engine.calculate(settings: settings) }
+    @ObservationIgnored private var calculationCache: (CaptureSettings, Calculation)?
+    var calculation: Calculation {
+        let inputs = settings
+        if let calculationCache, calculationCache.0 == inputs { return calculationCache.1 }
+        let result = engine.calculate(settings: inputs)
+        calculationCache = (inputs, result)
+        return result
+    }
     var shutterCalculation: ShutterCalculation {
         // Read observed inputs even on cache hits, so views still update after input edits,
         // import, reset or undo. Cache writes themselves must not trigger view invalidation.
@@ -87,9 +116,24 @@ final class CalculatorStore {
     var currentResolution: Resolution { engine.resolution(for: settings) }
     var currentCodec: CodecProfile { engine.codec(for: settings) }
     var currentMedia: MediaProfile { engine.media(id: settings.mediaId) }
+    var availableMedia: [MediaProfile] { engine.availableMedia(for: currentCamera) }
     var availableCodecs: [CodecProfile] { engine.availableCodecs(for: settings) }
     var availableSensorFrameRates: [Double] { engine.availableSensorFrameRates(for: settings) }
 
+    var catalogSelection = 0
+    func camera(_ camera: CameraProfile, supportsCodecNamed query: String) -> Bool {
+        guard catalog.codecs.contains(where: { $0.name.localizedStandardContains(query) }) else { return false }
+        var proposed = settings
+        proposed.cameraId = camera.id
+        for mode in camera.modes {
+            proposed.modeId = mode.id
+            for resolution in mode.resolutions {
+                proposed.resolutionId = resolution.id
+                if engine.availableCodecs(for: proposed).contains(where: { $0.name.localizedStandardContains(query) }) { return true }
+            }
+        }
+        return false
+    }
     var sortedCameras: [CameraProfile] {
         catalog.cameras.sorted {
             ($0.manufacturer.rawValue, $0.name) < ($1.manufacturer.rawValue, $1.name)
@@ -128,8 +172,38 @@ final class CalculatorStore {
         return components.string ?? ""
     }
 
+    /// Links cross a process boundary. Reject duplicate/missing fields and invalid numbers before previewing.
+    func configuration(from url: URL) -> CaptureSettings? {
+        guard url.scheme?.lowercased() == "fffilm", url.host == "configuration",
+              let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems else { return nil }
+        var fields: [String: String] = [:]
+        for item in items {
+            guard fields[item.name] == nil, let value = item.value else { return nil }
+            fields[item.name] = value
+        }
+        guard let camera = fields["camera"], catalog.cameras.contains(where: { $0.id == camera }),
+              let mode = fields["mode"], let resolution = fields["resolution"], let codec = fields["codec"],
+              let project = fields["project"].flatMap(Double.init), project.isFinite, project > 0,
+              let sensor = fields["sensor"].flatMap(Double.init), sensor.isFinite, sensor > 0,
+              let overdrive = fields["sensorOverdrive"].flatMap(Bool.init), let media = fields["media"],
+              let hours = fields["hours"].flatMap(Double.init), CaptureSettings.shootHoursRange.contains(hours) else { return nil }
+        let proposed = CaptureSettings(cameraId: camera, modeId: mode, resolutionId: resolution,
+            codecId: codec == "arriraw-hde" ? "arriraw" : codec, projectFps: project, sensorFps: sensor,
+            sensorOverdrive: overdrive, mediaId: media, shootHours: hours)
+        let result = engine.normalized(proposed)
+        guard result == proposed, engine.calculate(settings: result).hasEstimate else { return nil }
+        return result
+    }
+
+    func applyConfiguration(_ value: CaptureSettings) {
+        durationDraftPending = false; needsCadenceReview = false
+        commitFormatSettings(value)
+    }
+
     func readableRecordingSummary(storageUnit: StorageUnit) -> String {
-        AppText.recordingSummary(settings: settings, calculation: calculation, unit: storageUnit, task: recordingTask)
+        let result = calculation
+        return AppText.recordingSummary(settings: settings, calculation: result, unit: storageUnit, task: recordingTask)
+            + "\n" + result.rateBasis + (recordingTask == .capacity ? "\n" + backupSummary(unit: storageUnit) : "")
     }
 
     func readableShutterSummary() -> String {
@@ -256,6 +330,7 @@ final class CalculatorStore {
     }
 
     func selectSensorFps(_ fps: Double, persisting: Bool = true) {
+        needsCadenceReview = false
         updateFormatSettings(persisting: persisting) { $0.sensorFps = fps }
     }
 
@@ -264,9 +339,8 @@ final class CalculatorStore {
     }
 
     func selectMedia(_ id: String) {
-        guard catalog.mediaOptions.contains(where: { $0.id == id }) else { return }
-        clearTransientState()
-        settings.mediaId = id
+        guard availableMedia.contains(where: { $0.id == id }) else { return }
+        updateFormatSettings { $0.mediaId = id }
     }
 
     func setShootHours(_ hours: Double) {
@@ -320,6 +394,7 @@ final class CalculatorStore {
         feedbackMessage = AppText.reset
 
         if activeView == .rate {
+            durationDraftPending = false; needsCadenceReview = false
             let resetSettings = engine.normalized(.default)
             cameraMemories = Self.loadCameraMemories(defaults: defaults, catalog: catalog)
             resetUndoSnapshot = .rate(settings: settings, defaultCameraMemory: cameraMemories[resetSettings.cameraId])
@@ -356,20 +431,22 @@ final class CalculatorStore {
 
     /// One-shot import deliberately leaves RATE, angles and lighting unchanged.
     @discardableResult
-    func importShutterFrameRates() -> (sensor: Double, project: Double) {
+    func importShutterFrameRates(includeProject: Bool = false) -> (sensor: Double, project: Double) {
         clearTransientState()
-        shutterSettings.sensorFps = settings.sensorFps
-        shutterSettings.projectFps = settings.projectFps
+        shutterSettings.sensorFps = ShutterFramePreset.recordingCadence(calculation.captureFps)
+        if includeProject { shutterSettings.projectFps = ShutterFramePreset.recordingCadence(settings.projectFps) }
+        configureShutterRig(cameraLabel: currentCamera.name)
         persistShutterSettings()
         rememberShutterResult()
-        return (settings.sensorFps, settings.projectFps)
+        return (shutterSettings.sensorFps, shutterSettings.projectFps)
     }
 
     /// Identical setups are added again on purpose: two cameras with one format both record.
     /// The control's count and an accessibility announcement confirm the addition instead of
     /// a banner, which would shift the page while the operator is working near the bottom.
     func addCurrentToSummary() {
-        summary.add(settings)
+        guard canShareRecording else { return }
+        summary.add(settings, card: recordingTask == .runtime, rig: recordingRig)
         summaryAdditions += 1
     }
 
@@ -381,21 +458,12 @@ final class CalculatorStore {
         summary.clear()
     }
 
-    var summaryItems: [SummaryItem] {
-        // Read the observed entries even on cache hits so views still track summary changes.
-        let entries = summary.entries
-        if let summaryCache, summaryCache.entries == entries { return summaryCache.items }
-        let items = entries.map { SummaryItem(entry: $0, calculation: engine.calculate(settings: $0.settings)) }
-        summaryCache = (entries, items)
-        return items
-    }
-
-    var summaryTotalGb: Double {
-        summaryItems.reduce(0) { $0 + $1.calculation.dayTotalGb }
-    }
+    var summaryItems: [SummaryItem] { summary.items }
+    var summaryTotalGb: Double { summary.totalGb }
 
     func readableSummary(storageUnit: StorageUnit) -> String {
-        AppText.summaryText(items: summaryItems, total: summaryTotalGb, unit: storageUnit)
+        let unknown = summary.entries.filter { $0.snapshot == nil }.map { $0.settings.cameraId + " · " + AppText.key("rate.unknown") }
+        return ([summary.activeDay.title, AppText.summaryText(items: summaryItems, total: summaryTotalGb, unit: summary.activeDay.archivedUnit ?? storageUnit)] + unknown).joined(separator: "\n")
     }
 
     func clearTransientState() {
@@ -465,7 +533,12 @@ final class CalculatorStore {
         settings = normalized
         if persisting { rememberCurrentCamera() }
         if !adjusted.isEmpty {
-            feedbackMessage = AppText.adjusted(parameters: adjusted)
+            var message = AppText.adjusted(parameters: adjusted)
+            if proposed.sensorFps != normalized.sensorFps {
+                message += " \(DisplayFormat.fps(proposed.sensorFps)) → \(DisplayFormat.fps(normalized.sensorFps)) fps"
+                needsCadenceReview = abs(proposed.sensorFps - normalized.sensorFps) > 1
+            }
+            feedbackMessage = message
         }
     }
 

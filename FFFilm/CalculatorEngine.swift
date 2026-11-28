@@ -47,6 +47,10 @@ struct CalculatorEngine {
     func codec(for settings: CaptureSettings) -> CodecProfile {
         let selectedCamera = camera(id: settings.cameraId)
         let available = availableCodecs(for: settings)
+        guard !available.isEmpty else {
+            return CodecProfile(id: "unavailable", name: AppText.key("rate.unknown"), family: "", rateModel: .unavailable,
+                                effectiveBitsPerPixel: nil, note: "", supportedManufacturers: nil, supportedCameraIds: nil)
+        }
         if let selected = available.first(where: { $0.id == settings.codecId }) {
             return selected
         }
@@ -63,6 +67,11 @@ struct CalculatorEngine {
         catalog.mediaOptions.first(where: { $0.id == id }) ?? catalog.mediaOptions[0]
     }
 
+    func availableMedia(for camera: CameraProfile) -> [MediaProfile] {
+        guard let ids = camera.mediaIDs else { return catalog.mediaOptions }
+        return catalog.mediaOptions.filter { ids.contains($0.id) }
+    }
+
     func availableSensorFrameRates(for settings: CaptureSettings) -> [Double] {
         let selectedCamera = camera(id: settings.cameraId)
         if selectedCamera.isStandaloneProRes {
@@ -72,6 +81,11 @@ struct CalculatorEngine {
         let selectedMode = mode(for: settings, camera: selectedCamera)
         let selectedResolution = resolution(for: settings, mode: selectedMode)
         let selectedCodec = codec(for: settings)
+        if let reference = selectedResolution.references?[selectedCodec.id] {
+            if let rates = reference.frameRates { return rates }
+            let limit = reference.cardFps?[settings.mediaId] ?? reference.maximumFps
+            return Array(Set(catalog.frameRates.filter { $0 <= limit } + [limit])).sorted()
+        }
         let cameraMaximum = selectedCamera.supportsSensorOverdrive == true && !settings.sensorOverdrive
             ? selectedCamera.maxSensorFpsWithoutOverdrive ?? selectedCamera.maxSensorFps ?? 60
             : selectedCamera.maxSensorFps ?? 60
@@ -95,8 +109,20 @@ struct CalculatorEngine {
     func normalized(_ input: CaptureSettings) -> CaptureSettings {
         var output = input
         let selectedCamera = camera(id: output.cameraId)
+        // Earlier catalogs grouped distinct ARRI readouts by aspect ratio. Preserve the
+        // selected raster when migrating a saved format to its actual sensor mode.
+        if selectedCamera.id == "alexa35" {
+            if output.modeId == "open-gate", output.resolutionId == "a35-open-1x1" { output.modeId = "3k-square" }
+            if output.modeId == "16x9", output.resolutionId == "a35-46k-16x9" { output.modeId = "46k-16x9" }
+        }
         let selectedMode = mode(for: output, camera: selectedCamera)
         output.cameraId = selectedCamera.id
+        let media = availableMedia(for: selectedCamera)
+        if !media.contains(where: { $0.id == output.mediaId }) {
+            output.mediaId = media.last?.id ?? CaptureSettings.default.mediaId
+        }
+        // HDE is an offload derivative. Older saved inputs describe an ARRIRAW camera original.
+        if output.codecId == "arriraw-hde" { output.codecId = "arriraw" }
         output.modeId = selectedMode.id
         output.resolutionId = resolution(for: output, mode: selectedMode).id
         output.codecId = codec(for: output).id
@@ -138,7 +164,9 @@ struct CalculatorEngine {
         )
         let projectGbPerHour = projectMbps * 3_600 / 8 / 1_000
         let sensorGbPerHour = sensorMbps * 3_600 / 8 / 1_000
-        let captureRuntimeHours = selectedMedia.capacityGb / sensorGbPerHour
+        let referenceMinutes = selectedResolution.references?[selectedCodec.id]?.cardMinutes24?[selectedMedia.id]
+        let captureRuntimeHours = referenceMinutes.map { $0 / 60 * 24 / effectiveSensorFps }
+            ?? (sensorGbPerHour > 0 ? selectedMedia.capacityGb / sensorGbPerHour : 0)
         // Retiming preserves recorded frames, even when codec rates do not scale linearly with fps.
         let projectRuntimeHours = captureRuntimeHours * effectiveSensorFps / settings.projectFps
         let dayTotalGb = sensorGbPerHour * settings.shootHours
@@ -171,7 +199,7 @@ struct CalculatorEngine {
             projectRuntimeHours: projectRuntimeHours,
             captureRuntimeHours: captureRuntimeHours,
             dayTotalGb: dayTotalGb,
-            dayUsagePercent: dayTotalGb / selectedMedia.capacityGb * 100,
+            dayUsagePercent: captureRuntimeHours > 0 ? settings.shootHours / captureRuntimeHours * 100 : 0,
             clipWidthMm: clipWidth,
             clipHeightMm: clipHeight,
             imageCircleMm: imageCircle,
@@ -406,6 +434,8 @@ struct CalculatorEngine {
         camera: CameraProfile,
         resolution: Resolution
     ) -> Bool {
+        if let references = resolution.references { return references[codec.id] != nil }
+        if codec.rateModel == .reference { return false }
         // Mode restrictions intersect with camera and codec restrictions (not replace them).
         if let ids = camera.supportedCodecIds, !ids.contains(codec.id) { return false }
         if let ids = resolution.supportedCodecIds, !ids.contains(codec.id) { return false }
@@ -428,7 +458,11 @@ struct CalculatorEngine {
         resolution: Resolution,
         fps: Double
     ) -> Double {
+        if let reference = resolution.references?[codec.id] {
+            return reference.gbPerHour24 / 0.45 * fps / 24
+        }
         switch codec.rateModel {
+        case .unavailable, .reference: return 0
         case .appleTarget:
             return proResMbps(codec: codec, resolution: resolution, fps: fps)
         case .publishedTable:
@@ -483,7 +517,7 @@ struct CalculatorEngine {
     }
 
     private func normalizedRate(_ rate: Double, available: [Double]) -> Double {
-        available.contains(rate) ? rate : available.last ?? rate
+        available.min { abs($0 - rate) < abs($1 - rate) } ?? rate
     }
 
     private func publishedRateKey(camera: CameraProfile, codec: CodecProfile, resolution: Resolution) -> String {

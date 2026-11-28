@@ -19,8 +19,9 @@ enum RecordingEstimate {
         proposed.shootHours = hours
         let settings = engine.normalized(proposed)
         let result = engine.calculate(settings: settings)
+        guard result.hasEstimate else { return String(localized: "rate.unknown") }
         let unit = storageUnit(defaults)
-        let format = "\(result.camera.name) · \(result.codec.name) · \(DisplayFormat.fps(result.captureFps)) fps"
+        let format = "\(result.camera.name) · \(result.mode.label) · \(result.resolution.label) · \(result.codec.name) · \(DisplayFormat.fps(result.captureFps)) fps"
         let duration = DisplayFormat.plannedDuration(settings.shootHours)
         let storage = DisplayFormat.compactStorage(result.dayTotalGb, unit: unit)
         let rate = "\(DisplayFormat.number(unit.converted(decimalGB: result.sensorGbPerHour))) \(unit.symbol)/h"
@@ -31,14 +32,15 @@ enum RecordingEstimate {
 
     static func summaryAnswer(defaults: UserDefaults = .standard, catalog: CatalogData = .bundled) -> String {
         let engine = CalculatorEngine(catalog: catalog)
-        let entries = RecordingSummary(defaults: defaults, engine: engine).entries
+        let summary = RecordingSummary(defaults: defaults, engine: engine)
+        let entries = summary.entries
         guard !entries.isEmpty else {
             return String(localized: "intent.summary.empty", defaultValue: "The summary is empty.",
                           comment: "Siri answer when no setups have been added to the summary.")
         }
-        let total = entries.reduce(0) { $0 + engine.calculate(settings: $1.settings).dayTotalGb }
+        let total = summary.totalGb
         let storage = DisplayFormat.compactStorage(total, unit: storageUnit(defaults))
-        return String(localized: "intent.summary.answer",
+        return summary.activeDay.title + " · " + String(localized: "intent.summary.answer",
                       defaultValue: "\(entries.count) setups in the summary need \(storage) in total.",
                       comment: "Siri answer: number of summary entries and their total storage.")
     }

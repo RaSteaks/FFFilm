@@ -96,7 +96,7 @@ final class FFFilmUITests: XCTestCase {
         #if os(iOS)
         assertDuration(4, 0, 0, in: app)
         #else
-        XCTAssertEqual(duration.value as? String, "4.00")
+        XCTAssertEqual(duration.value as? String, "4")
         #endif
         reveal(picker, in: app)
         let capacityScreenshot = XCTAttachment(screenshot: app.screenshot())
@@ -117,7 +117,7 @@ final class FFFilmUITests: XCTestCase {
         runtimeScreenshot.lifetime = .keepAlways
         add(runtimeScreenshot)
         capacity.tap()
-        XCTAssertFalse(media.exists)
+        XCTAssertTrue(media.exists)
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "plan-capacity-output").firstMatch.exists)
         XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "card-runtime-output").firstMatch.exists)
         // The planned duration must survive hiding its field and returning to capacity planning;
@@ -126,7 +126,7 @@ final class FFFilmUITests: XCTestCase {
         assertDuration(4, 0, 0, in: app)
         setDuration(5, 1, 1, in: app)
         #else
-        XCTAssertEqual(duration.value as? String, "4.00")
+        XCTAssertEqual(duration.value as? String, "4")
         enterText("30", into: duration, in: app)
         finishDurationEditing(app)
         #endif
@@ -141,6 +141,11 @@ final class FFFilmUITests: XCTestCase {
         #endif
         let copy = app.buttons["copy-action"].firstMatch
         reveal(copy, in: app)
+        #if os(macOS)
+        XCTAssertFalse(copy.isEnabled)
+        enterText("4", into: duration, in: app)
+        finishDurationEditing(app)
+        #endif
         let restLabel = copy.label
         copy.tap()
         XCTAssertNotEqual(copy.label, restLabel)
@@ -528,10 +533,11 @@ final class FFFilmUITests: XCTestCase {
         confirm.tap()
         XCTAssertTrue(app.staticTexts["Summary is empty"].waitForExistence(timeout: 3))
         app.buttons["summary-done"].firstMatch.tap()
-        // The meter hides its summary line when empty; wide panels disable the button.
-        let emptied = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false OR isEnabled == false"),
-                                                object: open)
-        XCTAssertEqual(XCTWaiter.wait(for: [emptied], timeout: 4), .completed)
+        // Even an empty day must keep the day manager and archived handoffs reachable.
+        reveal(open, in: app)
+        open.tap()
+        XCTAssertTrue(app.staticTexts["Summary is empty"].waitForExistence(timeout: 3))
+        app.buttons["summary-done"].firstMatch.tap()
     }
     #endif
 
@@ -601,7 +607,12 @@ final class FFFilmUITests: XCTestCase {
     private func enterText(_ text: String, into field: XCUIElement, in app: XCUIApplication) {
         dismissKeyboardFocus(in: app)
         reveal(field, in: app)
+        #if os(macOS)
+        app.activate()
+        field.click()
+        #else
         field.tap()
+        #endif
         // Keyboard insets and the app's focus-centering task must settle before selecting text.
         Thread.sleep(forTimeInterval: 0.6)
         if field.identifier == "shutter-shutterDenominator" {
@@ -613,8 +624,9 @@ final class FFFilmUITests: XCTestCase {
             return
         }
         #if os(macOS)
-        field.typeKey("a", modifierFlags: .command)
-        field.typeText(text)
+        // AppKit routes typing through the window's shared field editor.
+        app.typeKey("a", modifierFlags: .command)
+        app.typeText(text)
         #else
         replaceFieldText(text, field: field, app: app)
         if text.isEmpty {
@@ -1144,10 +1156,9 @@ final class FFFilmUITests: XCTestCase {
         #else
         details.tap()
         #endif
-        let expanded = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
-            resultText().contains("60 Hz × 1 cycles · 120 Hz × 2 cycles")
-        }, object: nil)
-        XCTAssertEqual(XCTWaiter.wait(for: [expanded], timeout: 3), .completed, resultText())
+        let cycles = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@ OR value CONTAINS %@",
+            "60 Hz × 1 cycles · 120 Hz × 2 cycles", "60 Hz × 1 cycles · 120 Hz × 2 cycles")).firstMatch
+        XCTAssertTrue(cycles.waitForExistence(timeout: 5), resultText())
         // Let the native disclosure animation finish before recording visual evidence.
         Thread.sleep(forTimeInterval: 0.5)
         let attachment = XCTAttachment(screenshot: app.screenshot())
@@ -1201,6 +1212,7 @@ final class FFFilmUITests: XCTestCase {
         placement.lifetime = .keepAlways
         add(placement)
         importButton.tap()
+        app.buttons["shutter-import-capture"].firstMatch.tap()
         XCTAssertEqual(app.textFields["shutter-sensorFps"].value as? String, "24")
         enter("48", field: "sensorFps", in: app)
         finishEditing(app)
@@ -1217,6 +1229,7 @@ final class FFFilmUITests: XCTestCase {
         XCTAssertEqual(app.textFields["shutter-sensorFps"].value as? String, "48")
         reveal(importButton, in: app)
         importButton.tap()
+        app.buttons["shutter-import-capture"].firstMatch.tap()
         XCTAssertEqual(app.textFields["shutter-sensorFps"].value as? String, "24")
     }
 
@@ -1278,10 +1291,12 @@ final class FFFilmUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments += ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()
-        XCTAssertTrue(app.buttons["more-action"].firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.popUpButtons["more-action"].firstMatch.waitForExistence(timeout: 5))
         XCTAssertTrue(app.toolbars.buttons["copy-action"].exists)
         // The titlebar is the only macOS workbench navigation; the old content header is gone.
-        XCTAssertEqual(app.segmentedControls.matching(identifier: "calculator-view-picker").count, 1)
+        let switcher = app.toolbars.descendants(matching: .any).matching(identifier: "calculator-view-picker").firstMatch
+        XCTAssertTrue(switcher.exists)
+        XCTAssertTrue(switcher.radioButtons["Shutter"].firstMatch.exists)
         XCTAssertFalse(app.staticTexts["Recording calculator"].exists)
         let rateScreenshot = XCTAttachment(screenshot: app.screenshot())
         rateScreenshot.name = "Native macOS recording workbench"
@@ -1300,9 +1315,19 @@ final class FFFilmUITests: XCTestCase {
         app.typeKey("1", modifierFlags: .command)
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "rate-results").firstMatch.exists)
         app.typeKey("p", modifierFlags: [.command, .shift])
-        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "pinned-setups").firstMatch.exists)
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "summary-total").firstMatch.exists)
         app.typeKey("c", modifierFlags: [.command, .shift])
         XCTAssertEqual(app.buttons["copy-action"].firstMatch.label, "Copied")
+        let duration = app.textFields["capture-duration"].firstMatch
+        enterText("0.004", into: duration, in: app)
+        finishDurationEditing(app)
+        XCTAssertEqual(duration.value as? String, "0.004")
+        let copiedDuration = app.descendants(matching: .any).matching(identifier: "record-time-output").firstMatch
+        XCTAssertTrue(copiedDuration.label.contains("00:00:14") || (copiedDuration.value as? String)?.contains("00:00:14") == true)
+        enterText("30", into: duration, in: app)
+        finishDurationEditing(app)
+        XCTAssertFalse(app.toolbars.buttons["summary-add"].firstMatch.isEnabled)
+        XCTAssertFalse(app.toolbars.buttons["copy-action"].firstMatch.isEnabled)
     }
     #endif
 

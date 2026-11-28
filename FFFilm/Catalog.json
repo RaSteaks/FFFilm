@@ -126,40 +126,109 @@
               "id": "a35-open",
               "label": "4.6K Open Gate · 4608 × 3164",
               "width": 4608,
-              "height": 3164
+              "height": 3164,
+              "references": {
+                "arriraw": {
+                  "gbPerHour24": 2009,
+                  "maximumFps": 75,
+                  "cardMinutes24": {
+                    "1tb": 28,
+                    "2tb": 56
+                  },
+                  "cardFps": {
+                    "1tb": 35,
+                    "2tb": 75
+                  }
+                },
+                "prores-422-hq": {
+                  "gbPerHour24": 633,
+                  "maximumFps": 60,
+                  "cardMinutes24": {
+                    "1tb": 90,
+                    "2tb": 181
+                  }
+                },
+                "prores-4444": {
+                  "gbPerHour24": 945,
+                  "maximumFps": 60,
+                  "cardMinutes24": {
+                    "1tb": 60,
+                    "2tb": 121
+                  }
+                },
+                "prores-4444-xq": {
+                  "gbPerHour24": 1414,
+                  "maximumFps": 60,
+                  "cardMinutes24": {
+                    "1tb": 40,
+                    "2tb": 81
+                  }
+                }
+              }
             },
             {
               "id": "a35-open-3k",
               "label": "3K Open Gate · 3072 × 2112",
               "width": 3072,
-              "height": 2112
-            },
-            {
-              "id": "a35-open-1x1",
-              "label": "3K 1:1 · 3072 × 3072",
-              "width": 3072,
-              "height": 3072
+              "height": 2112,
+              "references": {}
             }
           ]
         },
         {
           "id": "16x9",
-          "label": "16:9",
+          "label": "4K 16:9",
           "note": "Television & streaming",
           "resolutions": [
-            {
-              "id": "a35-46k-16x9",
-              "label": "4.6K 16:9 · 4608 × 2592",
-              "width": 4608,
-              "height": 2592
-            },
             {
               "id": "a35-16x9",
               "label": "4K 16:9 · 4096 × 2304",
               "width": 4096,
               "height": 2304,
               "activeWidth": 4608,
-              "activeHeight": 2592
+              "activeHeight": 2592,
+              "references": {
+                "arriraw": {
+                  "gbPerHour24": 1304,
+                  "maximumFps": 120,
+                  "cardMinutes24": {
+                    "1tb": 43,
+                    "2tb": 86
+                  },
+                  "cardFps": {
+                    "1tb": 55,
+                    "2tb": 120
+                  }
+                },
+                "prores-422-hq": {
+                  "gbPerHour24": 413,
+                  "maximumFps": 100,
+                  "cardMinutes24": {
+                    "1tb": 139,
+                    "2tb": 279
+                  }
+                },
+                "prores-4444": {
+                  "gbPerHour24": 615,
+                  "maximumFps": 100,
+                  "cardMinutes24": {
+                    "1tb": 93,
+                    "2tb": 187
+                  }
+                },
+                "prores-4444-xq": {
+                  "gbPerHour24": 918,
+                  "maximumFps": 100,
+                  "cardMinutes24": {
+                    "1tb": 62,
+                    "2tb": 125
+                  },
+                  "cardFps": {
+                    "1tb": 90,
+                    "2tb": 100
+                  }
+                }
+              }
             },
             {
               "id": "a35-uhd-16x9",
@@ -167,7 +236,8 @@
               "width": 3840,
               "height": 2160,
               "activeWidth": 4608,
-              "activeHeight": 2592
+              "activeHeight": 2592,
+              "references": {}
             },
             {
               "id": "a35-2k-16x9",
@@ -175,7 +245,8 @@
               "width": 2048,
               "height": 1152,
               "activeWidth": 4608,
-              "activeHeight": 2592
+              "activeHeight": 2592,
+              "references": {}
             }
           ]
         },
@@ -188,13 +259,15 @@
               "id": "a35-239",
               "label": "4.6K 2.39 · 4608 × 1920",
               "width": 4608,
-              "height": 1920
+              "height": 1920,
+              "references": {}
             },
             {
               "id": "a35-38k-239",
               "label": "3.8K Scope · 3840 × 1608",
               "width": 3840,
-              "height": 1608
+              "height": 1608,
+              "references": {}
             }
           ]
         },
@@ -207,7 +280,49 @@
               "id": "a35-2x1",
               "label": "4K 2:1 · 4096 × 2048",
               "width": 4096,
-              "height": 2048
+              "height": 2048,
+              "references": {
+                "arriraw": {
+                  "gbPerHour24": 1160,
+                  "maximumFps": 120,
+                  "cardMinutes24": {
+                    "1tb": 48,
+                    "2tb": 97
+                  },
+                  "cardFps": {
+                    "1tb": 65,
+                    "2tb": 120
+                  }
+                },
+                "prores-422-hq": {
+                  "gbPerHour24": 368,
+                  "maximumFps": 120,
+                  "cardMinutes24": {
+                    "1tb": 156,
+                    "2tb": 313
+                  }
+                },
+                "prores-4444": {
+                  "gbPerHour24": 547,
+                  "maximumFps": 120,
+                  "cardMinutes24": {
+                    "1tb": 105,
+                    "2tb": 210
+                  }
+                },
+                "prores-4444-xq": {
+                  "gbPerHour24": 817,
+                  "maximumFps": 120,
+                  "cardMinutes24": {
+                    "1tb": 70,
+                    "2tb": 140
+                  },
+                  "cardFps": {
+                    "1tb": 100,
+                    "2tb": 120
+                  }
+                }
+              }
             }
           ]
         },
@@ -220,7 +335,57 @@
               "id": "a35-65",
               "label": "3.3K 6:5 · 3328 × 2790",
               "width": 3328,
-              "height": 2790
+              "height": 2790,
+              "references": {
+                "arriraw": {
+                  "gbPerHour24": 1283,
+                  "maximumFps": 100,
+                  "cardMinutes24": {
+                    "1tb": 44,
+                    "2tb": 88
+                  },
+                  "cardFps": {
+                    "1tb": 55,
+                    "2tb": 100
+                  }
+                },
+                "prores-422-hq": {
+                  "gbPerHour24": 406,
+                  "maximumFps": 75,
+                  "cardMinutes24": {
+                    "1tb": 141,
+                    "2tb": 283
+                  },
+                  "cardFps": {
+                    "1tb": 75,
+                    "2tb": 75
+                  }
+                },
+                "prores-4444": {
+                  "gbPerHour24": 605,
+                  "maximumFps": 75,
+                  "cardMinutes24": {
+                    "1tb": 95,
+                    "2tb": 190
+                  },
+                  "cardFps": {
+                    "1tb": 75,
+                    "2tb": 75
+                  }
+                },
+                "prores-4444-xq": {
+                  "gbPerHour24": 904,
+                  "maximumFps": 75,
+                  "cardMinutes24": {
+                    "1tb": 63,
+                    "2tb": 127
+                  },
+                  "cardFps": {
+                    "1tb": 75,
+                    "2tb": 75
+                  }
+                }
+              }
             }
           ]
         },
@@ -233,10 +398,99 @@
               "id": "a35-89",
               "label": "2.7K 8:9 · 2743 × 3086",
               "width": 2743,
-              "height": 3086
+              "height": 3086,
+              "references": {}
+            }
+          ]
+        },
+        {
+          "id": "3k-square",
+          "label": "3K 1:1",
+          "note": "",
+          "resolutions": [
+            {
+              "id": "a35-open-1x1",
+              "label": "3K 1:1 · 3072 × 3072",
+              "width": 3072,
+              "height": 3072,
+              "references": {
+                "arriraw": {
+                  "gbPerHour24": 1304,
+                  "maximumFps": 100,
+                  "cardMinutes24": {
+                    "1tb": 43,
+                    "2tb": 86
+                  },
+                  "cardFps": {
+                    "1tb": 55,
+                    "2tb": 100
+                  }
+                },
+                "prores-422-hq": {
+                  "gbPerHour24": 413,
+                  "maximumFps": 90,
+                  "cardMinutes24": {
+                    "1tb": 139,
+                    "2tb": 279
+                  }
+                },
+                "prores-4444": {
+                  "gbPerHour24": 615,
+                  "maximumFps": 90,
+                  "cardMinutes24": {
+                    "1tb": 93,
+                    "2tb": 187
+                  }
+                },
+                "prores-4444-xq": {
+                  "gbPerHour24": 918,
+                  "maximumFps": 90,
+                  "cardMinutes24": {
+                    "1tb": 62,
+                    "2tb": 125
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "46k-16x9",
+          "label": "4.6K 16:9",
+          "note": "",
+          "resolutions": [
+            {
+              "id": "a35-46k-16x9",
+              "label": "4.6K 16:9 · 4608 × 2592",
+              "width": 4608,
+              "height": 2592,
+              "references": {
+                "arriraw": {
+                  "gbPerHour24": 1648,
+                  "maximumFps": 75,
+                  "cardMinutes24": {
+                    "1tb": 34,
+                    "2tb": 68
+                  },
+                  "cardFps": {
+                    "1tb": 45,
+                    "2tb": 75
+                  }
+                }
+              }
             }
           ]
         }
+      ],
+      "mediaIDs": [
+        "1tb",
+        "2tb"
+      ],
+      "supportedCodecIds": [
+        "arriraw",
+        "prores-422-hq",
+        "prores-4444",
+        "prores-4444-xq"
       ]
     },
     {
@@ -387,7 +641,48 @@
               "id": "venice2-full",
               "label": "8.6K Full Frame · 8640 × 5760",
               "width": 8640,
-              "height": 5760
+              "height": 5760,
+              "references": {
+                "x-ocn-xt": {
+                  "gbPerHour24": 2405.25,
+                  "maximumFps": 29.97,
+                  "frameRates": [
+                    23.976,
+                    24,
+                    25,
+                    29.97
+                  ],
+                  "cardMinutes24": {
+                    "1tb": 23
+                  }
+                },
+                "x-ocn-st": {
+                  "gbPerHour24": 1646.1,
+                  "maximumFps": 29.97,
+                  "frameRates": [
+                    23.976,
+                    24,
+                    25,
+                    29.97
+                  ],
+                  "cardMinutes24": {
+                    "1tb": 34
+                  }
+                },
+                "x-ocn-lt": {
+                  "gbPerHour24": 969.75,
+                  "maximumFps": 29.97,
+                  "frameRates": [
+                    23.976,
+                    24,
+                    25,
+                    29.97
+                  ],
+                  "cardMinutes24": {
+                    "1tb": 58
+                  }
+                }
+              }
             }
           ]
         },
@@ -400,7 +695,33 @@
               "id": "venice2-17x9",
               "label": "8.6K 17:9 · 8640 × 4556",
               "width": 8640,
-              "height": 4556
+              "height": 4556,
+              "references": {
+                "x-ocn-xt": {
+                  "gbPerHour24": 1904.85,
+                  "maximumFps": 24,
+                  "frameRates": [
+                    23.976,
+                    24
+                  ]
+                },
+                "x-ocn-st": {
+                  "gbPerHour24": 1303.65,
+                  "maximumFps": 24,
+                  "frameRates": [
+                    23.976,
+                    24
+                  ]
+                },
+                "x-ocn-lt": {
+                  "gbPerHour24": 767.7,
+                  "maximumFps": 24,
+                  "frameRates": [
+                    23.976,
+                    24
+                  ]
+                }
+              }
             }
           ]
         },
@@ -413,7 +734,33 @@
               "id": "venice2-239",
               "label": "8.2K Scope · 8192 × 3432",
               "width": 8192,
-              "height": 3432
+              "height": 3432,
+              "references": {
+                "x-ocn-xt": {
+                  "gbPerHour24": 1385.55,
+                  "maximumFps": 24,
+                  "frameRates": [
+                    23.976,
+                    24
+                  ]
+                },
+                "x-ocn-st": {
+                  "gbPerHour24": 948.15,
+                  "maximumFps": 24,
+                  "frameRates": [
+                    23.976,
+                    24
+                  ]
+                },
+                "x-ocn-lt": {
+                  "gbPerHour24": 558.45,
+                  "maximumFps": 24,
+                  "frameRates": [
+                    23.976,
+                    24
+                  ]
+                }
+              }
             }
           ]
         },
@@ -426,13 +773,65 @@
               "id": "venice2-16x9",
               "label": "8.1K 16:9 · 8100 × 4556",
               "width": 8100,
-              "height": 4556
+              "height": 4556,
+              "references": {
+                "x-ocn-xt": {
+                  "gbPerHour24": 1904.85,
+                  "maximumFps": 24,
+                  "frameRates": [
+                    23.976,
+                    24
+                  ]
+                },
+                "x-ocn-st": {
+                  "gbPerHour24": 1303.65,
+                  "maximumFps": 24,
+                  "frameRates": [
+                    23.976,
+                    24
+                  ]
+                },
+                "x-ocn-lt": {
+                  "gbPerHour24": 767.7,
+                  "maximumFps": 24,
+                  "frameRates": [
+                    23.976,
+                    24
+                  ]
+                }
+              }
             },
             {
               "id": "venice2-76k-16x9",
               "label": "7.6K 16:9 · 7680 × 4320",
               "width": 7680,
-              "height": 4320
+              "height": 4320,
+              "references": {
+                "x-ocn-xt": {
+                  "gbPerHour24": 1737.45,
+                  "maximumFps": 24,
+                  "frameRates": [
+                    23.976,
+                    24
+                  ]
+                },
+                "x-ocn-st": {
+                  "gbPerHour24": 1188.9,
+                  "maximumFps": 24,
+                  "frameRates": [
+                    23.976,
+                    24
+                  ]
+                },
+                "x-ocn-lt": {
+                  "gbPerHour24": 700.2,
+                  "maximumFps": 24,
+                  "frameRates": [
+                    23.976,
+                    24
+                  ]
+                }
+              }
             }
           ]
         },
@@ -445,22 +844,78 @@
               "id": "venice2-58k-43",
               "label": "5.8K 4:3 · 5792 × 4276",
               "width": 5792,
-              "height": 4276
+              "height": 4276,
+              "references": {}
             },
             {
               "id": "venice2-58k-65",
               "label": "5.8K 6:5 · 5792 × 4854",
               "width": 5792,
-              "height": 4854
+              "height": 4854,
+              "references": {
+                "x-ocn-xt": {
+                  "gbPerHour24": 1368.0,
+                  "maximumFps": 24,
+                  "frameRates": [
+                    23.976,
+                    24
+                  ]
+                },
+                "x-ocn-st": {
+                  "gbPerHour24": 936.0,
+                  "maximumFps": 24,
+                  "frameRates": [
+                    23.976,
+                    24
+                  ]
+                },
+                "x-ocn-lt": {
+                  "gbPerHour24": 551.25,
+                  "maximumFps": 24,
+                  "frameRates": [
+                    23.976,
+                    24
+                  ]
+                }
+              }
             },
             {
               "id": "venice2-58k-179",
               "label": "5.8K 17:9 · 5792 × 3056",
               "width": 5792,
-              "height": 3056
+              "height": 3056,
+              "references": {
+                "x-ocn-xt": {
+                  "gbPerHour24": 863.55,
+                  "maximumFps": 24,
+                  "frameRates": [
+                    23.976,
+                    24
+                  ]
+                },
+                "x-ocn-st": {
+                  "gbPerHour24": 590.85,
+                  "maximumFps": 24,
+                  "frameRates": [
+                    23.976,
+                    24
+                  ]
+                },
+                "x-ocn-lt": {
+                  "gbPerHour24": 347.85,
+                  "maximumFps": 24,
+                  "frameRates": [
+                    23.976,
+                    24
+                  ]
+                }
+              }
             }
           ]
         }
+      ],
+      "mediaIDs": [
+        "1tb"
       ]
     },
     {
@@ -483,7 +938,37 @@
               "id": "raptor-full",
               "label": "8K Full Frame · 8192 × 4320",
               "width": 8192,
-              "height": 4320
+              "height": 4320,
+              "references": {
+                "r3d-hq": {
+                  "gbPerHour24": 1530.0,
+                  "maximumFps": 24,
+                  "frameRates": [
+                    24
+                  ]
+                },
+                "r3d-mq": {
+                  "gbPerHour24": 1072.8,
+                  "maximumFps": 24,
+                  "frameRates": [
+                    24
+                  ]
+                },
+                "r3d-lq": {
+                  "gbPerHour24": 669.6,
+                  "maximumFps": 24,
+                  "frameRates": [
+                    24
+                  ]
+                },
+                "r3d-elq": {
+                  "gbPerHour24": 360.0,
+                  "maximumFps": 24,
+                  "frameRates": [
+                    24
+                  ]
+                }
+              }
             }
           ]
         },
@@ -496,7 +981,8 @@
               "id": "raptor-16x9",
               "label": "7.6K 16:9 · 7680 × 4320",
               "width": 7680,
-              "height": 4320
+              "height": 4320,
+              "references": {}
             }
           ]
         },
@@ -509,11 +995,33 @@
               "id": "raptor-239",
               "label": "6K 2.39 · 6144 × 2570",
               "width": 6144,
-              "height": 2570
+              "height": 2570,
+              "references": {}
+            }
+          ]
+        },
+        {
+          "id": "prores-4k",
+          "label": "ProRes 4K 17:9",
+          "note": "Dedicated ProRes recording · 4K maximum",
+          "resolutions": [
+            {
+              "id": "raptor-prores-4k",
+              "label": "4K · 4096 × 2160",
+              "width": 4096,
+              "height": 2160,
+              "maxSensorFps": 120,
+              "supportedCodecIds": [
+                "prores-4444-xq",
+                "prores-4444",
+                "prores-422-hq",
+                "prores-422-lt"
+              ]
             }
           ]
         }
-      ]
+      ],
+      "maxSensorFps": 120
     },
     {
       "id": "alexa35-xtreme",
@@ -1240,7 +1748,33 @@
               "id": "venice2-6k-full",
               "label": "6K Full Frame · 6048 × 4032",
               "width": 6048,
-              "height": 4032
+              "height": 4032,
+              "references": {
+                "x-ocn-xt": {
+                  "gbPerHour24": 1183.95,
+                  "maximumFps": 24,
+                  "frameRates": [
+                    23.976,
+                    24
+                  ]
+                },
+                "x-ocn-st": {
+                  "gbPerHour24": 810.0,
+                  "maximumFps": 24,
+                  "frameRates": [
+                    23.976,
+                    24
+                  ]
+                },
+                "x-ocn-lt": {
+                  "gbPerHour24": 477.45,
+                  "maximumFps": 24,
+                  "frameRates": [
+                    23.976,
+                    24
+                  ]
+                }
+              }
             }
           ]
         },
@@ -1253,7 +1787,33 @@
               "id": "venice2-6k-17x9",
               "label": "6K 17:9 · 6054 × 3192",
               "width": 6054,
-              "height": 3192
+              "height": 3192,
+              "references": {
+                "x-ocn-xt": {
+                  "gbPerHour24": 940.95,
+                  "maximumFps": 24,
+                  "frameRates": [
+                    23.976,
+                    24
+                  ]
+                },
+                "x-ocn-st": {
+                  "gbPerHour24": 643.95,
+                  "maximumFps": 24,
+                  "frameRates": [
+                    23.976,
+                    24
+                  ]
+                },
+                "x-ocn-lt": {
+                  "gbPerHour24": 379.35,
+                  "maximumFps": 24,
+                  "frameRates": [
+                    23.976,
+                    24
+                  ]
+                }
+              }
             }
           ]
         },
@@ -1266,7 +1826,33 @@
               "id": "venice2-6k-185",
               "label": "6K 1.85:1 · 6054 × 3272",
               "width": 6054,
-              "height": 3272
+              "height": 3272,
+              "references": {
+                "x-ocn-xt": {
+                  "gbPerHour24": 964.35,
+                  "maximumFps": 24,
+                  "frameRates": [
+                    23.976,
+                    24
+                  ]
+                },
+                "x-ocn-st": {
+                  "gbPerHour24": 660.15,
+                  "maximumFps": 24,
+                  "frameRates": [
+                    23.976,
+                    24
+                  ]
+                },
+                "x-ocn-lt": {
+                  "gbPerHour24": 388.8,
+                  "maximumFps": 24,
+                  "frameRates": [
+                    23.976,
+                    24
+                  ]
+                }
+              }
             }
           ]
         },
@@ -1279,7 +1865,33 @@
               "id": "venice2-6k-239",
               "label": "6K Scope · 6048 × 2534",
               "width": 6048,
-              "height": 2534
+              "height": 2534,
+              "references": {
+                "x-ocn-xt": {
+                  "gbPerHour24": 749.25,
+                  "maximumFps": 24,
+                  "frameRates": [
+                    23.976,
+                    24
+                  ]
+                },
+                "x-ocn-st": {
+                  "gbPerHour24": 513.0,
+                  "maximumFps": 24,
+                  "frameRates": [
+                    23.976,
+                    24
+                  ]
+                },
+                "x-ocn-lt": {
+                  "gbPerHour24": 301.95,
+                  "maximumFps": 24,
+                  "frameRates": [
+                    23.976,
+                    24
+                  ]
+                }
+              }
             }
           ]
         },
@@ -1292,13 +1904,65 @@
               "id": "venice2-6k-57k",
               "label": "5.7K 16:9 · 5674 × 3192",
               "width": 5674,
-              "height": 3192
+              "height": 3192,
+              "references": {
+                "x-ocn-xt": {
+                  "gbPerHour24": 940.95,
+                  "maximumFps": 24,
+                  "frameRates": [
+                    23.976,
+                    24
+                  ]
+                },
+                "x-ocn-st": {
+                  "gbPerHour24": 643.95,
+                  "maximumFps": 24,
+                  "frameRates": [
+                    23.976,
+                    24
+                  ]
+                },
+                "x-ocn-lt": {
+                  "gbPerHour24": 379.35,
+                  "maximumFps": 24,
+                  "frameRates": [
+                    23.976,
+                    24
+                  ]
+                }
+              }
             },
             {
               "id": "venice2-6k-38k",
               "label": "3.8K 16:9 · 3840 × 2160",
               "width": 3840,
-              "height": 2160
+              "height": 2160,
+              "references": {
+                "x-ocn-xt": {
+                  "gbPerHour24": 434.25,
+                  "maximumFps": 24,
+                  "frameRates": [
+                    23.976,
+                    24
+                  ]
+                },
+                "x-ocn-st": {
+                  "gbPerHour24": 297.45,
+                  "maximumFps": 24,
+                  "frameRates": [
+                    23.976,
+                    24
+                  ]
+                },
+                "x-ocn-lt": {
+                  "gbPerHour24": 175.05,
+                  "maximumFps": 24,
+                  "frameRates": [
+                    23.976,
+                    24
+                  ]
+                }
+              }
             }
           ]
         },
@@ -1311,19 +1975,97 @@
               "id": "venice2-6k-4k-65",
               "label": "4K 6:5 · 4096 × 3432",
               "width": 4096,
-              "height": 3432
+              "height": 3432,
+              "references": {
+                "x-ocn-xt": {
+                  "gbPerHour24": 686.25,
+                  "maximumFps": 24,
+                  "frameRates": [
+                    23.976,
+                    24
+                  ]
+                },
+                "x-ocn-st": {
+                  "gbPerHour24": 469.8,
+                  "maximumFps": 24,
+                  "frameRates": [
+                    23.976,
+                    24
+                  ]
+                },
+                "x-ocn-lt": {
+                  "gbPerHour24": 276.75,
+                  "maximumFps": 24,
+                  "frameRates": [
+                    23.976,
+                    24
+                  ]
+                }
+              }
             },
             {
               "id": "venice2-6k-4k-43",
               "label": "4K 4:3 · 4096 × 3024",
               "width": 4096,
-              "height": 3024
+              "height": 3024,
+              "references": {
+                "x-ocn-xt": {
+                  "gbPerHour24": 603.9,
+                  "maximumFps": 24,
+                  "frameRates": [
+                    23.976,
+                    24
+                  ]
+                },
+                "x-ocn-st": {
+                  "gbPerHour24": 413.55,
+                  "maximumFps": 24,
+                  "frameRates": [
+                    23.976,
+                    24
+                  ]
+                },
+                "x-ocn-lt": {
+                  "gbPerHour24": 243.45,
+                  "maximumFps": 24,
+                  "frameRates": [
+                    23.976,
+                    24
+                  ]
+                }
+              }
             },
             {
               "id": "venice2-6k-4k-179",
               "label": "4K 17:9 · 4096 × 2160",
               "width": 4096,
-              "height": 2160
+              "height": 2160,
+              "references": {
+                "x-ocn-xt": {
+                  "gbPerHour24": 434.25,
+                  "maximumFps": 24,
+                  "frameRates": [
+                    23.976,
+                    24
+                  ]
+                },
+                "x-ocn-st": {
+                  "gbPerHour24": 297.45,
+                  "maximumFps": 24,
+                  "frameRates": [
+                    23.976,
+                    24
+                  ]
+                },
+                "x-ocn-lt": {
+                  "gbPerHour24": 175.05,
+                  "maximumFps": 24,
+                  "frameRates": [
+                    23.976,
+                    24
+                  ]
+                }
+              }
             }
           ]
         }
@@ -1540,6 +2282,10 @@
             }
           ]
         }
+      ],
+      "supportedCodecIds": [
+        "fx6-xavc-i",
+        "fx6-xavc-l"
       ]
     },
     {
@@ -5546,17 +6292,6 @@
       ]
     },
     {
-      "id": "arriraw-hde",
-      "name": "ARRIRAW HDE",
-      "family": "RAW",
-      "rateModel": "estimated-bpp",
-      "effectiveBitsPerPixel": 7.15,
-      "note": "High-density encoding · ARRI camera estimate",
-      "supportedManufacturers": [
-        "ARRI"
-      ]
-    },
-    {
       "id": "dji-prores-raw",
       "name": "ProRes RAW / RAW HQ",
       "family": "RAW",
@@ -5673,7 +6408,7 @@
       "family": "RAW",
       "rateModel": "estimated-bpp",
       "effectiveBitsPerPixel": 12,
-      "note": "KineOS 8.0 \u00b7 12-bit DNG payload estimate \u00b7 excludes headers, padding and audio",
+      "note": "KineOS 8.0 · 12-bit DNG payload estimate · excludes headers, padding and audio",
       "supportedManufacturers": [
         "KINEFINITY"
       ]
@@ -5756,6 +6491,126 @@
       "note": "Long-GOP H.264 · highest published setting",
       "supportedManufacturers": [
         "SONY"
+      ]
+    },
+    {
+      "id": "r3d-hq",
+      "name": "R3D REDCODE HQ",
+      "family": "R3D",
+      "rateModel": "reference",
+      "note": "RED V-RAPTOR XL 8K VV · 24p reference",
+      "supportedManufacturers": [
+        "RED"
+      ],
+      "supportedCameraIds": [
+        "raptor-xl"
+      ]
+    },
+    {
+      "id": "r3d-mq",
+      "name": "R3D REDCODE MQ",
+      "family": "R3D",
+      "rateModel": "reference",
+      "note": "RED V-RAPTOR XL 8K VV · 24p reference",
+      "supportedManufacturers": [
+        "RED"
+      ],
+      "supportedCameraIds": [
+        "raptor-xl"
+      ]
+    },
+    {
+      "id": "r3d-lq",
+      "name": "R3D REDCODE LQ",
+      "family": "R3D",
+      "rateModel": "reference",
+      "note": "RED V-RAPTOR XL 8K VV · 24p reference",
+      "supportedManufacturers": [
+        "RED"
+      ],
+      "supportedCameraIds": [
+        "raptor-xl"
+      ]
+    },
+    {
+      "id": "r3d-elq",
+      "name": "R3D REDCODE ELQ",
+      "family": "R3D",
+      "rateModel": "reference",
+      "note": "RED V-RAPTOR XL 8K VV · 24p reference",
+      "supportedManufacturers": [
+        "RED"
+      ],
+      "supportedCameraIds": [
+        "raptor-xl"
+      ]
+    },
+    {
+      "id": "x-ocn-xt",
+      "name": "X-OCN XT",
+      "family": "X-OCN",
+      "rateModel": "reference",
+      "note": "Sony X-OCN White Paper · 23.98/24p reference",
+      "supportedManufacturers": [
+        "SONY"
+      ],
+      "supportedCameraIds": [
+        "venice2",
+        "venice2-6k"
+      ]
+    },
+    {
+      "id": "x-ocn-st",
+      "name": "X-OCN ST",
+      "family": "X-OCN",
+      "rateModel": "reference",
+      "note": "Sony X-OCN White Paper · 23.98/24p reference",
+      "supportedManufacturers": [
+        "SONY"
+      ],
+      "supportedCameraIds": [
+        "venice2",
+        "venice2-6k"
+      ]
+    },
+    {
+      "id": "x-ocn-lt",
+      "name": "X-OCN LT",
+      "family": "X-OCN",
+      "rateModel": "reference",
+      "note": "Sony X-OCN White Paper · 23.98/24p reference",
+      "supportedManufacturers": [
+        "SONY"
+      ],
+      "supportedCameraIds": [
+        "venice2",
+        "venice2-6k"
+      ]
+    },
+    {
+      "id": "fx6-xavc-i",
+      "name": "XAVC-I",
+      "family": "XAVC-I",
+      "rateModel": "published-table",
+      "note": "Sony FX6 · published recording bitrate",
+      "supportedManufacturers": [
+        "SONY"
+      ],
+      "supportedCameraIds": [
+        "fx6"
+      ]
+    },
+    {
+      "id": "fx6-xavc-l",
+      "name": "XAVC-L",
+      "family": "XAVC-L",
+      "rateModel": "published-table",
+      "note": "Sony FX6 · published recording bitrate",
+      "supportedManufacturers": [
+        "SONY"
+      ],
+      "supportedCameraIds": [
+        "fx6"
       ]
     }
   ],
@@ -7234,6 +8089,42 @@
       "59.94": 6.25,
       "100": 12.5,
       "119.88": 12.5
+    },
+    "fx6|fx6-xavc-i|fx6-dci4k": {
+      "23.976": 30.0,
+      "25": 31.25,
+      "29.97": 37.5,
+      "50": 62.5,
+      "59.94": 75.0,
+      "24": 30.0
+    },
+    "fx6|fx6-xavc-i|fx6-qfhd": {
+      "23.976": 30.0,
+      "25": 31.25,
+      "29.97": 37.5,
+      "50": 62.5,
+      "59.94": 75.0
+    },
+    "fx6|fx6-xavc-l|fx6-qfhd": {
+      "23.976": 12.5,
+      "25": 12.5,
+      "29.97": 12.5,
+      "50": 18.75,
+      "59.94": 18.75
+    },
+    "fx6|fx6-xavc-i|fx6-hd": {
+      "23.976": 11.125,
+      "25": 14.0,
+      "29.97": 13.875,
+      "50": 27.875,
+      "59.94": 27.75
+    },
+    "fx6|fx6-xavc-l|fx6-hd": {
+      "23.976": 6.25,
+      "25": 6.25,
+      "29.97": 6.25,
+      "50": 6.25,
+      "59.94": 6.25
     }
   }
 }

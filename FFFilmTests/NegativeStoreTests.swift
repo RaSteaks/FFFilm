@@ -15,17 +15,26 @@ struct NegativeStoreTests {
         let store = NegativeStore()
         store.openExternalFile(first); try await waitUntilIdle(store)
         #expect(store.asset?.width == 100 && store.asset?.fileURL != first)
+        store.displayFailed()
+        #expect(store.error != nil && store.displayed != nil)
+        store.resetDisplayFailure()
+        #expect(store.error == nil)
         let request = store.externalOpenID
         store.selectBase(); try await waitUntilIdle(store)
         store.confirmBase(); try await waitUntilIdle(store)
-        let old = store.asset
+        let old = try #require(store.asset)
+        let oldBase = try #require(store.base)
+        store.filmLook = .classicMono
         store.openExternalFile(invalid); try await waitUntilIdle(store)
+        store.resetDisplayFailure()
         #expect(store.error != nil && store.asset === old && store.canExport)
+        #expect(store.base == oldBase && store.showsPositive && store.filmLook == .classicMono)
         store.openExternalFile(URL(string: "https://example.com/photo.tiff")!)
         #expect(store.error != nil && store.asset === old)
         store.openExternalFile(second); try await waitUntilIdle(store)
         #expect(store.externalOpenID != request && store.asset?.width == 80 && store.asset?.height == 120)
         #expect(store.error == nil && store.base == nil && !store.showsPositive)
+        #expect(store.filmLook == .neutral)
         try FileManager.default.removeItem(at: second)
         // Decoding owns a private copy and remains usable after the sender removes its file.
         store.selectBase(); try await waitUntilIdle(store)
@@ -62,7 +71,7 @@ struct NegativeStoreTests {
     @Test func savePositiveToPhotosPreservesSizeAndCleansUp() async throws {
         let library = StubNegativePhotoLibrary()
         let store = try await photoStore(library)
-        store.showsPositive = false
+        store.setComparingOriginal(true)
         store.saveToPhotos()
         store.saveToPhotos() // A duplicate tap while pending must not create another asset.
         try await waitUntilIdle(store)
@@ -203,6 +212,24 @@ struct NegativeStoreTests {
         #expect(view.accessibilityCustomActions?.count == 2)
     }
 
+    @Test func cameraFillsTheViewportAndRevealsAllEdgesForSampling() {
+        let source = CIImage(color: .white).cropped(to: CGRect(x: 0, y: 0, width: 900, height: 1200))
+        let view = NegativeZoomView()
+        view.frame = CGRect(x: 0, y: 0, width: 300, height: 600)
+        view.fillsViewport = true
+        view.setCameraImage(source, base: nil, look: .neutral, sampling: false, point: .zero, failed: {})
+        view.layoutIfNeeded()
+        #expect(view.contentSize == CGSize(width: 450, height: 600))
+        #expect(abs(view.contentOffset.x - 75) < 1)
+        let center = view.convert(CGPoint(x: view.bounds.midX, y: view.bounds.midY), to: view.imageView)
+        #expect(abs(center.x / view.imageView.bounds.width - 0.5) < 0.001)
+        view.setZoomScale(2, animated: false)
+        view.fillsViewport = false
+        view.layoutIfNeeded()
+        #expect(view.zoomScale == 1 && view.contentSize == CGSize(width: 300, height: 400))
+        #expect(abs(view.contentInset.top - 100) < 1)
+    }
+
     @Test func gpuOnlyCameraFrameCanFreezeSampleCompareAndExport() async throws {
         let camera = StubNegativeCamera(), store = NegativeStore(camera: camera)
         let source = CIImage(color: CIColor(red: 0.6, green: 0.4, blue: 0.3, alpha: 1,
@@ -217,9 +244,13 @@ struct NegativeStoreTests {
         #expect(abs(try #require(store.candidate).red - 0.6) < 0.001)
         store.confirmBase(); try await waitUntilIdle(store)
         #expect(store.showsPositive && store.canExport && store.imageState.positive == nil)
-        store.showsPositive = false; store.export(.png)
+        store.suspend()
+        #expect(store.canExport && store.paused && !store.live)
+        store.outputName = "RollB-02"
+        store.setComparingOriginal(true); store.export(.png)
         try await waitUntilIdle(store)
         let url = try #require(store.share?.url)
+        #expect(url.lastPathComponent.hasPrefix("RollB-02-positive-"))
         let exported = try #require(CGImageSourceCreateWithURL(url as CFURL, nil))
         let cg = try #require(CGImageSourceCreateImageAtIndex(exported, 0, nil))
         #expect(cg.width == 192 && cg.height == 128)
@@ -272,6 +303,64 @@ struct NegativeStoreTests {
         try await waitFor { store.sampling && store.candidate != nil && store.phase == nil }
         store.cancelSampling()
         #expect(store.base == nil && !store.canExport && store.needsCameraResampling)
+        store.suspend()
+    }
+
+    @Test func inputChangesInvalidateCalibrationAndSaveUninvertedSlides() async throws {
+        let name = "FFFilm.input-test." + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        let camera = StubNegativeCamera(), library = StubNegativePhotoLibrary()
+        let store = NegativeStore(camera: camera, photoLibrary: library, defaults: defaults)
+        let image = CIImage(color: CIColor(red: 0.6, green: 0.4, blue: 0.2, alpha: 1, colorSpace: NegativePixels.linear)!)
+            .cropped(to: CGRect(x: 0, y: 0, width: 96, height: 64))
+        let frame = NegativeAsset(image: image)
+        #expect(store.inputType == .colorNegative)
+        store.startCamera(); try await waitFor { camera.hasStarted }
+        camera.deliver(frame); try await waitFor { store.asset != nil }
+        store.selectBase(); camera.deliver(frame, frozenForSampling: true)
+        try await waitFor { store.candidate != nil }
+        store.setInputType(.slide)
+        #expect(store.inputType == .colorNegative && store.sampling)
+        store.confirmBase(); try await waitUntilIdle(store)
+        #expect(store.captureLocked && store.canExport)
+        store.setInputType(.monochromeNegative)
+        #expect(store.live && !store.captureLocked && !store.showsPositive && !store.canExport)
+        #expect(store.base == nil && camera.storedBase == nil)
+        store.setInputType(.scene)
+        store.selectBase()
+        #expect(!store.canExport && !store.sampling && store.phase == nil)
+        store.setInputType(.slide)
+        #expect(store.canExport && !store.showsPositive)
+        #expect(NegativeStore(defaults: defaults).inputType == .slide)
+        // A normal live frame can change without updating the document-sized asset.
+        // Both sharing and Photos must freeze/export the latest camera snapshot.
+        let latest = NegativeAsset(image: CIImage(color: CIColor(red: 0.18, green: 0.64, blue: 0.09, alpha: 1,
+                                                                 colorSpace: NegativePixels.linear)!).cropped(to: image.extent))
+        camera.deliver(latest); try await waitFor { store.imageState.cameraImage === latest.image }
+        store.export(.png); try await waitUntilIdle(store)
+        let share = try #require(store.share)
+        #expect(store.asset === latest && share.url.lastPathComponent.contains("-original-"))
+        let decoded = try #require(CIImage(contentsOf: share.url))
+        var pixel = [Float](repeating: 0, count: 4)
+        NegativePixels.context().render(decoded, toBitmap: &pixel, rowBytes: 16, bounds: CGRect(x: 0, y: 0, width: 1, height: 1),
+                                        format: .RGBAf, colorSpace: NegativePixels.linear)
+        #expect(abs(pixel[1] - 0.64) < 0.005)
+        store.share = nil
+        store.saveToPhotos(); try await waitUntilIdle(store)
+        #expect(library.saved.last?.lastPathComponent.contains("-original-") == true)
+        #expect(store.photoNotice == AppText.localized("negative.photos.originalSaved"))
+        store.setInputType(.colorNegative)
+        #expect(!store.live && !store.canExport)
+        store.suspend()
+        store.setInputType(.scene)
+        #expect(store.paused && !store.canExport)
+        let starts = camera.startCount
+        store.resume()
+        try await waitFor { camera.startCount == starts + 1 }
+        camera.deliver(frame)
+        try await waitFor { store.busy == nil && store.live }
+        #expect(store.inputType == .scene && !store.paused && !store.captureLocked)
         store.suspend()
     }
 
@@ -343,8 +432,10 @@ struct NegativeStoreTests {
         camera.deliver(asset)
         try await waitFor { store.asset != nil }
         let tapped = CGPoint(x: 0.3, y: 0.1)
+        store.filmLook = .triX400
+        store.setComparingOriginal(true)
         store.selectBase(at: tapped)
-        #expect(camera.requestedLock && store.phase == .locking)
+        #expect(camera.requestedLock && store.phase == .locking && !store.isComparingOriginal)
         // The lock callback must sample the tapped edge, not silently reset to image center.
         camera.deliver(asset, frozenForSampling: true)
         try await waitFor { store.candidate != nil }
@@ -357,17 +448,18 @@ struct NegativeStoreTests {
         try await waitUntilIdle(store)
         store.confirmBase()
         try await waitUntilIdle(store)
-        #expect(store.showsPositive && store.live && !store.sampling)
+        #expect(store.showsPositive && store.live && !store.sampling && store.filmLook == .triX400)
         #expect(camera.storedBase == store.base && store.base != nil)
         // Camera positives are displayed from source pixels without a CPU bitmap.
         #expect(store.imageState.cameraImage != nil && store.base != nil)
         // Re-sampling is provisional, and camera restart clears the temporary calibration.
         let committed = store.base
         store.selectBase()
+        #expect(!store.showsPositive)
         camera.deliver(asset, frozenForSampling: true)
         try await waitFor { store.sampling }
         store.cancelSampling()
-        #expect(store.base == committed && camera.storedBase == committed && store.live)
+        #expect(store.base == committed && camera.storedBase == committed && store.live && store.showsPositive)
         store.startCamera()
         try await waitFor { store.base == nil }
         #expect(camera.storedBase == nil && !store.showsPositive)
@@ -420,15 +512,21 @@ struct NegativeStoreTests {
         try context.writeTIFFRepresentation(of: image, to: file, format: .RGBA16, colorSpace: NegativePixels.display)
         let store = NegativeStore()
         store.loadFile(file); try await waitUntilIdle(store)
+        store.filmLook = .portra400
         store.selectBase(); try await waitUntilIdle(store)
         store.confirmBase(); try await waitUntilIdle(store)
         store.displayNeeds(2200)
         try await waitFor { store.imageState.positive?.width == 2200 }
+        let calibrated = try #require(store.displayed), base = try #require(store.base)
+        #expect(store.showsPositive && store.filmLook == .portra400)
         #expect(store.imageState.original?.width == 1800)
-        // Switching comparison must satisfy the retained zoom without another pinch gesture.
-        store.showsPositive = false
+        // A temporary original comparison gets the same zoom tier without another pinch.
+        store.setComparingOriginal(true)
         try await waitFor { store.imageState.original?.width == 2200 }
-        #expect(store.displayLimit == 2200)
+        #expect(store.displayed === store.imageState.original)
+        store.setComparingOriginal(false)
+        #expect(store.displayed === calibrated && store.displayLimit == 2200)
+        #expect(store.filmLook == .portra400 && store.base == base && store.canExport)
         store.suspend()
     }
 

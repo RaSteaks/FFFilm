@@ -26,6 +26,28 @@ nonisolated struct NegativeBase: Sendable, Equatable {
     let uneven: Bool
 }
 
+nonisolated enum FilmPreviewInput: String, CaseIterable, Sendable {
+    case colorNegative, monochromeNegative, slide, scene
+
+    var localizationKey: String { "negative.inputType." + rawValue }
+    var requiresBase: Bool { self == .colorNegative || self == .monochromeNegative }
+
+    func exportContent(base: NegativeBase?) -> FilmExportContent? {
+        switch self {
+        case .slide: return .original
+        case .scene: return nil
+        case .colorNegative, .monochromeNegative:
+            return base.map { .positive($0, monochrome: self == .monochromeNegative) }
+        }
+    }
+}
+
+/// Captures the exact image operation when export starts, independent of the viewing controls.
+nonisolated enum FilmExportContent: Sendable {
+    case original
+    case positive(NegativeBase, monochrome: Bool = false)
+}
+
 /// A source owns a private file copy until every preview/export job releases it.
 nonisolated final class NegativeAsset: @unchecked Sendable {
     let image: CIImage
@@ -33,12 +55,13 @@ nonisolated final class NegativeAsset: @unchecked Sendable {
     let preview: CGImage?
     let width: Int, height: Int
     let assumesSRGB: Bool
+    let sourceName: String?
     let fileURL: URL?
     let filePixels: NegativeFilePixels?
-    init(image: CIImage, preview: CGImage? = nil, assumesSRGB: Bool = false, fileURL: URL? = nil, filePixels: NegativeFilePixels? = nil) {
+    init(image: CIImage, preview: CGImage? = nil, assumesSRGB: Bool = false, fileURL: URL? = nil, filePixels: NegativeFilePixels? = nil, sourceName: String? = nil) {
         self.image = image; self.preview = preview
         width = Int(image.extent.width); height = Int(image.extent.height)
-        self.assumesSRGB = assumesSRGB; self.fileURL = fileURL; self.filePixels = filePixels
+        self.assumesSRGB = assumesSRGB; self.fileURL = fileURL; self.filePixels = filePixels; self.sourceName = sourceName
     }
     func region(_ rect: CGRect) -> CIImage {
         filePixels?.region(rect) ?? image.cropped(to: rect)
@@ -86,7 +109,7 @@ nonisolated final class NegativeFilePixels: @unchecked Sendable {
         #endif
     }
 
-    func preview(base: NegativeBase? = nil, context: CIContext, limit: CGFloat = 1800) throws -> CGImage {
+    func preview(base: NegativeBase? = nil, monochrome: Bool = false, context: CIContext, limit: CGFloat = 1800) throws -> CGImage {
         let scale = min(1, Self.affordableLimit(wanted: limit, extent: image.extent)
             / max(image.extent.width, image.extent.height))
         let width = max(1, Int((image.extent.width * scale).rounded()))
@@ -104,7 +127,7 @@ nonisolated final class NegativeFilePixels: @unchecked Sendable {
                     .insetBy(dx: -2 / sx, dy: -2 / sy).integral.intersection(image.extent)
                 try autoreleasepool {
                     let tile = region(sourceRect)
-                    let converted = base.map { NegativePixels.positive(tile, base: $0) } ?? tile
+                    let converted = base.map { NegativePixels.positive(tile, base: $0, monochrome: monochrome) } ?? tile
                     try NegativePixels.renderBitmap(converted.transformed(by: CGAffineTransform(scaleX: sx, y: sy)),
                                    context: context, toBitmap: bytes.baseAddress!.advanced(by: start * rowBytes), rowBytes: rowBytes,
                                    bounds: target, format: .RGBAh, colorSpace: NegativePixels.linear)
@@ -150,11 +173,17 @@ nonisolated enum NegativePixels {
 
     /// Core Image's sRGB tone-curve filters make the inversion domain explicit.
     /// RGB normalization happens in linear light, inversion in encoded sRGB.
-    static func positive(_ image: CIImage, base: NegativeBase) -> CIImage {
+    static func positive(_ image: CIImage, base: NegativeBase, monochrome: Bool = false) -> CIImage {
+        let red = 1 / CGFloat(max(base.red, 0.000001))
+        let green = 1 / CGFloat(max(base.green, 0.000001))
+        let blue = 1 / CGFloat(max(base.blue, 0.000001))
+        // Rec.709 luminance of base-normalized linear RGB gives one transmission value
+        // for silver B&W film. Replicate it in all channels before the shared inversion.
+        let gray = monochrome ? CIVector(x: 0.2126 * red, y: 0.7152 * green, z: 0.0722 * blue, w: 0) : nil
         let normalized = image.applyingFilter("CIColorMatrix", parameters: [
-            "inputRVector": CIVector(x: 1 / CGFloat(max(base.red, 0.000001)), y: 0, z: 0, w: 0),
-            "inputGVector": CIVector(x: 0, y: 1 / CGFloat(max(base.green, 0.000001)), z: 0, w: 0),
-            "inputBVector": CIVector(x: 0, y: 0, z: 1 / CGFloat(max(base.blue, 0.000001)), w: 0)
+            "inputRVector": gray ?? CIVector(x: red, y: 0, z: 0, w: 0),
+            "inputGVector": gray ?? CIVector(x: 0, y: green, z: 0, w: 0),
+            "inputBVector": gray ?? CIVector(x: 0, y: 0, z: blue, w: 0)
         ]).applyingFilter("CIColorClamp", parameters: [
             "inputMinComponents": CIVector(x: 0, y: 0, z: 0, w: 0),
             "inputMaxComponents": CIVector(x: 1, y: 1, z: 1, w: 1)
@@ -165,10 +194,10 @@ nonisolated enum NegativePixels {
             .cropped(to: image.extent)
     }
 
-    static func preview(_ image: CIImage, base: NegativeBase? = nil, context: CIContext, limit: CGFloat = 1800) throws -> CGImage {
+    static func preview(_ image: CIImage, base: NegativeBase? = nil, monochrome: Bool = false, context: CIContext, limit: CGFloat = 1800) throws -> CGImage {
         let scale = min(1, limit / max(image.extent.width, image.extent.height))
         // Convert before scaling so display and export sample the same nonlinear operation.
-        let converted = base.map { positive(image, base: $0) } ?? image
+        let converted = base.map { positive(image, base: $0, monochrome: monochrome) } ?? image
         let small = converted.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
         guard let result = context.createCGImage(small, from: small.extent.integral, format: .RGBAh, colorSpace: linear) else {
             throw NegativeFailure(key: "negative.error.render")
@@ -254,25 +283,25 @@ actor NegativeRenderer {
 
     /// Reject a known-unaffordable decode before ImageIO allocates it. Available
     /// memory is a changing snapshot, so this is a guard, not a size guarantee.
-    private func checkMemory(width: Int, height: Int, decoding: Bool) throws {
+    private func checkMemory(width: Int, height: Int, bytesPerPixel: Int) throws {
         let (pixels, overflow) = width.multipliedReportingOverflow(by: height)
         guard !overflow, pixels > 0, pixels < (Int.max - 64 * 1024 * 1024) / 12 else {
             throw NegativeFailure(key: "negative.error.size")
         }
         #if os(iOS) && !targetEnvironment(simulator)
-        let estimated = pixels * (decoding ? 12 : 4) + 64 * 1024 * 1024
+        let estimated = pixels * bytesPerPixel + 64 * 1024 * 1024
         guard os_proc_available_memory() > estimated else { throw NegativeFailure(key: "negative.error.memory") }
         #endif
     }
 
     func load(_ url: URL) throws -> NegativeAsset {
         try Task.checkCancellation()
-        return try load(owned: Self.copiedFile(url))
+        return try load(owned: Self.copiedFile(url), sourceName: url.lastPathComponent)
     }
 
     /// Takes ownership immediately; failures and cancellation remove the copy,
     /// while a successful asset retains it until the asset is released.
-    func load(owned: URL) throws -> NegativeAsset {
+    func load(owned: URL, sourceName: String? = nil) throws -> NegativeAsset {
         var committed = false
         defer { if !committed { try? FileManager.default.removeItem(at: owned) } }
         try Task.checkCancellation()
@@ -284,7 +313,7 @@ actor NegativeRenderer {
               let height = metadata[kCGImagePropertyPixelHeight as String] as? Int, width > 0, height > 0 else {
             throw NegativeFailure(key: "negative.error.decode")
         }
-        try checkMemory(width: width, height: height, decoding: true)
+        try checkMemory(width: width, height: height, bytesPerPixel: 0)
         if type == UTType.tiff.identifier && CGImageSourceGetCount(source) != 1 { throw NegativeFailure(key: "negative.error.pages") }
         let depth = metadata[kCGImagePropertyDepth as String] as? Int ?? 8
         guard type != UTType.tiff.identifier || depth == 8 || depth == 16 else { throw NegativeFailure(key: "negative.error.depth") }
@@ -312,14 +341,23 @@ actor NegativeRenderer {
         let orientation = Int32(metadata[kCGImagePropertyOrientation as String] as? Int ?? 1)
         // ImageIO can re-run LZW/PackBits decoding for each cropped CGImage even
         // with caching enabled. An explicit raw provider shares one decoded buffer.
-        guard let bytes = cg.dataProvider?.data,
-              CFDataGetLength(bytes) >= cg.bytesPerRow * cg.height,
-              let provider = CGDataProvider(data: bytes),
-              let decoded = CGImage(width: cg.width, height: cg.height, bitsPerComponent: cg.bitsPerComponent,
-                                    bitsPerPixel: cg.bitsPerPixel, bytesPerRow: cg.bytesPerRow,
-                                    space: cg.colorSpace ?? space, bitmapInfo: cg.bitmapInfo, provider: provider,
-                                    decode: cg.decode, shouldInterpolate: false, intent: cg.renderingIntent) else {
-            throw NegativeFailure(key: "negative.error.decode")
+        let decoded: CGImage
+        let tiff = metadata[kCGImagePropertyTIFFDictionary as String] as? [String: Any]
+        if type == UTType.tiff.identifier, tiff?[kCGImagePropertyTIFFCompression as String] as? Int == 1,
+           let mapped = MappedTIFF.image(at: owned, matching: cg, space: space) {
+            decoded = mapped
+        } else {
+            try checkMemory(width: width, height: height, bytesPerPixel: 12)
+            guard let bytes = cg.dataProvider?.data,
+                  CFDataGetLength(bytes) >= cg.bytesPerRow * cg.height,
+                  let provider = CGDataProvider(data: bytes),
+                  let buffered = CGImage(width: cg.width, height: cg.height, bitsPerComponent: cg.bitsPerComponent,
+                                        bitsPerPixel: cg.bitsPerPixel, bytesPerRow: cg.bytesPerRow,
+                                        space: cg.colorSpace ?? space, bitmapInfo: cg.bitmapInfo, provider: provider,
+                                        decode: cg.decode, shouldInterpolate: false, intent: cg.renderingIntent) else {
+                throw NegativeFailure(key: "negative.error.decode")
+            }
+            decoded = buffered
         }
         try Task.checkCancellation()
         let filePixels = NegativeFilePixels(cg: decoded, space: space, orientation: orientation)
@@ -327,7 +365,7 @@ actor NegativeRenderer {
         let preview = try filePixels.preview(context: context)
         try Task.checkCancellation()
         committed = true
-        return NegativeAsset(image: image, preview: preview, assumesSRGB: assumed, fileURL: owned, filePixels: filePixels)
+        return NegativeAsset(image: image, preview: preview, assumesSRGB: assumed, fileURL: owned, filePixels: filePixels, sourceName: sourceName)
     }
 
     func sample(_ asset: NegativeAsset, point: CGPoint) throws -> NegativeBase {
@@ -359,23 +397,38 @@ actor NegativeRenderer {
         return try pixels.preview(context: context, limit: limit)
     }
 
-    func render(_ asset: NegativeAsset, base: NegativeBase, limit: CGFloat = 1800) throws -> CGImage {
+    func render(_ asset: NegativeAsset, base: NegativeBase, monochrome: Bool = false, limit: CGFloat = 1800) throws -> CGImage {
         try Task.checkCancellation()
-        if let pixels = asset.filePixels { return try pixels.preview(base: base, context: context, limit: limit) }
+        if let pixels = asset.filePixels { return try pixels.preview(base: base, monochrome: monochrome, context: context, limit: limit) }
         // Camera snapshots follow the selected capture resolution in both comparison modes.
-        return try NegativePixels.preview(asset.image, base: base, context: context, limit: CGFloat(max(asset.width, asset.height)))
+        return try NegativePixels.preview(asset.image, base: base, monochrome: monochrome, context: context, limit: CGFloat(max(asset.width, asset.height)))
     }
 
-    func export(_ asset: NegativeAsset, base: NegativeBase, format: NegativeFormat) throws -> URL {
+    func export(_ asset: NegativeAsset, content: FilmExportContent, format: NegativeFormat, name: String? = nil, progress: (@Sendable (Double) -> Void)? = nil) throws -> URL {
         try Task.checkCancellation()
-        try checkMemory(width: asset.width, height: asset.height, decoding: false)
-        let output = FileManager.default.temporaryDirectory.appendingPathComponent("Positive-\(UUID().uuidString).\(format.rawValue)")
+        try checkMemory(width: asset.width, height: asset.height, bytesPerPixel: 4)
+        let proposed = name?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let stem = proposed.flatMap { $0.isEmpty ? nil : $0 } ?? asset.sourceName.map { URL(fileURLWithPath: $0).deletingPathExtension().lastPathComponent } ?? "Camera"
+        // A single safe filename keeps the source association without borrowing the source's directory.
+        let safe = String(stem.unicodeScalars.filter { !CharacterSet.controlCharacters.union(CharacterSet(charactersIn: "/:\\")).contains($0) }.prefix(42))
+        let suffix: String
+        let preserveAlpha: Bool
+        switch content {
+        case .original: suffix = "original"; preserveAlpha = format != .jpg
+        case .positive: suffix = "positive"; preserveAlpha = false
+        }
+        let output = FileManager.default.temporaryDirectory.appendingPathComponent("\(safe)-\(suffix)-\(UUID().uuidString).\(format.rawValue)")
         do {
-            let converted = NegativePixels.positive(asset.image, base: base)
             // A disk-backed raster avoids allocating one giant output bitmap/GPU surface.
-            // The encoder reads this immutable provider; 256-row renders bound working tiles.
-            try NegativeRaster.write(converted, context: context, format: format, to: output) { rect in
-                NegativePixels.positive(asset.region(rect), base: base)
+            // The image supplies the oriented extent; each stripe supplies its own source pixels.
+            try NegativeRaster.write(asset.image, context: context, format: format, preserveAlpha: preserveAlpha, to: output, progress: progress) { rect in
+                let tile = asset.region(rect)
+                switch content {
+                case .positive(let base, let monochrome):
+                    return NegativePixels.positive(tile, base: base, monochrome: monochrome)
+                case .original:
+                    return format == .jpg ? tile.composited(over: CIImage(color: .white).cropped(to: rect)) : tile
+                }
             }
             try Task.checkCancellation()
             return output

@@ -180,6 +180,7 @@ final class FFFilmUITests: XCTestCase {
         app.launchArguments += ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launchEnvironment["FFFILM_UI_RESET_LANGUAGE"] = "1"
         app.launch()
+        XCTAssertTrue(app.tabBars.buttons["Film Simulation"].waitForExistence(timeout: 5))
         // Clear only this test's preference when finished so system-language tests stay isolated.
         defer {
             app.terminate()
@@ -198,7 +199,7 @@ final class FFFilmUITests: XCTestCase {
         choose("简体中文", picker: "app-language-picker", in: app)
         XCTAssertTrue(app.navigationBars["设置"].waitForExistence(timeout: 3))
         XCTAssertTrue(app.tabBars.buttons["计算"].exists)
-        XCTAssertTrue(app.tabBars.buttons["胶片预览"].exists)
+        XCTAssertTrue(app.tabBars.buttons["胶片模拟"].exists)
         let unit = app.descendants(matching: .any).matching(identifier: "storage-unit-picker").firstMatch
         XCTAssertTrue((unit.label + " " + (unit.value as? String ?? "")).contains("进制"))
         let chinese = XCTAttachment(screenshot: app.screenshot())

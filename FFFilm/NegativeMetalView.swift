@@ -5,9 +5,16 @@ import OSLog
 
 /// On-demand, color-managed camera display. No timer, CGImage readback, or frame history.
 final class NegativeMetalView: MTKView, MTKViewDelegate {
+    private struct Appearance: Equatable {
+        var base: NegativeBase?
+        var look = CameraFilmLook.neutral
+        var strength = 1.0
+        var monochrome = false
+    }
+
     private let worker: NegativeMetalRenderer?
     private var source: CIImage?
-    private var base: NegativeBase?
+    private var appearance = Appearance()
     private var revision: UInt64 = 0
     private var inFlight = false
     private var reportedFailure = false
@@ -30,10 +37,11 @@ final class NegativeMetalView: MTKView, MTKViewDelegate {
     }
     required init(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
-    func show(_ image: CIImage, base: NegativeBase?) {
-        guard source !== image || self.base != base else { return }
-        if source !== image { reportedFailure = false }
-        source = image; self.base = base
+    func show(_ image: CIImage, base: NegativeBase?, look: CameraFilmLook, strength: Double = 1, monochrome: Bool = false) {
+        let next = Appearance(base: base, look: look, strength: strength, monochrome: monochrome)
+        guard source !== image || appearance != next else { return }
+        reportedFailure = false
+        source = image; appearance = next
         revision &+= 1
         setNeedsDisplay()
     }
@@ -59,12 +67,16 @@ final class NegativeMetalView: MTKView, MTKViewDelegate {
         guard let drawable = currentDrawable else { return }
         inFlight = true
         let submitted = revision
+        let requested = appearance
         // One GPU job plus the latest source only: a busy GPU never builds a stale-frame queue.
-        worker.render(source, base: base, drawable: drawable) { [weak self] success in
+        worker.render(source, base: requested.base, look: requested.look, strength: requested.strength,
+                      monochrome: requested.monochrome, drawable: drawable) { [weak self] success in
             Task { @MainActor [weak self] in
                 guard let self else { return }
                 self.inFlight = false
-                if !success { self.reportFailure() }
+                // A failed look must not block a newer choice on the same frozen frame.
+                // A failure of the current settings still surfaces during continuous capture.
+                if !success && self.appearance == requested { self.reportFailure() }
                 else if self.revision != submitted { self.setNeedsDisplay() }
             }
         }
@@ -97,16 +109,18 @@ nonisolated final class NegativeMetalRenderer: @unchecked Sendable {
     }
 
     /// Shared by onscreen and offscreen verification, with the same floating-point inversion.
-    static func displayImage(_ image: CIImage, base: NegativeBase?, size: CGSize) -> CIImage {
-        let converted = base.map { NegativePixels.positive(image, base: $0) } ?? image
-        return converted.transformed(by: CGAffineTransform(translationX: -image.extent.minX, y: -image.extent.minY))
+    static func displayImage(_ image: CIImage, base: NegativeBase?, look: CameraFilmLook, strength: Double = 1,
+                             monochrome: Bool = false, size: CGSize) -> CIImage {
+        let converted = base.map { NegativePixels.positive(image, base: $0, monochrome: monochrome) } ?? image
+        let display = look.applying(to: converted, strength: strength)
+        return display.transformed(by: CGAffineTransform(translationX: -image.extent.minX, y: -image.extent.minY))
             .transformed(by: CGAffineTransform(scaleX: size.width / image.extent.width, y: size.height / image.extent.height))
     }
 
-    static func encode(_ image: CIImage, base: NegativeBase?, texture: MTLTexture,
-                       context: CIContext, command: MTLCommandBuffer) throws {
+    static func encode(_ image: CIImage, base: NegativeBase?, look: CameraFilmLook = .neutral, strength: Double = 1,
+                       monochrome: Bool = false, texture: MTLTexture, context: CIContext, command: MTLCommandBuffer) throws {
         let size = CGSize(width: texture.width, height: texture.height)
-        let output = displayImage(image, base: base, size: size)
+        let output = displayImage(image, base: base, look: look, strength: strength, monochrome: monochrome, size: size)
         let destination = CIRenderDestination(mtlTexture: texture, commandBuffer: command)
         destination.colorSpace = NegativePixels.linear
         // Metal's first texture row is the top of the UIKit view.
@@ -114,8 +128,8 @@ nonisolated final class NegativeMetalRenderer: @unchecked Sendable {
         _ = try context.startTask(toRender: output, to: destination)
     }
 
-    func render(_ image: CIImage, base: NegativeBase?, drawable: CAMetalDrawable,
-                completion: @escaping @Sendable (Bool) -> Void) {
+    func render(_ image: CIImage, base: NegativeBase?, look: CameraFilmLook, strength: Double = 1,
+                monochrome: Bool = false, drawable: CAMetalDrawable, completion: @escaping @Sendable (Bool) -> Void) {
         let target = Target(drawable: drawable)
         queue.async { [self] in
             autoreleasepool {
@@ -128,7 +142,8 @@ nonisolated final class NegativeMetalRenderer: @unchecked Sendable {
                 }
                 guard let context, let command = commands.makeCommandBuffer() else { completion(false); return }
                 do {
-                    try Self.encode(image, base: base, texture: drawable.texture, context: context, command: command)
+                    try Self.encode(image, base: base, look: look, strength: strength, monochrome: monochrome,
+                                    texture: drawable.texture, context: context, command: command)
                     command.present(drawable)
                     command.addCompletedHandler { [self, image] command in
                         #if DEBUG

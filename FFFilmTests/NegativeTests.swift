@@ -132,7 +132,7 @@ struct NegativeTests {
         let preview = try await renderer.render(asset, base: base)
         let expected = pixels(preview)
         for format in NegativeFormat.allCases {
-            let output = try await renderer.export(asset, base: base, format: format)
+            let output = try await renderer.export(asset, content: .positive(base), format: format)
             defer { try? FileManager.default.removeItem(at: output) }
             let source = try #require(CGImageSourceCreateWithURL(output as CFURL, nil))
             let cg = try #require(CGImageSourceCreateImageAtIndex(source, 0, nil))
@@ -146,6 +146,45 @@ struct NegativeTests {
                 let index = row * cg.width * 4
                 #expect(abs(Int(actual[index]) - Int(expected[index])) <= (format == .jpg ? 4 : 1))
             }
+        }
+    }
+
+    @Test func originalSlideAndMonochromePositiveKeepTheirSourceSemantics() async throws {
+        let input = temporary("png"), context = NegativePixels.context()
+        defer { try? FileManager.default.removeItem(at: input) }
+        let bounds = CGRect(x: 0, y: 0, width: 48, height: 320)
+        let clearEdge = CIImage(color: .clear).cropped(to: bounds)
+        let patch = CIImage(color: CIColor(red: 0.48, green: 0.09, blue: 0.16, alpha: 1, colorSpace: NegativePixels.linear)!)
+            .cropped(to: CGRect(x: 0, y: 0, width: 40, height: 320))
+        let source = patch.composited(over: clearEdge)
+        try context.writePNGRepresentation(of: source, to: input, format: .RGBA16, colorSpace: NegativePixels.display)
+        let renderer = NegativeRenderer(), asset = try await renderer.load(input)
+        let base = NegativeBase(red: 0.6, green: 0.4, blue: 0.2, uneven: false)
+        let mono = try await renderer.render(asset, base: base, monochrome: true)
+        let monoRGB = pixels(mono)
+        #expect(monoRGB[0] == monoRGB[1] && monoRGB[1] == monoRGB[2] && monoRGB[0] > 10)
+        let colorRGB = pixels(try await renderer.render(asset, base: base))
+        #expect(abs(Int(colorRGB[0]) - Int(colorRGB[1])) > 40)
+
+        let positiveURL = try await renderer.export(asset, content: .positive(base, monochrome: true), format: .png)
+        defer { try? FileManager.default.removeItem(at: positiveURL) }
+        let positiveSource = try #require(CGImageSourceCreateWithURL(positiveURL as CFURL, nil))
+        let positiveRGB = pixels(try #require(CGImageSourceCreateImageAtIndex(positiveSource, 0, nil)))
+        #expect(abs(Int(positiveRGB[0]) - Int(monoRGB[0])) <= 1 && positiveRGB[1] == positiveRGB[2])
+
+        let original = pixels(try #require(asset.preview))
+        for format in NegativeFormat.allCases {
+            let url = try await renderer.export(asset, content: .original, format: format, name: "Roll01")
+            defer { try? FileManager.default.removeItem(at: url) }
+            #expect(url.lastPathComponent.hasPrefix("Roll01-original-"))
+            let encoded = try #require(CGImageSourceCreateWithURL(url as CFURL, nil))
+            let image = try #require(CGImageSourceCreateImageAtIndex(encoded, 0, nil))
+            #expect(image.width == 48 && image.height == 320)
+            let rgba = pixels(image)
+            for channel in 0..<3 { #expect(abs(Int(rgba[channel]) - Int(original[channel])) <= (format == .jpg ? 5 : 1)) }
+            let edge = (image.width * image.height - 1) * 4
+            if format == .jpg { #expect(rgba[edge...edge + 2].allSatisfy { $0 >= 249 }) }
+            else { #expect(rgba[edge + 3] == 0) }
         }
     }
 
@@ -172,6 +211,31 @@ struct NegativeTests {
         #expect(reference.width == positive.width && reference.height == positive.height)
         let a = pixels(positive), b = pixels(reference)
         #expect(zip(a, b).allSatisfy { abs(Int($0) - Int($1)) <= 1 })
+    }
+
+    /// Check the optimized provider against ImageIO's color-managed output for both TIFF byte orders.
+    @Test(arguments: ["little", "big"])
+    func mappedPackedRGBMatchesDecoder(order: String) async throws {
+        let bundle = Bundle(for: NegativeFixtureBundle.self)
+        let url = try #require(bundle.url(forResource: "packed-rgb16-" + order, withExtension: "tiff"))
+        let source = try #require(CGImageSourceCreateWithURL(url as CFURL, nil))
+        let reference = try #require(CGImageSourceCreateImageAtIndex(source, 0, nil))
+        let space = NegativePixels.display
+        let mapped = MappedTIFF.image(at: url, matching: reference, space: space)
+        #expect((mapped != nil) == (order == "little"))
+        let imported = try await NegativeRenderer().load(url)
+        let decoded = try #require(imported.filePixels?.cg)
+        let context = NegativePixels.context()
+        func rendered(_ cg: CGImage) -> [UInt16] {
+            let image = CIImage(cgImage: cg, options: [.colorSpace: space])
+            var pixels = [UInt16](repeating: 0, count: 8 * 8 * 4)
+            context.render(image, toBitmap: &pixels, rowBytes: 8 * 8, bounds: image.extent,
+                           format: .RGBA16, colorSpace: space)
+            return pixels
+        }
+        let a = rendered(decoded), b = rendered(reference)
+        #expect(Set(a).count > 8)
+        #expect(zip(a, b).allSatisfy { abs(Int($0) - Int($1)) <= 2 })
     }
 
     @Test func rejectsMultipageTIFF() async throws {
@@ -221,7 +285,7 @@ struct NegativeTests {
         let base = try await renderer.sample(asset, point: CGPoint(x: 0.5, y: 0.1))
         #expect(abs(base.red - 0.6) < 0.002)
         #expect(abs(base.blue - 0.2) < 0.002)
-        let output = try await renderer.export(asset, base: base, format: .png)
+        let output = try await renderer.export(asset, content: .positive(base), format: .png)
         defer { try? FileManager.default.removeItem(at: output) }
         let result = try #require(CGImageSourceCreateWithURL(output as CFURL, nil))
         #expect(CGImageSourceCreateImageAtIndex(result, 0, nil)?.bitsPerComponent == 16)
@@ -263,7 +327,7 @@ struct NegativeTests {
         let renderer = NegativeRenderer()
         let task = Task {
             try Task.checkCancellation()
-            return try await renderer.export(asset, base: NegativeBase(red: 0.6, green: 0.4, blue: 0.2, uneven: false), format: .png)
+            return try await renderer.export(asset, content: .positive(NegativeBase(red: 0.6, green: 0.4, blue: 0.2, uneven: false)), format: .png)
         }
         task.cancel()
         do { let url = try await task.value; try? FileManager.default.removeItem(at: url); Issue.record("Cancelled export unexpectedly completed") }
@@ -297,7 +361,7 @@ struct NegativeTests {
         #expect(max(preview.width, preview.height) <= 1801)
         let base = try await renderer.sample(asset, point: CGPoint(x: 0.5, y: 0.1))
         for format in NegativeFormat.allCases {
-            let output = try await renderer.export(asset, base: base, format: format)
+            let output = try await renderer.export(asset, content: .positive(base), format: format)
             defer { try? FileManager.default.removeItem(at: output) }
             let source = try #require(CGImageSourceCreateWithURL(output as CFURL, nil))
             let properties = try #require(CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [String: Any])
@@ -307,3 +371,5 @@ struct NegativeTests {
         }
     }
 }
+
+private final class NegativeFixtureBundle {}

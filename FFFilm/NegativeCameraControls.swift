@@ -36,7 +36,9 @@ struct NegativeCameraControls: View {
                         Text("cm")
                     }.font(.caption).foregroundStyle(Palette.muted)
                 }
-                Text("negative.camera.settingsHint").font(.caption).foregroundStyle(Palette.muted)
+                if store.inputType.requiresBase {
+                    Text("negative.camera.settingsHint").font(.caption).foregroundStyle(Palette.muted)
+                }
             }
             // Settings live in a scrollable sheet so edits never resize the viewfinder.
             .disabled(!store.canAdjustCamera)

@@ -7,9 +7,10 @@ import CoreTransferable
 /// Transfer photos as files, avoiding a whole-file Data copy for large images.
 nonisolated struct NegativePhoto: Transferable, Sendable {
     let url: URL
+    let sourceName: String
     static var transferRepresentation: some TransferRepresentation {
         FileRepresentation(importedContentType: .image) { received in
-            NegativePhoto(url: try NegativeRenderer.copiedFile(received.file))
+            NegativePhoto(url: try NegativeRenderer.copiedFile(received.file), sourceName: received.file.lastPathComponent)
         }
     }
 }
@@ -44,6 +45,9 @@ final class NegativeStore {
         set { imageState.positive = newValue }
     }
     @ObservationIgnored private var latestCameraAsset: NegativeAsset?
+    private(set) var inputType: FilmPreviewInput
+    @ObservationIgnored private let defaults: UserDefaults?
+    private static let inputPreference = "fffilm.film-preview-input-type"
     private(set) var base: NegativeBase?
     private(set) var candidate: NegativeBase?
     private(set) var isCamera = false
@@ -69,16 +73,28 @@ final class NegativeStore {
     private(set) var phase: Phase?
     var busy: String? { phase?.rawValue }
     private(set) var candidateBusy = false
-    var showsPositive = false {
-        didSet {
-            // A comparison switch can land on a variant rendered before zoom demanded more resolution.
-            guard showsPositive != oldValue else { return }
-            sharpenDisplay(target: displayLimit)
+    /// Belongs to the displayed source. A failed or cancelled replacement keeps its look.
+    var filmLook = CameraFilmLook.neutral
+    private(set) var isComparingOriginal = false
+    /// Calibration determines inversion. Sampling and temporary comparison always show the input.
+    var showsPositive: Bool { base != nil && !isComparingOriginal && !sampling && phase != .locking }
+    var point = CGPoint(x: 0.5, y: 0.5)
+    var error: String? {
+        didSet { hasDisplayFailure = false }
+    }
+    @ObservationIgnored private var hasDisplayFailure = false
+    var share: NegativeShare?
+    private(set) var exportProgress = 0.0
+    var outputName = ""
+    private func exportUpdates(for id: UUID) -> @Sendable (Double) -> Void {
+        { [weak self] value in
+            Task { @MainActor in
+                guard let self, self.revision == id, self.phase == .exporting,
+                      value > self.exportProgress else { return }
+                self.exportProgress = value
+            }
         }
     }
-    var point = CGPoint(x: 0.5, y: 0.5)
-    var error: String?
-    var share: NegativeShare?
     var photoNotice: String?
     private(set) var photoAccessDenied = false
     var cameraDenied = false
@@ -105,14 +121,45 @@ final class NegativeStore {
     @ObservationIgnored private var calibrationID: UUID?
     @ObservationIgnored private var beforeSamplingLive = false
 
-    init(camera: any NegativeCameraCapture = NegativeCamera(), photoLibrary: (any NegativePhotoSaving)? = nil) {
+    init(camera: any NegativeCameraCapture = NegativeCamera(), photoLibrary: (any NegativePhotoSaving)? = nil,
+         defaults: UserDefaults? = nil) {
         self.photoLibrary = photoLibrary ?? NegativePhotoLibrary()
         self.camera = camera
+        self.defaults = defaults
+        inputType = defaults?.string(forKey: Self.inputPreference).flatMap(FilmPreviewInput.init(rawValue:)) ?? .colorNegative
     }
 
-    var displayed: CGImage? { !sampling && showsPositive ? positive ?? imageState.original : imageState.original }
-    var canExport: Bool { base != nil && asset != nil && !sampling && busy == nil }
+    var displayed: CGImage? { showsPositive ? positive ?? imageState.original : imageState.original }
+    var canChangeInputType: Bool { !sampling && busy == nil }
+    private var exportContent: FilmExportContent? {
+        guard canChangeInputType, isCamera ? latestCameraAsset != nil : asset != nil else { return nil }
+        return inputType.exportContent(base: base)
+    }
+    var canExport: Bool { exportContent != nil }
     var canAdjustCamera: Bool { isCamera && live && busy == nil && !sampling && cameraConfiguration != nil }
+
+    func setComparingOriginal(_ comparing: Bool) {
+        guard comparing != isComparingOriginal else { return }
+        if comparing, asset == nil || sampling || phase != nil { return }
+        isComparingOriginal = comparing
+        // The other cached bitmap may predate the current pinch zoom.
+        sharpenDisplay(target: displayLimit)
+    }
+
+    func setInputType(_ type: FilmPreviewInput) {
+        guard canChangeInputType, inputType != type else { return }
+        displayTask?.cancel()
+        revision = UUID()
+        inputType = type
+        filmLook = .neutral
+        defaults?.set(type.rawValue, forKey: Self.inputPreference)
+        resetDisplayFailure()
+        // A material change starts uncalibrated even if the new roll uses the same lens.
+        // Keep the current source/freeze state; only the optical lock and derived pixels expire.
+        base = nil; positive = nil; candidate = nil; sampleError = nil
+        captureLocked = false; needsCameraResampling = false; isComparingOriginal = false
+        if isCamera { camera.setBase(nil) }
+    }
 
     func reportImportError(_ error: Error) {
         // Picker cancellation is not an import failure, including provider cancellation.
@@ -153,7 +200,7 @@ final class NegativeStore {
         importImage { [renderer] in
             guard let photo = try await item.loadTransferable(type: NegativePhoto.self) else { throw NegativeFailure(key: "negative.error.decode") }
             // Transfer the app-owned copy to the renderer, including cleanup on failure.
-            return try await renderer.load(owned: photo.url)
+            return try await renderer.load(owned: photo.url, sourceName: photo.sourceName)
         }
     }
 
@@ -167,9 +214,12 @@ final class NegativeStore {
                 let result = try await load()
                 guard !Task.isCancelled, revision == id else { return }
                 camera.stop(); cameraRevision = UUID()
+                outputName = result.sourceName.map { URL(fileURLWithPath: $0).deletingPathExtension().lastPathComponent } ?? ""
                 asset = result; imageState.original = result.preview; imageState.cameraImage = nil
+                filmLook = .neutral
                 latestCameraAsset = nil; positive = nil; base = nil; candidate = nil
-                isCamera = false; live = false; paused = false; sampling = false; displayLimit = 1800; showsPositive = false
+                captureLocked = false; needsCameraResampling = false; calibrationID = nil
+                isCamera = false; live = false; paused = false; sampling = false; displayLimit = 1800; isComparingOriginal = false
             } catch {
                 if revision == id && !Task.isCancelled { reportImportError(error) }
             }
@@ -191,7 +241,8 @@ final class NegativeStore {
             guard revision == id, !Task.isCancelled else { return }
             guard granted else { phase = nil; cameraDenied = true; error = AppText.localized("negative.error.permission"); return }
             let generation = UUID(); cameraRevision = generation
-            base = nil; positive = nil; sampling = false; candidate = nil; showsPositive = false
+            base = nil; positive = nil; sampling = false; candidate = nil; isComparingOriginal = false
+            if !isCamera { outputName = ""; filmLook = .neutral }
             isCamera = true; live = true; paused = false; captureLocked = false
             camera.start(settings: requestedSettings, onConfiguration: { [weak self] configuration in
                 Task { @MainActor [weak self] in
@@ -208,7 +259,7 @@ final class NegativeStore {
                     if let previous = self.calibrationID, let current = frame.calibrationID, previous != current {
                         // Switching into or out of macro changes the optical/color pipeline.
                         self.needsCameraResampling = self.needsCameraResampling || self.base != nil
-                        self.base = nil; self.positive = nil; self.showsPositive = false; self.captureLocked = false
+                        self.base = nil; self.positive = nil; self.isComparingOriginal = false; self.captureLocked = false
                     }
                     self.calibrationID = frame.calibrationID
                     self.latestCameraAsset = frame.asset
@@ -228,17 +279,18 @@ final class NegativeStore {
                     self.suspend()
                     self.error = AppText.key(key)
                     // Interrupted configuration cannot retain a valid sampled base.
-                    self.base = nil; self.positive = nil; self.showsPositive = false; self.camera.setBase(nil)
+                    self.base = nil; self.positive = nil; self.camera.setBase(nil)
                 }
             }
         }
     }
 
     func selectBase(at selected: CGPoint = CGPoint(x: 0.5, y: 0.5)) {
-        guard asset != nil, busy == nil, !sampling,
+        guard inputType.requiresBase, asset != nil, busy == nil, !sampling,
               selected.x.isFinite, selected.y.isFinite,
               (0...1).contains(selected.x), (0...1).contains(selected.y) else { return }
         // Preserve a tap in source coordinates while exposure and white balance lock.
+        isComparingOriginal = false
         point = selected
         beforeSamplingLive = live
         if isCamera && live {
@@ -290,15 +342,16 @@ final class NegativeStore {
     }
 
     func confirmBase() {
-        guard let candidate, let asset, busy == nil else { return }
+        guard inputType.requiresBase, sampling, let candidate, let asset, busy == nil else { return }
         let id = revision
         phase = .rendering
         operation = Task {
             do {
                 // Live and frozen camera comparison is evaluated directly by the GPU surface.
-                let result = isCamera ? nil : try await renderer.render(asset, base: candidate, limit: displayLimit)
+                let result = isCamera ? nil : try await renderer.render(asset, base: candidate, monochrome: inputType == .monochromeNegative, limit: displayLimit)
                 guard revision == id, !Task.isCancelled else { return }
-                base = candidate; positive = result; sampling = false; showsPositive = true
+                // Keep the user's look; its input now becomes this calibrated positive.
+                base = candidate; positive = result; sampling = false
                 needsCameraResampling = false
                 // Only the sampled RGB values persist for this capture session, not a frame history.
                 camera.setBase(candidate)
@@ -333,7 +386,7 @@ final class NegativeStore {
                   wanted > CGFloat(max(shown.width, shown.height)) else { return }
             do {
                 if self.showsPositive, let base = self.base {
-                    let result = try await self.renderer.render(asset, base: base, limit: wanted)
+                    let result = try await self.renderer.render(asset, base: base, monochrome: self.inputType == .monochromeNegative, limit: wanted)
                     // Actor work can finish after cancellation or a new source/calibration.
                     guard !Task.isCancelled, self.revision == id, self.base == base else { return }
                     self.imageState.publishSharper(result, positive: true)
@@ -362,7 +415,7 @@ final class NegativeStore {
         if paused { startCamera() }
         else {
             // A manually frozen auto-exposed frame is valid only as a static preview.
-            if !captureLocked { base = nil; positive = nil; showsPositive = false; camera.setBase(nil) }
+            if !captureLocked { base = nil; positive = nil; camera.setBase(nil) }
             live = true; camera.freeze(false)
         }
     }
@@ -377,10 +430,16 @@ final class NegativeStore {
             self?.focusPoint = nil
         }
     }
-    func cameraDisplayFailed() {
-        guard isCamera else { return }
-        suspend()
+    func displayFailed() {
+        if isCamera { suspend() }
         error = AppText.localized("negative.error.render")
+        hasDisplayFailure = true
+    }
+
+    func resetDisplayFailure() {
+        // Returning to the file bitmap can recover a GPU display failure. Preserve
+        // any independent import/export error that arrived after the failed draw.
+        if hasDisplayFailure { error = nil }
     }
     func setCameraLens(_ id: String) {
         guard canAdjustCamera, cameraConfiguration?.lenses.contains(where: { $0.id == id }) == true, id != cameraSettings.lensID else { return }
@@ -405,14 +464,14 @@ final class NegativeStore {
     }
 
     func export(_ format: NegativeFormat) {
-        guard canExport else { return }
+        guard let content = exportContent else { return }
         freeze()
-        guard let asset, let base else { return }
+        guard let asset else { return }
         let id = revision
-        phase = .exporting; error = nil
+        exportProgress = 0; phase = .exporting; error = nil
         operation = Task {
             do {
-                let url = try await renderer.export(asset, base: base, format: format)
+                let url = try await renderer.export(asset, content: content, format: format, name: outputName, progress: exportUpdates(for: id))
                 guard revision == id, !Task.isCancelled else { try? FileManager.default.removeItem(at: url); return }
                 share = NegativeShare(url: url)
             } catch { if revision == id && !Task.isCancelled { self.error = error.localizedDescription } }
@@ -420,13 +479,13 @@ final class NegativeStore {
         }
     }
 
-    /// Save the committed positive at source dimensions, regardless of comparison or zoom.
+    /// Save the committed positive or slide at source dimensions, regardless of comparison or zoom.
     func saveToPhotos() {
-        guard canExport else { return }
+        guard let content = exportContent else { return }
         freeze()
-        guard let asset, let base else { return }
+        guard let asset else { return }
         let id = revision
-        phase = .exporting; error = nil; photoNotice = nil; photoAccessDenied = false
+        exportProgress = 0; phase = .exporting; error = nil; photoNotice = nil; photoAccessDenied = false
         operation = Task {
             defer {
                 if revision == id {
@@ -445,14 +504,17 @@ final class NegativeStore {
                 return
             }
             do {
-                let url = try await renderer.export(asset, base: base, format: .jpg)
+                let url = try await renderer.export(asset, content: content, format: .jpg, name: outputName, progress: exportUpdates(for: id))
                 defer { try? FileManager.default.removeItem(at: url) }
                 guard revision == id, !Task.isCancelled else { return }
                 // Once handed to Photos the transaction cannot be cancelled. Keep the
                 // busy state (also across backgrounding) until completion to prevent duplicates.
                 phase = .savingPhotos
                 try await photoLibrary.save(url)
-                photoNotice = AppText.localized("negative.photos.saved")
+                switch content {
+                case .original: photoNotice = AppText.localized("negative.photos.originalSaved")
+                case .positive: photoNotice = AppText.localized("negative.photos.saved")
+                }
             } catch {
                 if revision == id && !Task.isCancelled {
                     photoNotice = AppText.localized("negative.photos.failed") + "\n" + error.localizedDescription
@@ -469,12 +531,20 @@ final class NegativeStore {
         if isCamera { freeze() }
     }
     func suspend() {
+        setComparingOriginal(false)
         focusFeedback?.cancel(); focusPoint = nil
-        // Mark paused first so cancelling a sampling sheet cannot resume capture during suspension.
-        if isCamera { paused = true }
-        cancelWork(); cancelSampling()
+        // File operations and committed exports belong to the workspace and can finish offscreen.
+        // A stopped capture pipeline cannot certify a new exposure, but its last frozen pixels
+        // and their base still form a valid static image.
+        guard isCamera || phase == .cameraStarting else { return }
+        paused = true
+        if phase == .cameraStarting || phase == .locking {
+            cancelWork()
+            error = AppText.key("negative.interrupted")
+        }
+        freeze(); cancelSampling()
         cameraRevision = UUID(); camera.stop()
-        if isCamera { live = false; paused = true; captureLocked = false; base = nil; positive = nil; showsPositive = false }
+        live = false; captureLocked = false
     }
 }
 

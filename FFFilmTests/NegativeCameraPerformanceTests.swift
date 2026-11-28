@@ -7,6 +7,19 @@ import Metal
 @testable import FFFilm
 
 struct NegativeCameraPerformanceTests {
+    @MainActor @Test func filmLookStrengthsPersistIndependentlyAcrossSessions() throws {
+        let suite = "fffilm-test-look-strengths-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let first = FilmLookPreferences(defaults: defaults)
+        first[.portra400] = 0.35
+        first[.triX400] = 0
+        let reopened = FilmLookPreferences(defaults: defaults)
+        #expect(reopened[.portra400] == 0.35)
+        #expect(reopened[.triX400] == 0)
+        #expect(reopened[.ektar100] == 1)
+    }
+
     private func makeBuffer(_ format: OSType, width: Int = 98, height: Int = 64) throws -> CVPixelBuffer {
         var result: CVPixelBuffer?
         #expect(CVPixelBufferCreate(nil, width, height, format,
@@ -113,6 +126,60 @@ struct NegativeCameraPerformanceTests {
                 } else { #expect(Float(actual[0]) < 0.002 && Float(actual[(height - 1) * width * 4]) > 0.1) }
             }
         }
+    }
+
+    @Test func previewLooksPreserveTonalOrderAndUseTheCalibratedPositive() throws {
+        let context = NegativePixels.context()
+        let bounds = CGRect(x: 0, y: 0, width: 1, height: 1)
+        func pixel(_ rgb: (CGFloat, CGFloat, CGFloat), look: CameraFilmLook,
+                   strength: Double = 1, base: NegativeBase? = nil, monochrome: Bool = false) throws -> [Float] {
+            let color = try #require(CIColor(red: rgb.0, green: rgb.1, blue: rgb.2, alpha: 1, colorSpace: NegativePixels.linear))
+            let source = CIImage(color: color).cropped(to: bounds)
+            let image = NegativeMetalRenderer.displayImage(source, base: base, look: look, strength: strength,
+                                                          monochrome: monochrome, size: bounds.size)
+            var values = [Float](repeating: 0, count: 4)
+            context.render(image, toBitmap: &values, rowBytes: 16, bounds: bounds, format: .RGBAf, colorSpace: NegativePixels.linear)
+            return values
+        }
+        for look in CameraFilmLook.allCases {
+            let ramp = try [0.0, 0.04, 0.18, 0.5, 1.0].map { try pixel(($0, $0, $0), look: look)[0] }
+            #expect(zip(ramp, ramp.dropFirst()).allSatisfy { $0 < $1 })
+        }
+        let colored: (CGFloat, CGFloat, CGFloat) = (0.6, 0.4, 0.3)
+        let mono = try pixel(colored, look: .classicMono)
+        #expect(abs(mono[0] - mono[1]) < 0.002 && abs(mono[1] - mono[2]) < 0.002)
+        let soft = try pixel(colored, look: .softNegative), vivid = try pixel(colored, look: .vividSlide)
+        #expect(vivid[0] - vivid[2] > soft[0] - soft[2] + 0.04)
+        // A sample equal to the film base gives a black positive before the look lifts the toe.
+        let base = NegativeBase(red: 0.6, green: 0.4, blue: 0.3, uneven: false)
+        let calibrated = try pixel(colored, look: .softNegative, base: base)
+        #expect(calibrated.prefix(3).allSatisfy { $0 < 0.015 })
+
+        let shade: (CGFloat, CGFloat, CGFloat) = (0.12, 0.22, 0.15)
+        let raw = try pixel(shade, look: .neutral)
+        for look in [CameraFilmLook.portra400, .ektar100, .ektachromeE100, .triX400] {
+            let zero = try pixel(shade, look: look, strength: 0)
+            let half = try pixel(shade, look: look, strength: 0.5)
+            let full = try pixel(shade, look: look)
+            let gray = try pixel((0.18, 0.18, 0.18), look: look)
+            for channel in 0..<3 {
+                #expect(zero[channel] == raw[channel])
+                #expect(abs(half[channel] - (raw[channel] + full[channel]) * 0.5) < 0.002)
+                #expect(abs(gray[channel] - 0.18) < 0.003)
+            }
+        }
+        // Published RGB layers diverge in the highlights. These anchors also check table
+        // channel order and sRGB table decoding independently of the LUT generator.
+        for (look, white) in [(CameraFilmLook.portra400, [0.868, 0.859, 0.946] as [Float]),
+                              (.ektar100, [0.883, 0.888, 0.966]), (.ektachromeE100, [0.690, 0.718, 0.661])] {
+            let result = try pixel((1, 1, 1), look: look)
+            for channel in 0..<3 { #expect(abs(result[channel] - white[channel]) < 0.007) }
+        }
+        let silver = try pixel(shade, look: .triX400)
+        #expect(abs(silver[0] - silver[1]) < 0.002 && abs(silver[1] - silver[2]) < 0.002)
+        let grayBase = try pixel(shade, look: .neutral, base: base, monochrome: true)
+        #expect(abs(grayBase[0] - grayBase[2]) < 0.002)
+        #expect(try pixel(shade, look: .neutral, monochrome: true) == raw)
     }
 
     @Test func completedGPUFramesReleaseNativePoolStorage() throws {

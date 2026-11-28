@@ -11,10 +11,23 @@ struct NegativePreviewView: View {
     @State private var photo: PhotosPickerItem?
     @State private var cameraImmersive = true
     @State private var showsCameraSettings = false
+    @State private var showsLookOptions = false
+    private let lookPreferences = FilmLookPreferences.shared
+    @ScaledMetric(relativeTo: .subheadline) private var filmRowHeight: CGFloat = 40
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private var immersive: Bool { store.isCamera && cameraImmersive }
+    private var displayedLook: CameraFilmLook {
+        guard !store.isComparingOriginal, !store.sampling, store.phase != .locking,
+              !store.inputType.requiresBase || store.showsPositive else { return .neutral }
+        return store.filmLook
+    }
+    private var offersComparison: Bool {
+        guard !store.sampling, store.phase != .locking, store.asset != nil else { return false }
+        if store.isComparingOriginal || store.base != nil { return true }
+        return displayedLook != .neutral && lookPreferences[displayedLook] > 0
+    }
 
     var body: some View {
         NavigationStack {
@@ -59,11 +72,18 @@ struct NegativePreviewView: View {
             }
             .presentationDetents([.medium, .large])
         }
+        .sheet(isPresented: $showsLookOptions) { lookOptionsSheet }
+        .onChange(of: displayedLook) { _, _ in
+            if !store.isCamera { store.resetDisplayFailure() }
+        }
+        .onChange(of: lookPreferences[store.filmLook]) { _, _ in
+            if !store.isCamera { store.resetDisplayFailure() }
+        }
         .onChange(of: store.externalOpenID, initial: true) { _, request in
             guard request != nil else { return }
             // External opens always reveal the document workspace, including failed imports.
             cameraImmersive = false
-            showsFiles = false; showsPhotos = false; showsCameraSettings = false; photo = nil
+            showsFiles = false; showsPhotos = false; showsCameraSettings = false; showsLookOptions = false; photo = nil
         }
         .onChange(of: store.isCamera) { _, camera in if camera { cameraImmersive = true } }
         .fileImporter(isPresented: $showsFiles, allowedContentTypes: [.tiff, .jpeg, .png, .heic, .heif]) { result in
@@ -120,24 +140,25 @@ struct NegativePreviewView: View {
             ScrollView {
                 VStack(spacing: 12) {
                     if store.asset != nil {
-                        Picker("negative.comparison", selection: $store.showsPositive) {
-                            Text("negative.original").tag(false)
-                            Text("negative.positive").tag(true)
-                        }
-                        .pickerStyle(.segmented)
-                        .disabled(store.base == nil || store.sampling)
-                        .accessibilityIdentifier("negative-comparison")
-                        NegativeImagePanel(store: store)
+                        inputTypePicker
+                        NegativeImagePanel(store: store, look: displayedLook, strength: lookPreferences[store.filmLook])
                             // File review remains a scrollable workbench; live capture has its own viewport.
                             .frame(height: max(220, geometry.size.height - (store.sampling ? 300 : store.isCamera ? 240 : 210)))
+                            .overlay(alignment: .topLeading) {
+                                if offersComparison { compareOriginalButton.padding(8) }
+                            }
                         if let asset = store.asset {
+                            if let name = asset.sourceName { Text(name).font(.callout).textSelection(.enabled) }
                             Text("\(asset.width) × \(asset.height)")
                                 .font(.caption.monospacedDigit()).foregroundStyle(Palette.muted)
                                 .accessibilityIdentifier("negative-dimensions")
                             if asset.assumesSRGB { Text("negative.assumedProfile").font(.caption).foregroundStyle(Palette.muted) }
                         }
                         if store.sampling { samplingControls }
-                        else { viewingControls }
+                        else {
+                            lookOptionsButton
+                            viewingControls
+                        }
                     } else {
                         ContentUnavailableView {
                             Label("negative.title", systemImage: "photo")
@@ -168,7 +189,7 @@ struct NegativePreviewView: View {
                     VStack(spacing: 8) {
                         if let busy = store.busy {
                             HStack {
-                                ProgressView()
+                                operationProgress
                                 Text(LocalizedStringKey(busy))
                                 Spacer()
                                 // Photo-library commits cannot be cancelled after submission.
@@ -211,13 +232,16 @@ struct NegativePreviewView: View {
             let wide = geometry.size.width > geometry.size.height
             let panelHeight = dynamicTypeSize.isAccessibilitySize
                 ? geometry.size.height * 0.55
-                : min(geometry.size.height * 0.44, store.sampling ? 260.0 : 184.0)
+                : min(geometry.size.height * 0.44, 260)
+            let availableHeight = wide ? max(100, geometry.size.height - 80) : panelHeight
             ZStack {
-                // The complete frame always stays visible outside the overlays; film edges are never cropped.
-                NegativeImagePanel(store: store, cornerRadius: 0)
-                    .padding(.top, 64)
-                    .padding(.bottom, !wide ? panelHeight + 24 : 0)
-                    .padding(.trailing, wide ? 324 : 0)
+                // Only sampling needs every film edge clear of the header and actions.
+                NegativeImagePanel(store: store, cornerRadius: 0, fillsViewport: !store.sampling,
+                                   look: displayedLook, strength: lookPreferences[store.filmLook])
+                    .padding(.top, store.sampling ? 64 : 0)
+                    .padding(.bottom, store.sampling && !wide ? panelHeight + 24 : 0)
+                    .padding(.trailing, store.sampling && wide ? 324 : 0)
+                    .ignoresSafeArea(.container, edges: store.sampling ? [] : .all)
                 VStack {
                     cameraHeader
                     Spacer(minLength: 0)
@@ -227,32 +251,34 @@ struct NegativePreviewView: View {
                     Spacer(minLength: 0)
                     HStack {
                         if wide { Spacer(minLength: 0) }
-                        ScrollView {
-                            VStack(spacing: 8) {
-                                if let busy = store.busy {
-                                    HStack {
-                                        ProgressView()
-                                        Text(LocalizedStringKey(busy))
-                                        Spacer()
-                                        // Photo-library commits cannot be cancelled after submission.
-                                        if store.phase != .savingPhotos {
-                                            Button("negative.cancel") { store.cancelWork() }.frame(minHeight: 44)
-                                        }
-                                    }.accessibilityIdentifier("negative-progress")
+                        VStack(alignment: .trailing, spacing: 6) {
+                            if !store.sampling, store.asset != nil {
+                                // Keep the drum outside the action scroller. Its three rows can use at
+                                // most half the available height, including in landscape and large text.
+                                HStack(alignment: .bottom, spacing: 6) {
+                                    VStack(alignment: .trailing, spacing: 6) {
+                                        if offersComparison { compareOriginalButton }
+                                        lookOptionsButton.labelStyle(.iconOnly)
+                                            .background(Palette.background.opacity(0.94), in: Circle())
+                                    }
+                                    RulerDial(values: CameraFilmLook.allCases, selection: store.filmLook,
+                                              spacing: min(filmRowHeight, availableHeight / 6),
+                                              identifier: "negative-film-look", accessibilityLabel: Text("negative.look.previewOnly"),
+                                              label: { AppText.key($0.rawValue) }, accessibilityValue: { AppText.key($0.rawValue) },
+                                              isNotch: { $0 == .neutral }, face: .verticalWheel, onSelect: selectLook)
+                                        .frame(maxWidth: dynamicTypeSize.isAccessibilitySize ? 280 : 196)
                                 }
-                                if let error = store.error {
-                                    Text(error).font(.callout).accessibilityIdentifier("negative-error")
-                                    if store.cameraDenied { permissionSettingsButton }
-                                }
-                                if store.sampling { samplingControls }
-                                else { cameraActions }
-                            }.padding(12)
+                                .disabled(store.busy != nil)
+                            }
+                            ViewThatFits(in: .vertical) {
+                                cameraPanelContent.fixedSize(horizontal: false, vertical: true)
+                                ScrollView { cameraPanelContent }
+                                    .accessibilityIdentifier("negative-camera-actions")
+                            }
+                            .background(Palette.background.opacity(0.94), in: RoundedRectangle(cornerRadius: 18))
                         }
-                        .accessibilityIdentifier("negative-camera-actions")
-                        .scrollBounceBehavior(.basedOnSize)
                         .frame(maxWidth: wide ? 300 : 600)
-                        .frame(height: wide ? max(100, geometry.size.height - 80) : panelHeight)
-                        .background(Palette.background.opacity(0.94), in: RoundedRectangle(cornerRadius: 18))
+                        .frame(maxHeight: availableHeight, alignment: .bottom)
                     }
                 }.padding(12)
             }
@@ -260,21 +286,38 @@ struct NegativePreviewView: View {
         .background(.black)
     }
 
+    private var cameraPanelContent: some View {
+        VStack(spacing: 8) {
+            if let busy = store.busy {
+                HStack {
+                    operationProgress
+                    Text(LocalizedStringKey(busy))
+                    Spacer()
+                    // Photo-library commits cannot be cancelled after submission.
+                    if store.phase != .savingPhotos {
+                        Button("negative.cancel") { store.cancelWork() }.frame(minHeight: 44)
+                    }
+                }.accessibilityIdentifier("negative-progress")
+            }
+            if let error = store.error {
+                Text(error).font(.callout).accessibilityIdentifier("negative-error")
+                if store.cameraDenied { permissionSettingsButton }
+            }
+            if store.sampling { samplingControls }
+            else { cameraActions }
+        }.padding(12)
+    }
+
     private var cameraHeader: some View {
         HStack(spacing: 12) {
             Button {
-                // Leaving the immersive camera also stops capture; reopening resumes explicitly.
+                // Return to the same frame and look; live acquisition resumes explicitly.
                 store.suspend(); cameraImmersive = false
-            } label: { Label("negative.camera.close", systemImage: "xmark").labelStyle(.iconOnly).font(.system(size: 20)).frame(width: 44, height: 44) }
+            } label: { Label("negative.camera.close", systemImage: "chevron.backward").labelStyle(.iconOnly).font(.system(size: 20)).frame(width: 44, height: 44) }
             .accessibilityIdentifier("negative-camera-close")
             .disabled(store.phase == .savingPhotos)
-            Picker("negative.comparison", selection: $store.showsPositive) {
-                Text("negative.original").tag(false)
-                Text("negative.positive").tag(true)
-            }
-            .pickerStyle(.segmented)
-            .disabled(store.base == nil || store.sampling || store.busy != nil)
-            .accessibilityIdentifier("negative-comparison")
+            inputTypeMenu
+                .frame(maxWidth: .infinity)
             Button { showsCameraSettings = true } label: {
                 Label("negative.camera.settings", systemImage: "slider.horizontal.3").labelStyle(.iconOnly).font(.system(size: 20)).frame(width: 44, height: 44)
             }
@@ -286,6 +329,119 @@ struct NegativePreviewView: View {
         .background(Palette.background.opacity(0.94), in: Capsule())
     }
 
+    private var inputTypePicker: some View {
+        LabeledContent("negative.inputType.title") { inputTypeMenu }
+    }
+
+    private var inputTypeMenu: some View {
+        Picker("negative.inputType.title", selection: Binding(get: { store.inputType }, set: store.setInputType)) {
+            ForEach(FilmPreviewInput.allCases, id: \.self) { input in
+                Text(LocalizedStringKey(input.localizationKey)).tag(input)
+            }
+        }
+        .pickerStyle(.menu).labelsHidden()
+        .disabled(!store.canChangeInputType)
+        .accessibilityIdentifier("negative-input-type")
+    }
+
+    private func selectLook(_ look: CameraFilmLook) {
+        store.setComparingOriginal(false)
+        store.filmLook = look
+    }
+
+    private var lookOptionsButton: some View {
+        Button {
+            store.setComparingOriginal(false)
+            showsLookOptions = true
+        } label: {
+            Label("negative.look.options", systemImage: "camera.filters")
+                .frame(minWidth: 44, minHeight: 44)
+        }
+        .accessibilityValue(Text(LocalizedStringKey(store.filmLook.rawValue)))
+        .accessibilityIdentifier("negative-look-options")
+        .disabled(store.busy != nil || store.sampling)
+    }
+
+    private var lookOptionsSheet: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    Picker("negative.look.previewOnly", selection: Binding(get: { store.filmLook }, set: selectLook)) {
+                        ForEach(CameraFilmLook.allCases, id: \.self) { look in
+                            Text(LocalizedStringKey(look.rawValue)).tag(look)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .accessibilityIdentifier("negative-look-picker")
+                    if store.filmLook != .neutral {
+                        let strength = Binding(get: { lookPreferences[store.filmLook] },
+                                               set: { lookPreferences[store.filmLook] = $0 })
+                        VStack(alignment: .leading) {
+                            LabeledContent("negative.look.strength") {
+                                Text(strength.wrappedValue, format: .percent.precision(.fractionLength(0)))
+                                    .monospacedDigit()
+                            }
+                            HStack {
+                                strengthStep(-1, value: strength)
+                                Slider(value: strength, in: 0...1, step: 0.05) { Text("negative.look.strength") }
+                                    .accessibilityIdentifier("negative-look-strength")
+                                strengthStep(1, value: strength)
+                            }
+                        }
+                    }
+                } footer: {
+                    if store.inputType.requiresBase && store.base == nil {
+                        Text("negative.simulation.calibrateHint")
+                    } else {
+                        Text(store.inputType == .scene ? "negative.look.sceneHint" : "negative.look.previewHint")
+                    }
+                }
+                if let reference = store.filmLook.kodakDataSheet {
+                    Section {
+                        Link("negative.look.dataSheet", destination: reference)
+                    } footer: {
+                        Text("negative.look.profileHint")
+                    }
+                }
+            }
+            .navigationTitle(AppText.localized("negative.look.options"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("negative.done") { showsLookOptions = false }
+                        .accessibilityIdentifier("negative-look-done")
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+    }
+
+    private func strengthStep(_ delta: Int, value: Binding<Double>) -> some View {
+        let next = Int((value.wrappedValue * 20).rounded()) + delta
+        return Button {
+            value.wrappedValue = Double(next) / 20
+        } label: {
+            Image(systemName: delta < 0 ? "minus" : "plus").frame(width: 44, height: 44)
+        }
+        .buttonStyle(.borderless)
+        .accessibilityLabel(delta < 0 ? Text("negative.look.decrease") : Text("negative.look.increase"))
+        .accessibilityIdentifier(delta < 0 ? "negative-look-strength-decrease" : "negative-look-strength-increase")
+        .disabled(!(0...20).contains(next))
+    }
+
+    private var compareOriginalButton: some View {
+        Button { store.setComparingOriginal(!store.isComparingOriginal) } label: {
+            Text(store.isComparingOriginal ? "negative.simulation.return" : "negative.simulation.compare")
+                .font(.subheadline.weight(.medium))
+                .frame(minHeight: 44)
+                .padding(.horizontal, 10)
+        }
+        .background(Palette.background.opacity(0.94), in: Capsule())
+        .disabled(store.busy != nil)
+        .accessibilityIdentifier("negative-compare-original")
+    }
+
     private var cameraActions: some View {
         // Stack actions vertically at accessibility sizes instead of compressing their labels.
         let actions = dynamicTypeSize.isAccessibilitySize
@@ -293,14 +449,16 @@ struct NegativePreviewView: View {
         return VStack(spacing: 8) {
             if !dynamicTypeSize.isAccessibilitySize { cameraStatus }
             actions {
-                if let base = store.base { baseSwatch(base) }
-                Button { store.selectBase() } label: {
-                    Label(store.base == nil ? "negative.sample" : "negative.resample", systemImage: "scope")
-                        .frame(maxWidth: .infinity, minHeight: 44)
+                if store.inputType.requiresBase {
+                    if let base = store.base { baseSwatch(base) }
+                    Button { store.selectBase() } label: {
+                        Label(store.base == nil ? "negative.simulation.invert" : "negative.resample", systemImage: "scope")
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                    }
+                    .buttonStyle(.borderedProminent).foregroundStyle(Palette.background)
+                    .disabled(store.busy != nil || store.asset == nil)
+                    .accessibilityIdentifier("negative-sample")
                 }
-                .buttonStyle(.borderedProminent).foregroundStyle(Palette.background)
-                .disabled(store.busy != nil || store.asset == nil)
-                .accessibilityIdentifier("negative-sample")
                 Button {
                     if store.live { store.freeze() } else { store.resume() }
                 } label: {
@@ -309,7 +467,7 @@ struct NegativePreviewView: View {
                 }
                 .disabled(store.busy != nil || store.asset == nil)
                 .accessibilityIdentifier("negative-camera-freeze")
-                exportMenu.labelStyle(.iconOnly)
+                if store.inputType != .scene { exportMenu.labelStyle(.iconOnly) }
             }
             if dynamicTypeSize.isAccessibilitySize { cameraStatus }
         }
@@ -326,17 +484,34 @@ struct NegativePreviewView: View {
         }
     }
 
+    @ViewBuilder private var operationProgress: some View {
+        if store.phase == .exporting, store.exportProgress > 0 {
+            if store.exportProgress < 1 {
+                ProgressView(value: store.exportProgress).frame(maxWidth: 90)
+            } else {
+                Text("negative.encoding").font(.caption)
+            }
+        } else { ProgressView() }
+    }
+
     private var exportMenu: some View {
         Menu {
-            Button("negative.photos.save", systemImage: "square.and.arrow.down") { store.saveToPhotos() }
+            Button(store.inputType == .slide ? "negative.photos.saveOriginal" : "negative.photos.save",
+                   systemImage: "square.and.arrow.down") { store.saveToPhotos() }
                 .accessibilityIdentifier("negative-save-photos")
             Divider()
             ForEach(NegativeFormat.allCases) { format in
-                Button(format.title) { store.export(format) }
+                Button {
+                    store.export(format)
+                } label: {
+                    let bytes = Double(store.asset?.width ?? 0) * Double(store.asset?.height ?? 0) * (format == .jpg ? 8 : 16) + 67_108_864
+                    Text("\(format.title) · \(AppText.key("negative.scratch")) ≈ \(ByteCountFormatter.string(fromByteCount: Int64(bytes), countStyle: .file))")
+                }
                     .accessibilityIdentifier("negative-export-\(format.rawValue)")
             }
         } label: {
-            Label("negative.export", systemImage: "square.and.arrow.up").frame(minWidth: 44, minHeight: 44)
+            Label(store.inputType == .slide ? "negative.exportOriginal" : "negative.export",
+                  systemImage: "square.and.arrow.up").frame(minWidth: 44, minHeight: 44)
         }
         .disabled(!store.canExport)
         .accessibilityIdentifier("negative-export")
@@ -344,16 +519,21 @@ struct NegativePreviewView: View {
 
     private var viewingControls: some View {
         VStack(spacing: 8) {
-            HStack {
-                if let base = store.base { baseSwatch(base) }
-                Text(store.base == nil ? "negative.needsBase" : "negative.baseSet")
-                    .font(.callout).foregroundStyle(Palette.muted)
-                Spacer()
-                Button { store.selectBase() } label: {
-                    Text(store.base == nil ? "negative.sample" : "negative.resample").frame(minHeight: 44).contentShape(Rectangle())
+            if store.base != nil || store.inputType == .slide {
+                TextField("negative.outputName", text: Bindable(store).outputName).textFieldStyle(.roundedBorder)
+            }
+            if store.inputType.requiresBase {
+                HStack {
+                    if let base = store.base { baseSwatch(base) }
+                    Text(store.base == nil ? "negative.needsBase" : "negative.baseSet")
+                        .font(.callout).foregroundStyle(Palette.muted)
+                    Spacer()
+                    Button { store.selectBase() } label: {
+                        Text(store.base == nil ? "negative.simulation.invert" : "negative.resample").frame(minHeight: 44).contentShape(Rectangle())
+                    }
+                        .accessibilityIdentifier("negative-sample")
+                        .disabled(store.busy != nil)
                 }
-                    .accessibilityIdentifier("negative-sample")
-                    .disabled(store.busy != nil)
             }
             if store.isCamera {
                 Text(cameraHint)
@@ -376,7 +556,7 @@ struct NegativePreviewView: View {
                     .disabled(store.busy != nil)
                 }
                 Spacer()
-                exportMenu
+                if store.inputType != .scene { exportMenu }
             }
         }
     }
@@ -385,6 +565,7 @@ struct NegativePreviewView: View {
         if store.paused { return "negative.paused" }
         if store.needsCameraResampling { return "negative.camera.recalibrate" }
         if !store.live { return "negative.camera.frozen" }
+        if store.inputType.requiresBase && store.base == nil { return "negative.simulation.calibrateHint" }
         if store.captureLocked { return "negative.locked" }
         // Fixed-focus lenses must not invite an unsupported tap-to-focus action.
         if store.cameraConfiguration?.supportsFocus == false { return "negative.camera.fixedFocus" }
@@ -417,7 +598,9 @@ struct NegativePreviewView: View {
             actions {
                 Button { store.cancelSampling() } label: { Text("negative.cancel").frame(minHeight: 44).contentShape(Rectangle()) }
                 Spacer()
-                Button("negative.useBase") { store.confirmBase() }
+                Button("negative.useBase") {
+                    store.confirmBase()
+                }
                     // The app's light monochrome tint needs a dark label on this filled action.
                     .foregroundStyle(Palette.background)
                     .controlSize(.large).buttonStyle(.borderedProminent).disabled(store.candidate == nil || store.busy != nil)
@@ -445,16 +628,21 @@ struct NegativePreviewView: View {
 private struct NegativeImagePanel: View {
     let store: NegativeStore
     var cornerRadius: CGFloat = 12
+    var fillsViewport = false
+    var look: CameraFilmLook = .neutral
+    var strength: Double = 1
     var body: some View {
         ZStack(alignment: .topTrailing) {
             if store.imageState.cameraImage != nil || store.displayed != nil {
                 // Camera pixels go straight to Metal; file bitmaps keep their existing tier cache.
                 NegativeCanvas(image: store.displayed, cameraImage: store.imageState.cameraImage,
-                               base: !store.sampling && store.showsPositive ? store.base : nil,
+                               base: !store.sampling && store.phase != .locking && store.showsPositive ? store.base : nil,
+                               fillsViewport: fillsViewport, look: look, strength: strength,
+                               monochrome: store.inputType == .monochromeNegative,
                                sourceURL: store.asset?.fileURL,
                                sampling: store.sampling || store.focusPoint != nil,
                                point: store.sampling || store.phase == .locking ? store.point : store.focusPoint ?? CGPoint(x: 0.5, y: 0.5),
-                               displayNeed: { store.displayNeeds($0) }, failed: { store.cameraDisplayFailed() }) { point in
+                               displayNeed: { store.displayNeeds($0) }, failed: { store.displayFailed() }) { point in
                     guard store.busy == nil else { return }
                     if store.sampling { store.selectSamplePoint(point) }
                     else { store.focus(point) }
@@ -489,6 +677,10 @@ private struct NegativeCanvas: UIViewRepresentable {
     let image: CGImage?
     let cameraImage: CIImage?
     let base: NegativeBase?
+    let fillsViewport: Bool
+    let look: CameraFilmLook
+    let strength: Double
+    let monochrome: Bool
     let sourceURL: URL?
     let sampling: Bool
     let point: CGPoint
@@ -501,10 +693,12 @@ private struct NegativeCanvas: UIViewRepresentable {
         view.updateAccessibility()
         view.selected = selected
         view.displayNeed = displayNeed
+        view.fillsViewport = fillsViewport
         if let cameraImage {
-            view.setCameraImage(cameraImage, base: base, sampling: sampling, point: point, failed: failed)
+            view.setCameraImage(cameraImage, base: base, look: look, strength: strength, monochrome: monochrome,
+                                sampling: sampling, point: point, failed: failed)
         } else if let image {
-            view.setImage(image, sourceURL: sourceURL, sampling: sampling, point: point)
+            view.setImage(image, sourceURL: sourceURL, look: look, strength: strength, sampling: sampling, point: point, failed: failed)
         }
     }
 }
@@ -528,6 +722,15 @@ final class NegativeZoomView: UIScrollView, UIScrollViewDelegate {
     private var arranging = false
     private var metalView: NegativeMetalView?
     private weak var previousImage: CGImage?
+    private var fileTexture: CIImage?
+    var fillsViewport = false {
+        didSet {
+            guard fillsViewport != oldValue else { return }
+            // An old zoom/pan could hide the film edge when entering sampling.
+            lastBounds = .zero; pendingViewport = nil; lastViewport = nil
+            setNeedsLayout()
+        }
+    }
 
     init() {
         super.init(frame: .zero)
@@ -558,26 +761,44 @@ final class NegativeZoomView: UIScrollView, UIScrollViewDelegate {
         accessibilityLabel = label
         accessibilityCustomActions = [
             UIAccessibilityCustomAction(name: AppText.localized("negative.zoomIn"), target: self, selector: #selector(zoomIn)),
-            UIAccessibilityCustomAction(name: AppText.localized("negative.fit"), target: self, selector: #selector(fitImage))
+            UIAccessibilityCustomAction(name: AppText.localized("negative.resetZoom"), target: self, selector: #selector(resetZoom))
         ]
     }
-    func setImage(_ image: CGImage, sourceURL: URL?, sampling: Bool, point: CGPoint) {
-        metalView?.removeFromSuperview(); metalView = nil
-        if previousImage !== image { imageView.image = UIImage(cgImage: image); previousImage = image }
+    func setImage(_ image: CGImage, sourceURL: URL?, look: CameraFilmLook = .neutral, strength: Double = 1,
+                  sampling: Bool, point: CGPoint, failed: (() -> Void)? = nil) {
+        if look == .neutral || strength == 0 {
+            metalView?.failed = nil; metalView?.removeFromSuperview(); metalView = nil; fileTexture = nil
+            if previousImage !== image || imageView.image == nil { imageView.image = UIImage(cgImage: image) }
+        } else {
+            // File tiers already contain the selected original or calibrated positive.
+            // Wrap this tier once and apply only the creative look as its strength changes.
+            if previousImage !== image || fileTexture == nil { fileTexture = CIImage(cgImage: image) }
+            if let fileTexture {
+                showOnMetal(fileTexture, base: nil, look: look, strength: strength, monochrome: false, failed: failed)
+            }
+        }
+        previousImage = image
         setSource(size: CGSize(width: image.width, height: image.height), sourceURL: sourceURL, sampling: sampling, point: point)
+        updateCameraResolution()
     }
-    func setCameraImage(_ image: CIImage, base: NegativeBase?, sampling: Bool, point: CGPoint, failed: @escaping () -> Void) {
+    func setCameraImage(_ image: CIImage, base: NegativeBase?, look: CameraFilmLook, strength: Double = 1, monochrome: Bool = false,
+                        sampling: Bool, point: CGPoint, failed: @escaping () -> Void) {
+        fileTexture = nil; previousImage = nil
+        showOnMetal(image, base: base, look: look, strength: strength, monochrome: monochrome, failed: failed)
+        setSource(size: image.extent.size, sourceURL: nil, sampling: sampling, point: point)
+        updateCameraResolution()
+    }
+    private func showOnMetal(_ image: CIImage, base: NegativeBase?, look: CameraFilmLook, strength: Double,
+                             monochrome: Bool, failed: (() -> Void)?) {
         if metalView == nil {
             let surface = NegativeMetalView()
             // Insert below the source-coordinate reticle layers.
             imageView.insertSubview(surface, at: 0)
             metalView = surface
-            imageView.image = nil; previousImage = nil
+            imageView.image = nil
         }
         metalView?.failed = failed
-        metalView?.show(image, base: base)
-        setSource(size: image.extent.size, sourceURL: nil, sampling: sampling, point: point)
-        updateCameraResolution()
+        metalView?.show(image, base: base, look: look, strength: strength, monochrome: monochrome)
     }
     private func setSource(size: CGSize, sourceURL: URL?, sampling: Bool, point: CGPoint) {
         let sourceChanged = self.sourceURL != sourceURL
@@ -603,7 +824,8 @@ final class NegativeZoomView: UIScrollView, UIScrollViewDelegate {
             lastBounds = bounds.size
             pendingViewport = nil
             setZoomScale(1, animated: false)
-            let factor = min(bounds.width / imageSize.width, bounds.height / imageSize.height)
+            let horizontal = bounds.width / imageSize.width, vertical = bounds.height / imageSize.height
+            let factor = fillsViewport ? max(horizontal, vertical) : min(horizontal, vertical)
             imageView.frame = CGRect(origin: .zero, size: CGSize(width: imageSize.width * factor, height: imageSize.height * factor))
             contentSize = imageView.frame.size
             fitLongPoints = max(imageSize.width, imageSize.height) * factor
@@ -616,8 +838,9 @@ final class NegativeZoomView: UIScrollView, UIScrollViewDelegate {
                     x: min(max(target.x, -contentInset.left), contentSize.width - bounds.width + contentInset.right),
                     y: min(max(target.y, -contentInset.top), contentSize.height - bounds.height + contentInset.bottom))
             } else {
-                // A new source starts fully fitted and centered, without the old pan offset.
-                contentOffset = CGPoint(x: -contentInset.left, y: -contentInset.top)
+                // Center both letterboxing and overflow from the camera's aspect-fill crop.
+                contentOffset = CGPoint(x: (contentSize.width - bounds.width) / 2,
+                                        y: (contentSize.height - bounds.height) / 2)
             }
         }
         centerImage(); updateMarker(); updateCameraResolution()
@@ -674,7 +897,7 @@ final class NegativeZoomView: UIScrollView, UIScrollViewDelegate {
     /// Double-tap is inspection only; it cannot accidentally move focus or the sample point.
     @objc private func doubleTapped(_ gesture: UITapGestureRecognizer) {
         guard imageView.bounds.contains(gesture.location(in: imageView)) else { return }
-        if zoomScale > 1.01 { _ = fitImage() }
+        if zoomScale > 1.01 { _ = resetZoom() }
         else { zoom(to: gesture.location(in: imageView), scale: 2) }
     }
     private func zoom(to point: CGPoint, scale: CGFloat) {
@@ -688,7 +911,7 @@ final class NegativeZoomView: UIScrollView, UIScrollViewDelegate {
              scale: min(maximumZoomScale, zoomScale * 2))
         return true
     }
-    @objc func fitImage() -> Bool {
+    @objc func resetZoom() -> Bool {
         setZoomScale(1, animated: !UIAccessibility.isReduceMotionEnabled)
         return true
     }

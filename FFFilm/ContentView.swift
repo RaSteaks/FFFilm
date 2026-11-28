@@ -30,7 +30,7 @@ struct ContentView: View {
             return
         }
         #endif
-        _negativeStore = State(initialValue: NegativeStore())
+        _negativeStore = State(initialValue: NegativeStore(defaults: .standard))
         #endif
     }
 
@@ -167,7 +167,7 @@ struct ContentView: View {
             .accessibilityIdentifier("tab-shutter")
 
             // Negative preview is a separate iOS workspace; calculator state stays untouched.
-            Tab("negative.title", systemImage: "photo", value: MobileTab.negative) {
+            Tab("negative.title", systemImage: "camera.filters", value: MobileTab.negative) {
                 NegativePreviewView(store: negativeStore)
                     .environment(\.horizontalSizeClass, horizontalSizeClass)
             }

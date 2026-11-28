@@ -86,6 +86,74 @@
         }
       }
     },
+    "negative.encoding" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Encoding file…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在编码文件…"
+          }
+        }
+      }
+    },
+    "negative.interrupted" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Capture paused. Resume the camera to start a new calibration."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已暂停采集。恢复相机后可重新校准。"
+          }
+        }
+      }
+    },
+    "negative.outputName" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Output name"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "输出名称"
+          }
+        }
+      }
+    },
+    "negative.scratch" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Temporary space budget"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "预计临时空间"
+          }
+        }
+      }
+    },
     "shutter.playbackSpeed" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3746,13 +3814,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Film base stored for this session"
+            "value" : "Film base calibrated"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "片基颜色已暂存"
+            "value" : "片基已校准"
           }
         }
       }
@@ -3797,13 +3865,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Close camera"
+            "value" : "Return to review"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "退出相机"
+            "value" : "返回审片"
           }
         }
       }
@@ -4077,23 +4145,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "回到中心"
-          }
-        }
-      }
-    },
-    "negative.comparison" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Preview"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "预览"
           }
         }
       }
@@ -4421,19 +4472,36 @@
         }
       }
     },
+    "negative.exportOriginal" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Export original image"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "导出原像"
+          }
+        }
+      }
+    },
     "negative.exporting" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Exporting full-size positive…"
+            "value" : "Exporting full-size image…"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "正在导出原尺寸正片…"
+            "value" : "正在导出原尺寸图像…"
           }
         }
       }
@@ -4451,23 +4519,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "导入文件"
-          }
-        }
-      }
-    },
-    "negative.fit" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fit entire image"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "显示全图"
           }
         }
       }
@@ -4523,19 +4574,104 @@
         }
       }
     },
+    "negative.inputType.colorNegative" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Color negative"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "彩色负片"
+          }
+        }
+      }
+    },
+    "negative.inputType.monochromeNegative" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Black & white negative"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "黑白负片"
+          }
+        }
+      }
+    },
+    "negative.inputType.scene" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Camera scene"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "普通场景"
+          }
+        }
+      }
+    },
+    "negative.inputType.slide" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Slide / transparency"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已冲洗反转片"
+          }
+        }
+      }
+    },
+    "negative.inputType.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Input type"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "输入类型"
+          }
+        }
+      }
+    },
     "negative.intro" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Import a negative or use the camera. Sample an unexposed film edge to preview the positive."
+            "value" : "Open the camera or import an image. Invert a film negative or preview a film look."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "导入负片或打开相机，选取未曝光片边以预览正片。"
+            "value" : "打开相机或导入图像，实时反转负片，或试用胶片风格。"
           }
         }
       }
@@ -4676,19 +4812,308 @@
         }
       }
     },
+    "negative.look.classicMono" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Classic B&W"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "经典黑白"
+          }
+        }
+      }
+    },
+    "negative.look.dataSheet" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kodak technical data sheet"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "柯达官方技术资料"
+          }
+        }
+      }
+    },
+    "negative.look.decrease" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Decrease strength by 5%"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "降低 5% 模拟强度"
+          }
+        }
+      }
+    },
+    "negative.look.ektachromeE100" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "KODAK EKTACHROME E100"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "KODAK EKTACHROME E100"
+          }
+        }
+      }
+    },
+    "negative.look.ektar100" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "KODAK EKTAR 100"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "KODAK EKTAR 100"
+          }
+        }
+      }
+    },
+    "negative.look.increase" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Increase strength by 5%"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "提高 5% 模拟强度"
+          }
+        }
+      }
+    },
+    "negative.look.neutral" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Standard"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "标准"
+          }
+        }
+      }
+    },
+    "negative.look.options" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Film looks"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "胶片风格"
+          }
+        }
+      }
+    },
+    "negative.look.portra400" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "KODAK PORTRA 400"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "KODAK PORTRA 400"
+          }
+        }
+      }
+    },
+    "negative.look.previewHint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Strength is saved per look. Exports use the full frame with standard rendering."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每款风格分别记忆强度。导出保留完整画幅，使用标准色调。"
+          }
+        }
+      }
+    },
+    "negative.look.previewOnly" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preview look"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "模拟风格（仅预览）"
+          }
+        }
+      }
+    },
+    "negative.look.profileHint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This preview approximates the published film response. Exposure, processing and scanning affect the appearance of a real roll."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此预览近似模拟公开的胶片响应。实际观感还受曝光、冲洗和扫描条件影响。"
+          }
+        }
+      }
+    },
+    "negative.look.sceneHint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Each look remembers its strength. Set it to 0% to compare with the original scene."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每款风格分别记忆强度。调至 0% 可查看场景原有的色调。"
+          }
+        }
+      }
+    },
+    "negative.look.softNegative" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Soft color negative"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "柔和彩负"
+          }
+        }
+      }
+    },
+    "negative.look.strength" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Strength"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "模拟强度"
+          }
+        }
+      }
+    },
+    "negative.look.triX400" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "KODAK TRI-X 400"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "KODAK TRI-X 400"
+          }
+        }
+      }
+    },
+    "negative.look.vividSlide" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vivid slide"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "鲜艳反转片"
+          }
+        }
+      }
+    },
     "negative.needsBase" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Select an unexposed film edge first."
+            "value" : "Sample an unexposed edge to invert the negative."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "请先选取未曝光片基。"
+            "value" : "选取未曝光的片边，即可反转负片。"
           }
         }
       }
@@ -4706,23 +5131,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "打开设置"
-          }
-        }
-      }
-    },
-    "negative.original" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Original"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "原片"
           }
         }
       }
@@ -4795,6 +5203,23 @@
         }
       }
     },
+    "negative.photos.originalSaved" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Original image saved to Photos."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "原像已保存到相册。"
+          }
+        }
+      }
+    },
     "negative.photos.save" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4808,6 +5233,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "保存正片到相册（JPG）"
+          }
+        }
+      }
+    },
+    "negative.photos.saveOriginal" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Save original to Photos (JPG)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存原像到相册（JPG）"
           }
         }
       }
@@ -4863,23 +5305,6 @@
         }
       }
     },
-    "negative.positive" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Positive"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "正片"
-          }
-        }
-      }
-    },
     "negative.rendering" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4914,6 +5339,23 @@
         }
       }
     },
+    "negative.resetZoom" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reset zoom"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重置缩放"
+          }
+        }
+      }
+    },
     "negative.right" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4931,36 +5373,87 @@
         }
       }
     },
-    "negative.sample" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sample film base"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "选取片基"
-          }
-        }
-      }
-    },
     "negative.sampleHint" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tap an unexposed film edge, avoiding holes and lettering. Confirm to preview the positive."
+            "value" : "Tap an unexposed film edge away from holes and lettering. Confirm to apply inversion and your selected look."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "点按未曝光片边，避开齿孔和文字；确认后预览正片。"
+            "value" : "点按未曝光片边，避开齿孔和文字。确认后反转画面并应用所选风格。"
+          }
+        }
+      }
+    },
+    "negative.simulation.calibrateHint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sample an unexposed edge to invert the negative and apply your selected look."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选取未曝光片边后，画面会自动反转并应用所选风格。"
+          }
+        }
+      }
+    },
+    "negative.simulation.compare" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Compare original"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "对照原图"
+          }
+        }
+      }
+    },
+    "negative.simulation.invert" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Calibrate & invert"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "校准并反转"
+          }
+        }
+      }
+    },
+    "negative.simulation.return" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Back to simulation"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "返回模拟"
           }
         }
       }
@@ -4971,13 +5464,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Film Preview"
+            "value" : "Film Simulation"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "胶片预览"
+            "value" : "胶片模拟"
           }
         }
       }

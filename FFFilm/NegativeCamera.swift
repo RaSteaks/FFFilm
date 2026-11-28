@@ -267,7 +267,27 @@ nonisolated final class NegativeCamera: NSObject, NegativeCameraCapture, AVCaptu
             lockGeneration = UUID()
         }
     }
-    func setBase(_ value: NegativeBase?) { queue.async { [self] in base = value } }
+    func setBase(_ value: NegativeBase?) {
+        queue.async { [self] in
+            base = value
+            // Switching away from a calibrated negative must also release its hardware
+            // locks. Keep a manually frozen view frozen until the operator resumes.
+            guard value == nil, captureRequested, let device,
+                  device.exposureMode == .locked || device.whiteBalanceMode == .locked ||
+                  device.primaryConstituentDeviceSwitchingBehavior == .locked else { return }
+            do {
+                try device.lockForConfiguration()
+                defer { device.unlockForConfiguration() }
+                if device.isExposureModeSupported(.continuousAutoExposure) { device.exposureMode = .continuousAutoExposure }
+                else if device.isExposureModeSupported(.autoExpose) { device.exposureMode = .autoExpose }
+                if device.isWhiteBalanceModeSupported(.continuousAutoWhiteBalance) { device.whiteBalanceMode = .continuousAutoWhiteBalance }
+                else if device.isWhiteBalanceModeSupported(.autoWhiteBalance) { device.whiteBalanceMode = .autoWhiteBalance }
+                if device.primaryConstituentDeviceSwitchingBehavior == .locked {
+                    device.setPrimaryConstituentDeviceSwitchingBehavior(.auto, restrictedSwitchingBehaviorConditions: [])
+                }
+            } catch { errorHandler?("negative.error.camera") }
+        }
+    }
     func freeze(_ value: Bool) {
         queue.async { [self] in
             frozen = value; locking = false; waitingForLockedFrame = false; awaitingLockCompletion = false; lockGeneration = UUID()

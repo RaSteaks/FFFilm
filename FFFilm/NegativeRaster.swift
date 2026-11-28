@@ -6,7 +6,7 @@ import Darwin
 /// Disk backing bounds the output working set for large 16-bit scans.
 /// Source decoders can still allocate internally; their peak is measured in integration tests.
 nonisolated enum NegativeRaster {
-    static func write(_ image: CIImage, context: CIContext, format: NegativeFormat, to url: URL, regionImage: ((CGRect) -> CIImage)? = nil) throws {
+    static func write(_ image: CIImage, context: CIContext, format: NegativeFormat, preserveAlpha: Bool = false, to url: URL, progress: (@Sendable (Double) -> Void)? = nil, regionImage: ((CGRect) -> CIImage)? = nil) throws {
         let width = Int(image.extent.width), height = Int(image.extent.height)
         let depth = format == .jpg ? 8 : 16
         let rowBytes = width * (depth == 16 ? 8 : 4)
@@ -39,6 +39,7 @@ nonisolated enum NegativeRaster {
                 try NegativePixels.renderBitmap(regionImage?(region) ?? image, context: context, toBitmap: memory.advanced(by: start * rowBytes), rowBytes: rowBytes,
                                bounds: region, format: depth == 16 ? .RGBA16 : .RGBA8, colorSpace: NegativePixels.display)
             }
+            progress?(Double(start + rows) / Double(height))
             // Flush completed pages before advising the VM to reclaim them. Never drop dirty data.
             let offset = start * rowBytes / page * page
             let end = min(length, ((start + rows) * rowBytes / page) * page)
@@ -52,7 +53,7 @@ nonisolated enum NegativeRaster {
         guard let provider = CGDataProvider(dataInfo: nil, data: memory, size: length, releaseData: { _, _, _ in }),
               let cg = CGImage(width: width, height: height, bitsPerComponent: depth, bitsPerPixel: depth * 4,
                                bytesPerRow: rowBytes, space: NegativePixels.display,
-                               bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.noneSkipLast.rawValue)
+                               bitmapInfo: CGBitmapInfo(rawValue: (preserveAlpha ? CGImageAlphaInfo.premultipliedLast : .noneSkipLast).rawValue)
                                 .union(depth == 16 ? .byteOrder16Little : []),
                                provider: provider, decode: nil, shouldInterpolate: false, intent: .defaultIntent) else {
             throw NegativeFailure(key: "negative.error.export")

@@ -243,16 +243,26 @@ struct CalculatorStoreTests {
         let input = Legacy(entries: [
             SummaryEntry(id: UUID(), settings: .default, added: yesterday),
             SummaryEntry(id: UUID(), settings: retired, added: yesterday),
-            SummaryEntry(id: UUID(), settings: .default, added: .now)
+            SummaryEntry(id: UUID(), settings: retired, added: .now)
         ])
         defaults.set(try JSONEncoder().encode(input), forKey: RecordingSummary.key)
         let store = CalculatorStore(defaults: defaults)
-        #expect(store.summary.entries.count == 1 && store.summary.entries[0].snapshot?.reconstructed == true)
+        #expect(store.summary.entries.count == 1 && store.summary.entries[0].snapshot == nil)
+        let unavailable = RecordingEstimate.summaryAnswer(defaults: defaults, catalog: store.catalog)
+        #expect(unavailable.contains(String(localized: "intent.summary.unavailable")))
+        #expect(!unavailable.contains(DisplayFormat.compactStorage(0)))
+        store.addCurrentToSummary()
+        let partial = RecordingEstimate.summaryAnswer(defaults: defaults, catalog: store.catalog)
+        let subtotal = DisplayFormat.compactStorage(store.calculation.dayTotalGb)
+        let partialAnswer = String(localized: "intent.summary.partial",
+            defaultValue: "Estimates for \(1) of \(2) setups give a subtotal of \(subtotal).")
+        #expect(partial.contains(partialAnswer))
         let archive = try #require(store.summary.days.first { $0.archivedUnit != nil })
         store.summary.selectDay(archive)
         #expect(store.summary.entries.count == 2)
+        #expect(store.summaryItems.first?.calculation.reconstructed == true)
         #expect(store.readableSummary(storageUnit: .decimal).contains("retired-camera"))
-        #expect(CalculatorStore(defaults: defaults).summary.entries.count == 1)
+        #expect(CalculatorStore(defaults: defaults).summary.entries.count == 2)
     }
 
     @Test("Dial detents recalculate live but save camera and shutter memory once they settle")

@@ -3336,6 +3336,22 @@
         }
       }
     },
+    "intent.summary.partial" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Estimates for %1$lld of %2$lld setups give a subtotal of %3$@."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "共 %2$lld 条方案，其中 %1$lld 条有容量估算，小计 %3$@。"
+          }
+        }
+      }
+    },
     "intent.summary.shortTitle" : {
       "localizations" : {
         "en" : {
@@ -3348,6 +3364,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "汇总合计"
+          }
+        }
+      }
+    },
+    "intent.summary.unavailable" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Storage estimates are unavailable for this shooting day."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "该拍摄日的所有方案均无可用的容量估算。"
           }
         }
       }

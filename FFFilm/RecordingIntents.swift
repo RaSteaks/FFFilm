@@ -38,9 +38,18 @@ enum RecordingEstimate {
             return String(localized: "intent.summary.empty", defaultValue: "The summary is empty.",
                           comment: "Siri answer when no setups have been added to the summary.")
         }
-        let total = summary.totalGb
-        let storage = DisplayFormat.compactStorage(total, unit: storageUnit(defaults))
-        return summary.activeDay.title + " · " + String(localized: "intent.summary.answer",
+        let day = summary.activeDay.title + " · "
+        let estimatedCount = entries.count(where: { $0.snapshot != nil })
+        guard estimatedCount > 0 else {
+            return day + String(localized: "intent.summary.unavailable",
+                                defaultValue: "Storage estimates are unavailable for this shooting day.")
+        }
+        let storage = DisplayFormat.compactStorage(summary.totalGb, unit: storageUnit(defaults))
+        if estimatedCount < entries.count {
+            return day + String(localized: "intent.summary.partial",
+                defaultValue: "Estimates for \(estimatedCount) of \(entries.count) setups give a subtotal of \(storage).")
+        }
+        return day + String(localized: "intent.summary.answer",
                       defaultValue: "\(entries.count) setups in the summary need \(storage) in total.",
                       comment: "Siri answer: number of summary entries and their total storage.")
     }

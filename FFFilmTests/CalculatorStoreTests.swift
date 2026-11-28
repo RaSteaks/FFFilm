@@ -237,6 +237,24 @@ struct CalculatorStoreTests {
         #expect(CalculatorStore(defaults: defaults).summary.entries.isEmpty)
     }
 
+    @Test("Legacy ARRI configuration links migrate known IDs without repairing invalid formats")
+    func legacyConfigurationLinks() throws {
+        let suite = "FFFilm.LegacyLink.\(UUID())"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = CalculatorStore(defaults: defaults)
+        func link(mode: String, resolution: String) throws -> URL {
+            try #require(URL(string: "fffilm://configuration?camera=alexa35&mode=\(mode)&resolution=\(resolution)&codec=arriraw-hde&project=24&sensor=24&sensorOverdrive=false&media=2tb&hours=8"))
+        }
+        for (oldMode, resolution, newMode) in [("open-gate", "a35-open-1x1", "3k-square"), ("16x9", "a35-46k-16x9", "46k-16x9")] {
+            let url = try link(mode: oldMode, resolution: resolution)
+            let value = try #require(store.configuration(from: url))
+            #expect(value.modeId == newMode && value.resolutionId == resolution && value.codecId == "arriraw")
+        }
+        let invalid = try link(mode: "unknown", resolution: "a35-open-1x1")
+        #expect(store.configuration(from: invalid) == nil)
+    }
+
     @Test("Legacy entries migrate by shooting date and retain unavailable original IDs")
     func legacySummaryHandoff() throws {
         struct Legacy: Encodable { let version = 1; let entries: [SummaryEntry] }

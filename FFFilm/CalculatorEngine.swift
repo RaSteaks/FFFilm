@@ -106,23 +106,29 @@ struct CalculatorEngine {
         }
     }
 
-    func normalized(_ input: CaptureSettings) -> CaptureSettings {
+    /// Known catalog aliases preserve the requested format and are safe to accept in a shared link.
+    func migratingLegacyIdentifiers(_ input: CaptureSettings) -> CaptureSettings {
         var output = input
-        let selectedCamera = camera(id: output.cameraId)
         // Earlier catalogs grouped distinct ARRI readouts by aspect ratio. Preserve the
         // selected raster when migrating a saved format to its actual sensor mode.
-        if selectedCamera.id == "alexa35" {
+        if output.cameraId == "alexa35" {
             if output.modeId == "open-gate", output.resolutionId == "a35-open-1x1" { output.modeId = "3k-square" }
             if output.modeId == "16x9", output.resolutionId == "a35-46k-16x9" { output.modeId = "46k-16x9" }
         }
+        // HDE is an offload derivative. Older saved inputs describe an ARRIRAW camera original.
+        if output.codecId == "arriraw-hde" { output.codecId = "arriraw" }
+        return output
+    }
+
+    func normalized(_ input: CaptureSettings) -> CaptureSettings {
+        var output = migratingLegacyIdentifiers(input)
+        let selectedCamera = camera(id: output.cameraId)
         let selectedMode = mode(for: output, camera: selectedCamera)
         output.cameraId = selectedCamera.id
         let media = availableMedia(for: selectedCamera)
         if !media.contains(where: { $0.id == output.mediaId }) {
             output.mediaId = media.last?.id ?? CaptureSettings.default.mediaId
         }
-        // HDE is an offload derivative. Older saved inputs describe an ARRIRAW camera original.
-        if output.codecId == "arriraw-hde" { output.codecId = "arriraw" }
         output.modeId = selectedMode.id
         output.resolutionId = resolution(for: output, mode: selectedMode).id
         output.codecId = codec(for: output).id

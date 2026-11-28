@@ -188,10 +188,11 @@ final class CalculatorStore {
               let overdrive = fields["sensorOverdrive"].flatMap(Bool.init), let media = fields["media"],
               let hours = fields["hours"].flatMap(Double.init), CaptureSettings.shootHoursRange.contains(hours) else { return nil }
         let proposed = CaptureSettings(cameraId: camera, modeId: mode, resolutionId: resolution,
-            codecId: codec == "arriraw-hde" ? "arriraw" : codec, projectFps: project, sensorFps: sensor,
+            codecId: codec, projectFps: project, sensorFps: sensor,
             sensorOverdrive: overdrive, mediaId: media, shootHours: hours)
         let result = engine.normalized(proposed)
-        guard result == proposed, engine.calculate(settings: result).hasEstimate else { return nil }
+        guard result == engine.migratingLegacyIdentifiers(proposed),
+              engine.calculate(settings: result).hasEstimate else { return nil }
         return result
     }
 
